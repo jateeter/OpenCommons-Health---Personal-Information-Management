@@ -244,10 +244,16 @@ function camel(s: string): string {
  * Returns `null` when the input cannot be parsed as a valid date.
  */
 function normaliseDate(value: string): string | null {
-  // Already in YYYY-MM-DD format – fast path.
+  // Already in YYYY-MM-DD format – validate the components before fast-returning.
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const d = new Date(value + 'T00:00:00Z');
-    return isNaN(d.getTime()) ? null : value;
+    if (isNaN(d.getTime())) return null;
+    // Verify the components are in range (catches e.g. "2024-13-40").
+    const [y, m, day] = value.split('-').map(Number);
+    if (d.getUTCFullYear() !== y || d.getUTCMonth() + 1 !== m || d.getUTCDate() !== day) {
+      return null;
+    }
+    return value;
   }
   const d = new Date(value);
   if (isNaN(d.getTime())) return null;

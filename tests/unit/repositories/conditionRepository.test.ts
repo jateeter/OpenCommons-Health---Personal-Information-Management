@@ -136,17 +136,18 @@ describe('ConditionRepository', () => {
         code: { system: '', code: '' },
         status: '' as MedicalCondition['status'],
       };
+      let caughtError: unknown;
       try {
         await repo.create(bad);
-        fail('Expected ValidationError');
       } catch (err) {
-        expect(err).toBeInstanceOf(ValidationError);
-        const ve = err as ValidationError;
-        const fields = ve.issues.map((i) => i.field);
-        expect(fields).toContain('code.system');
-        expect(fields).toContain('code.code');
-        expect(fields).toContain('status');
+        caughtError = err;
       }
+      expect(caughtError).toBeInstanceOf(ValidationError);
+      const ve = caughtError as ValidationError;
+      const fields = ve.issues.map((i) => i.field);
+      expect(fields).toContain('code.system');
+      expect(fields).toContain('code.code');
+      expect(fields).toContain('status');
     });
 
     it('throws ValidationError for an invalid severity value', async () => {
