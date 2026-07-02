@@ -61,28 +61,38 @@ Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medicati
 - **Node.js ≥ 18**
 - A running **Solid Community Server** instance (see `localSolidCommunityServer`)
 
-## Getting Started
+## Quickstart (under 10 minutes)
 
 ```bash
 # 1. Clone and install
 git clone https://github.com/jateeter/OpenCommons-Health---Personal-Information-Management.git
 cd OpenCommons-Health---Personal-Information-Management
-npm install
+npm install                  # ~30 s
 
-# 2. Copy and edit local config
-cp config/local.json.example config/local.json
-# Fill in clientId, clientSecret, podServerUrl, podBaseUrl
+# 2. Copy environment template
+cp .env.example .env
+# Edit .env – fill in CSS_CLIENT_ID / CSS_CLIENT_SECRET if running against CSS
 
 # 3. Build
-npm run build
+npm run build                # compile TypeScript → dist/
 
-# 4. Use the library
+# 4. Run unit + round-trip tests (no server required)
+npm test                     # 97+ tests, should pass in < 10 s
+
+# 5. (Optional) run integration tests against a live CSS endpoint
+#    Requires a running CSS and credentials in .env / environment:
+#    npm run test:integration
+
+# 6. (Optional) run integration tests in Docker (no local CSS required)
+#    Requires Docker + Docker Compose v2:
+#    npm run test:integration:docker
 ```
+
+### Sample usage
 
 ```typescript
 import { HealthPIM } from './dist';
 
-// Headless / server-to-server (CSS client-credentials)
 const pim = await HealthPIM.create({
   podServerUrl: 'http://localhost:3000',
   podBaseUrl:   'http://localhost:3000/alice/',
@@ -111,7 +121,35 @@ console.log('Conditions:', all.length);
 
 ---
 
-## Authentication
+## Error handling
+
+All repository operations throw typed errors from `src/errors.ts`:
+
+| Error class | When thrown | Key properties |
+|---|---|---|
+| `ValidationError` | Required fields missing, invalid values, or absent `url` on update | `issues: ValidationIssue[]` – per-field `field`, `reason`, `value` |
+| `NotFoundError` | Pod resource does not exist (404 equivalent) | `url: string` |
+| `AuthError` | Session not authenticated or credentials insufficient | `message` |
+| `ConflictError` | Write conflict on the pod (409 equivalent) | `url`, `message` |
+
+```typescript
+import { ValidationError, NotFoundError } from './dist';
+
+try {
+  await pim.conditions.create({ code: { system: '', code: '' }, status: 'active' });
+} catch (err) {
+  if (err instanceof ValidationError) {
+    console.error('Validation failed:');
+    for (const issue of err.issues) {
+      console.error(` • ${issue.field}: ${issue.reason}`);
+    }
+  }
+}
+```
+
+---
+
+
 
 Two flows are supported:
 
@@ -178,11 +216,49 @@ tests/
 ## Development
 
 ```bash
-npm run build      # Compile TypeScript → dist/
-npm test           # Run Jest test suite (34 tests)
-npm run lint       # ESLint
-npm run dev        # Run src/index.ts directly via ts-node
-npm run clean      # Remove dist/
+npm run build              # Compile TypeScript → dist/
+npm test                   # Run Jest unit + round-trip tests (97+ tests)
+npm run test:integration   # Run integration tests (requires live CSS + env vars)
+npm run test:integration:docker  # Run integration tests in Docker
+npm run lint               # ESLint
+npm run lint:fix           # ESLint auto-fix
+npm run typecheck          # TypeScript type-check without emitting
+npm run dev                # Run src/index.ts directly via ts-node
+npm run clean              # Remove dist/
+```
+
+### Project structure
+
+```
+src/
+├── auth/               # Solid authentication (SolidAuthService)
+├── errors.ts           # Typed error classes (ValidationError, NotFoundError, …)
+├── pod/                # Low-level Solid pod client (PodClient)
+├── repositories/       # Domain CRUD repositories (one per health type)
+├── schemas/            # ShEx shape definitions (.shex) + registry
+├── types/              # TypeScript types for all health entities
+└── utils/              # RDF namespace helpers, URI builders
+
+config/
+├── default.json        # Default configuration (safe to commit)
+└── local.json.example  # Template for local secrets (copy → local.json)
+
+tests/
+├── integration/        # Integration tests (require live CSS endpoint)
+├── roundtrip/          # RDF domain ↔ Thing round-trip tests
+├── schemas/            # Schema registry tests
+├── types/              # Type-level tests
+├── unit/               # Unit tests (auth, pod, repositories)
+└── utils/              # RDF utility tests
+
+scripts/
+└── wait-for-pod.sh     # Waits for a CSS endpoint to become healthy
+
+.env.example            # Environment variable template
+docker-compose.test.yml # Containerised integration test runner
+Dockerfile.test         # Docker image for the test runner
+.github/workflows/
+└── ci.yml              # GitHub Actions CI pipeline
 ```
 
 ---

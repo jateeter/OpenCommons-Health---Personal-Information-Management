@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy dependency manifests first for layer caching.
+COPY package*.json ./
+RUN npm ci --include=dev
+
+# Copy source and configuration.
+COPY tsconfig*.json ./
+COPY jest.config*.js ./
+COPY src ./src
+COPY tests ./tests
+
+# Build TypeScript.
+RUN npm run build

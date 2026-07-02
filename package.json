@@ -10,8 +10,13 @@
     "dev": "ts-node src/index.ts",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
+    "test:unit": "jest --passWithNoTests",
+    "test:integration": "jest --config jest.config.integration.js --passWithNoTests",
+    "test:integration:docker": "docker compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test-runner",
+    "test:all": "npm run test && npm run test:integration",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "keywords": [

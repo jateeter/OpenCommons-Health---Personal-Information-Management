@@ -1,0 +1,47 @@
+version: '3.9'
+
+# ─── Integration test compose ────────────────────────────────────────────────
+#
+# Spins up a single-user Community Solid Server (CSS) and then runs the
+# integration test suite against it.
+#
+# Usage:
+#   npm run test:integration:docker
+#
+# Or directly:
+#   docker compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test-runner
+
+services:
+  # ── Solid Community Server ──────────────────────────────────────────────────
+  css:
+    image: solidcommunityserver/community-solid-server:latest
+    command:
+      - "-c"
+      - "@css:config/default.json"
+      - "-p"
+      - "3000"
+    ports:
+      - "3000:3000"
+    environment:
+      CSS_LOGGING_LEVEL: warn
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # ── Test runner ─────────────────────────────────────────────────────────────
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      css:
+        condition: service_healthy
+    environment:
+      INTEGRATION_TEST_BASE_URL: http://css:3000
+      INTEGRATION_POD_BASE_URL: http://css:3000/alice/
+      INTEGRATION_CLIENT_ID: ${INTEGRATION_CLIENT_ID:-alice-client}
+      INTEGRATION_CLIENT_SECRET: ${INTEGRATION_CLIENT_SECRET:-alice-secret}
+    command: ["npm", "run", "test:integration"]

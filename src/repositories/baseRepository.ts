@@ -12,6 +12,7 @@ import {
   type Thing,
 } from '@inrupt/solid-client';
 import type { PodClient } from '../pod/podClient';
+import { ValidationError, NotFoundError } from '../errors';
 import { NS, newResourceUrl, nowIso } from '../utils/rdfUtils';
 
 /**
@@ -38,13 +39,27 @@ export abstract class BaseRepository<T extends { url?: string }> {
   /** Convert an RDF Thing back to the domain object. */
   protected abstract fromThing(thing: Thing, resourceUrl: string): T;
 
+  /**
+   * Validate the entity before a create or update write.
+   * Concrete repositories should override this to enforce required-field rules.
+   * The default implementation is a no-op.
+   *
+   * @throws {ValidationError} if the entity does not satisfy the shape.
+   */
+  protected validate(_entity: T): void {
+    // Default: no validation – subclasses override.
+  }
+
   // ─── CRUD operations ─────────────────────────────────────────────────────
 
   /**
    * Persist a new entity to the pod.
    * The `url` field of the returned object is the new pod resource URL.
+   *
+   * @throws {ValidationError} if the entity fails shape validation.
    */
   async create(entity: T): Promise<T> {
+    this.validate(entity);
     const containerUrl = await this.client.ensureContainer(this.typeName);
     const resourceUrl = newResourceUrl(
       containerUrl,
@@ -63,6 +78,7 @@ export abstract class BaseRepository<T extends { url?: string }> {
 
   /**
    * Retrieve an entity by its pod resource URL.
+   * Returns `null` when the resource is not found.
    */
   async findByUrl(resourceUrl: string): Promise<T | null> {
     try {
@@ -87,13 +103,22 @@ export abstract class BaseRepository<T extends { url?: string }> {
 
   /**
    * Update an existing entity.
-   * The entity must have a `url` field.
+   * The entity must have a `url` field that matches an existing pod resource.
+   *
+   * @throws {ValidationError} if the entity is missing a `url` or fails shape
+   *   validation.
+   * @throws {NotFoundError} if the target resource does not exist on the pod.
    */
   async update(entity: T): Promise<T> {
     if (!entity.url) {
-      throw new Error('Cannot update entity without a url.');
+      throw new ValidationError('Cannot update entity without a url.', [
+        { field: 'url', reason: 'url is required for update operations' },
+      ]);
     }
-    const dataset = await this.client.getDataset(entity.url);
+    this.validate(entity);
+    const dataset = await this.client.getDataset(entity.url).catch(() => {
+      throw new NotFoundError(entity.url as string);
+    });
     const updated = {
       ...entity,
       updatedAt: nowIso(),
