@@ -1,0 +1,40 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+
+# ─── HealthcareProvider Shape ────────────────────────────────────────────────
+#
+# Represents a healthcare provider or organisation.
+# Maps to the TypeScript `HealthcareProvider` type.
+
+<HealthcareProviderShape> {
+  a                       [ health:HealthcareProvider ]  ;
+  schema:name             xsd:string                     ;
+  health:providerRole [
+    health:ProviderPrimaryCare
+    health:ProviderSpecialist
+    health:ProviderEmergency
+    health:ProviderPharmacy
+    health:ProviderLab
+    health:ProviderHospital
+    health:ProviderOther
+  ]                                                       ;
+  health:specialty        xsd:string?                    ;
+  health:npi              xsd:string?                    ;
+  schema:memberOf         xsd:string?                    ;
+  schema:address          <AddressShape>?                ;
+  schema:telephone        xsd:string*                    ;
+  schema:email            xsd:string*                    ;
+  schema:description      xsd:string?                    ;
+  schema:dateCreated      xsd:dateTime?                  ;
+  schema:dateModified     xsd:dateTime?                  ;
+}
+
+<AddressShape> {
+  a                     [ schema:PostalAddress ]? ;
+  schema:streetAddress  xsd:string?              ;
+  schema:addressLocality xsd:string?             ;
+  schema:addressRegion  xsd:string?              ;
+  schema:postalCode     xsd:string?              ;
+  schema:addressCountry xsd:string?              ;
+}

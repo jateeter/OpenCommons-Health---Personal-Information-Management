@@ -1,0 +1,40 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+PREFIX loinc:    <http://loinc.org/rdf/>
+
+# ─── LabResult Shape ─────────────────────────────────────────────────────────
+#
+# Represents a laboratory test result (LOINC-coded observation).
+# Maps to the TypeScript `LabResult` type.
+
+<LabResultShape> {
+  a                         [ health:LabResult ]         ;
+  health:observationCode    <CodingShape>                ;
+  health:valueDecimal       xsd:decimal?                 ;
+  health:valueString        xsd:string?                  ;
+  health:unit               xsd:string?                  ;
+  health:interpretation [
+    health:InterpNormal
+    health:InterpHigh
+    health:InterpLow
+    health:InterpCriticalHigh
+    health:InterpCriticalLow
+    health:InterpAbnormal
+  ]?                                                      ;
+  health:referenceRangeLow  xsd:decimal?                 ;
+  health:referenceRangeHigh xsd:decimal?                 ;
+  health:referenceRangeText xsd:string?                  ;
+  health:effectiveDateTime  xsd:dateTime                 ;
+  health:performer          xsd:string?                  ;
+  health:specimen           xsd:string?                  ;
+  schema:description        xsd:string?                  ;
+  schema:dateCreated        xsd:dateTime?                ;
+  schema:dateModified       xsd:dateTime?                ;
+}
+
+<CodingShape> {
+  health:codingSystem    xsd:anyURI   ;
+  health:codingCode      xsd:string   ;
+  health:codingDisplay   xsd:string?  ;
+}

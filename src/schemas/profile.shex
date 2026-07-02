@@ -1,0 +1,43 @@
+PREFIX schema: <https://schema.org/>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX foaf:   <http://xmlns.com/foaf/0.1/>
+PREFIX health: <https://opencommons.health/ns/health#>
+
+# ─── PersonProfile Shape ─────────────────────────────────────────────────────
+#
+# Represents the pod owner's personal health profile.
+# Maps to the TypeScript `PersonProfile` type.
+
+<PersonProfileShape> {
+  a                    [ schema:Person ]          ;
+  schema:familyName    xsd:string                 ;
+  schema:givenName     xsd:string+                ;
+  schema:birthDate     xsd:date                   ;
+  health:biologicalSex [
+    health:Male
+    health:Female
+    health:Other
+    health:Unknown
+  ]                                               ;
+  schema:address       <AddressShape>?            ;
+  schema:telephone     xsd:string*                ;
+  schema:email         xsd:string*                ;
+  schema:image         xsd:anyURI?                ;
+  schema:dateCreated   xsd:dateTime?              ;
+  schema:dateModified  xsd:dateTime?              ;
+}
+
+<AddressShape> {
+  a                    [ schema:PostalAddress ]?  ;
+  schema:streetAddress xsd:string?               ;
+  schema:addressLocality xsd:string?             ;
+  schema:addressRegion xsd:string?               ;
+  schema:postalCode    xsd:string?               ;
+  schema:addressCountry xsd:string?              ;
+}
+
+<ContactPointShape> {
+  schema:contactType   [ "phone" "email" "url" "fax" ] ;
+  schema:value         xsd:string                      ;
+  health:contactUse    [ "home" "work" "mobile" "temp" ]? ;
+}

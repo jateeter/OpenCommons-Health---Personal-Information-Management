@@ -1,0 +1,31 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+
+# ─── InsurancePolicy Shape ───────────────────────────────────────────────────
+#
+# Represents a health insurance policy entry.
+# Maps to the TypeScript `InsurancePolicy` type.
+
+<InsurancePolicyShape> {
+  a                       [ health:InsurancePolicy ]     ;
+  health:insuranceType [
+    health:InsMedical
+    health:InsDental
+    health:InsVision
+    health:InsPharmacy
+    health:InsOther
+  ]                                                       ;
+  schema:name             xsd:string                     ;
+  health:planName         xsd:string?                    ;
+  health:memberId         xsd:string                     ;
+  health:groupNumber      xsd:string?                    ;
+  health:effectiveDate    xsd:date                       ;
+  health:expirationDate   xsd:date?                      ;
+  health:policyHolder     xsd:string?                    ;
+  schema:telephone        xsd:string*                    ;
+  schema:email            xsd:string*                    ;
+  schema:description      xsd:string?                    ;
+  schema:dateCreated      xsd:dateTime?                  ;
+  schema:dateModified     xsd:dateTime?                  ;
+}
