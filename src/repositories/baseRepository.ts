@@ -4,6 +4,7 @@ import {
   buildThing,
   createThing,
   getStringNoLocale,
+  getThing,
   getUrl,
   removeThing,
   setThing,
@@ -115,11 +116,7 @@ export abstract class BaseRepository<T extends { url?: string }> {
 
   /** Extract the primary Thing from a dataset by its URL. */
   protected primaryThing(dataset: SolidDataset, url: string): Thing | null {
-    // We use @inrupt/solid-client's getThing via duck-typing to avoid the
-    // import of the whole module in the abstract base.  The concrete child
-    // classes may also call getThing directly.
     try {
-      const { getThing } = require('@inrupt/solid-client') as typeof import('@inrupt/solid-client');
       return getThing(dataset, url);
     } catch {
       return null;
