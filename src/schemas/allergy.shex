@@ -1,0 +1,46 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+PREFIX fhir:     <http://hl7.org/fhir/>
+
+# ─── AllergyIntolerance Shape ────────────────────────────────────────────────
+#
+# Represents an allergy or intolerance to a substance.
+# Maps to the TypeScript `AllergyIntolerance` type.
+
+<AllergyIntoleranceShape> {
+  a                      [ health:AllergyIntolerance ] ;
+  health:substance       <CodingShape>                 ;
+  health:allergyCategory [
+    health:AllergyFood
+    health:AllergyMedication
+    health:AllergyEnvironment
+    health:AllergyBiologic
+  ]                                                     ;
+  health:allergyStatus   [
+    health:AllergyActive
+    health:AllergyInactive
+    health:AllergyResolved
+  ]                                                     ;
+  health:reaction        <AllergyReactionShape>*       ;
+  health:onsetDate       xsd:date?                     ;
+  schema:description     xsd:string?                   ;
+  schema:dateCreated     xsd:dateTime?                 ;
+  schema:dateModified    xsd:dateTime?                 ;
+}
+
+<AllergyReactionShape> {
+  health:reactionSubstance     <CodingShape>?  ;
+  health:reactionManifestation xsd:string+     ;
+  health:reactionSeverity [
+    health:SeverityMild
+    health:SeverityModerate
+    health:SeveritySevere
+  ]?                                           ;
+}
+
+<CodingShape> {
+  health:codingSystem    xsd:anyURI   ;
+  health:codingCode      xsd:string   ;
+  health:codingDisplay   xsd:string?  ;
+}

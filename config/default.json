@@ -1,0 +1,16 @@
+{
+  "solid": {
+    "podServerUrl": "http://localhost:3000",
+    "oidcIssuer": "http://localhost:3000",
+    "podPath": "/health-pim/"
+  },
+  "auth": {
+    "clientName": "OpenCommons Health PIM",
+    "redirectUrl": "http://localhost:8080/callback",
+    "tokenStoragePath": "./.tokens"
+  },
+  "app": {
+    "port": 8080,
+    "logLevel": "info"
+  }
+}

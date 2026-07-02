@@ -1,0 +1,39 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+PREFIX loinc:    <http://loinc.org/rdf/>
+
+# ─── VitalSign Shape ─────────────────────────────────────────────────────────
+#
+# Represents a single vital-sign measurement.
+# Maps to the TypeScript `VitalSign` type.
+
+<VitalSignShape> {
+  a                     [ health:VitalSign ]          ;
+  health:vitalSignCode  [
+    health:VitalBodyWeight
+    health:VitalBodyHeight
+    health:VitalBMI
+    health:VitalBloodPressure
+    health:VitalHeartRate
+    health:VitalRespiratoryRate
+    health:VitalBodyTemperature
+    health:VitalOxygenSaturation
+    health:VitalBloodGlucose
+  ]                                                    ;
+  health:loincCode      <CodingShape>?                ;
+  health:valueDecimal   xsd:decimal?                  ;
+  health:valueSystolic  xsd:decimal?                  ;
+  health:valueDiastolic xsd:decimal?                  ;
+  health:unit           xsd:string                    ;
+  health:effectiveDateTime xsd:dateTime               ;
+  schema:description    xsd:string?                   ;
+  schema:dateCreated    xsd:dateTime?                 ;
+  schema:dateModified   xsd:dateTime?                 ;
+}
+
+<CodingShape> {
+  health:codingSystem    xsd:anyURI   ;
+  health:codingCode      xsd:string   ;
+  health:codingDisplay   xsd:string?  ;
+}

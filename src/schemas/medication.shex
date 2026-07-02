@@ -1,0 +1,42 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+PREFIX rxnorm:   <http://www.nlm.nih.gov/research/umls/rxnorm/>
+
+# ─── Medication Shape ────────────────────────────────────────────────────────
+#
+# Represents a medication statement (current or historical).
+# Maps to the TypeScript `Medication` type.
+
+<MedicationShape> {
+  a                      [ schema:Drug ]              ;
+  health:medicationCode  <CodingShape>                ;
+  health:medicationStatus [
+    health:MedActive
+    health:MedCompleted
+    health:MedStopped
+    health:MedOnHold
+  ]                                                    ;
+  health:dosage          <DosageShape>?               ;
+  health:startDate       xsd:date?                    ;
+  health:endDate         xsd:date?                    ;
+  health:prescriber      xsd:string?                  ;
+  health:reason          xsd:string?                  ;
+  schema:description     xsd:string?                  ;
+  schema:dateCreated     xsd:dateTime?                ;
+  schema:dateModified    xsd:dateTime?                ;
+}
+
+<DosageShape> {
+  health:dosageText      xsd:string?  ;
+  health:dosageTiming    xsd:string?  ;
+  health:dosageRoute     xsd:string?  ;
+  health:doseValue       xsd:decimal? ;
+  health:doseUnit        xsd:string?  ;
+}
+
+<CodingShape> {
+  health:codingSystem    xsd:anyURI   ;
+  health:codingCode      xsd:string   ;
+  health:codingDisplay   xsd:string?  ;
+}
