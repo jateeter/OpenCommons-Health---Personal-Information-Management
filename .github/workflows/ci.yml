@@ -89,7 +89,7 @@ jobs:
       contents: read
     services:
       css:
-        image: solidproject/community-solid-server:latest
+        image: solidcommunityserver/community-solid-server:latest
         ports:
           - 3000:3000
         options: >-
