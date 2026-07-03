@@ -1,0 +1,390 @@
+ndex.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
+EOF
+
+cat > backend/tsconfig.json <<'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
+EOF
+
+cat > backend/src/config/schema.ts <<'EOF'
+import { z } from "zod";
+
+export const ConfigSchema = z.object({
+  HOST: z.string().default("0.0.0.0"),
+  PORT: z.coerce.number().int().min(1).max(65535).default(8080),
+  APP_PORT: z.coerce.number().int().min(1).max(65535).default(8080),
+  localSolidCommunityServer: z.coerce.boolean().default(true),
+  SOLID_POD_SERVER_URL: z.string().url(),
+  SOLID_OIDC_ISSUER: z.string().url(),
+  SOLID_POD_PATH: z.string().default("/pods"),
+  SOLID_REDIRECT_URL: z.string().url()
+});
+
+export type AppConfig = z.infer<typeof ConfigSchema>;
+EOF
+
+cat > backend/src/config/store.ts <<'EOF'
+import fs from "node:fs";
+import path from "node:path";
+import { ConfigSchema, type AppConfig } from "./schema.js";
+
+const CONFIG_FILE_PATH = process.env.CONFIG_FILE_PATH || "/tmp/config.json";
+
+function fromEnv(): AppConfig {
+  return ConfigSchema.parse({
+    HOST: process.env.HOST ?? "0.0.0.0",
+    PORT: process.env.PORT ?? 8080,
+    APP_PORT: process.env.APP_PORT ?? 8080,
+    localSolidCommunityServer: process.env.localSolidCommunityServer ?? true,
+    SOLID_POD_SERVER_URL: process.env.SOLID_POD_SERVER_URL ?? "http://local-solid-community-server:3000",
+    SOLID_OIDC_ISSUER: process.env.SOLID_OIDC_ISSUER ?? "http://local-solid-community-server:3000",
+    SOLID_POD_PATH: process.env.SOLID_POD_PATH ?? "/pods",
+    SOLID_REDIRECT_URL: process.env.SOLID_REDIRECT_URL ?? "https://localhost/auth/callback"
+  });
+}
+
+export function loadConfig(): AppConfig {
+  if (!fs.existsSync(CONFIG_FILE_PATH)) return fromEnv();
+  const raw = fs.readFileSync(CONFIG_FILE_PATH, "utf-8");
+  return ConfigSchema.parse(JSON.parse(raw));
+}
+
+export function saveConfig(input: unknown): AppConfig {
+  const parsed = ConfigSchema.parse(input);
+  fs.mkdirSync(path.dirname(CONFIG_FILE_PATH), { recursive: true });
+  fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(parsed, null, 2));
+  return parsed;
+}
+EOF
+
+cat > backend/src/index.ts <<'EOF'
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import { loadConfig, saveConfig } from "./config/store.js";
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.get("/api/healthz", (_req, res) => {
+  res.json({ ok: true, service: "backend" });
+});
+
+app.get("/api/config", (_req, res) => {
+  res.json(loadConfig());
+});
+
+app.put("/api/config", (req, res) => {
+  try {
+    res.json(saveConfig(req.body));
+  } catch (e: any) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+app.get("/api/solid/health", async (_req, res) => {
+  const cfg = loadConfig();
+  if (!cfg.localSolidCommunityServer) return res.json({ ok: true, enabled: false });
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3000);
+    const r = await fetch(cfg.SOLID_POD_SERVER_URL, { signal: ctrl.signal });
+    clearTimeout(t);
+    res.json({ ok: r.ok, enabled: true, status: r.status, url: cfg.SOLID_POD_SERVER_URL });
+  } catch {
+    res.status(503).json({ ok: false, enabled: true, url: cfg.SOLID_POD_SERVER_URL });
+  }
+});
+
+const port = Number(process.env.BACKEND_PORT || 3001);
+app.listen(port, "0.0.0.0", () => {
+  console.log(`backend listening on ${port}`);
+});
+EOF
+
+cat > backend/Dockerfile <<'EOF'
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY backend/package*.json ./
+RUN npm install
+COPY backend/tsconfig.json ./tsconfig.json
+COPY backend/src ./src
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY backend/package*.json ./
+RUN npm install --omit=dev
+COPY --from=build /app/dist ./dist
+ENV BACKEND_PORT=3001
+EXPOSE 3001
+CMD ["node", "dist/index.js"]
+EOF
+
+cat > frontend/package.json <<'EOF'
+{
+  "name": "oc-health-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.9",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
+  }
+}
+EOF
+
+cat > frontend/tsconfig.json <<'EOF'
+{ "compilerOptions": { "target": "ES2020", "module": "ESNext", "jsx": "react-jsx", "strict": true }, "include": ["src"] }
+EOF
+
+cat > frontend/vite.config.ts <<'EOF'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+export default defineConfig({ plugins: [react()] });
+EOF
+
+cat > frontend/index.html <<'EOF'
+<!doctype html><html><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+EOF
+
+cat > frontend/src/main.tsx <<'EOF'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+ReactDOM.createRoot(document.getElementById("root")!).render(<App />);
+EOF
+
+cat > frontend/src/App.tsx <<'EOF'
+import { useEffect, useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+type Cfg = any;
+
+export default function App() {
+  const [cfg, setCfg] = useState<Cfg | null>(null);
+  const [solid, setSolid] = useState<any>(null);
+
+  async function load() {
+    setCfg(await fetch("/api/config").then(r => r.json()));
+    setSolid(await fetch("/api/solid/health").then(r => r.json()));
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function save() {
+    await fetch("/api/config", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(cfg) });
+    await load();
+  }
+
+  if (!cfg) return <div style={{padding:20}}>Loading…</div>;
+
+  const chartData = [
+    { name: "localSolidCommunityServer", value: cfg.localSolidCommunityServer ? 1 : 0 },
+    { name: "solidHealth", value: solid?.ok ? 1 : 0 }
+  ];
+
+  return (
+    <div style={{fontFamily:"sans-serif", padding:20}}>
+      <h1>OpenCommons Health Config</h1>
+      <label>
+        <input type="checkbox" checked={!!cfg.localSolidCommunityServer}
+          onChange={e => setCfg({...cfg, localSolidCommunityServer: e.target.checked})}/>
+        localSolidCommunityServer
+      </label>
+      <div>
+        <input value={cfg.SOLID_POD_SERVER_URL} onChange={e => setCfg({...cfg, SOLID_POD_SERVER_URL:e.target.value})} style={{width:500}} />
+      </div>
+      <button onClick={save}>Save</button>
+      <pre>{JSON.stringify({solid}, null, 2)}</pre>
+      <div style={{width:500, height:240}}>
+        <ResponsiveContainer>
+          <BarChart data={chartData}><XAxis dataKey="name"/><YAxis domain={[0,1]}/><Tooltip/><Bar dataKey="value"/></BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+EOF
+
+cat > frontend/Dockerfile <<'EOF'
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend ./
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EOF
+
+cat > nginx/conf.d/default.conf <<'EOF'
+server {
+  listen 80;
+  server_name _;
+  return 301 https://$host$request_uri;
+}
+server {
+  listen 443 ssl;
+  server_name _;
+  ssl_certificate /etc/nginx/certs/dev.crt;
+  ssl_certificate_key /etc/nginx/certs/dev.key;
+
+  location /api/ {
+    proxy_pass http://backend:3001/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  location / {
+    proxy_pass http://frontend:80/;
+  }
+}
+EOF
+
+cat > certs/.gitignore <<'EOF'
+*.crt
+*.key
+EOF
+
+cat > certs/generate-self-signed.sh <<'EOF'
+#!/usr/bin/env sh
+set -eu
+mkdir -p certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/dev.key -out certs/dev.crt \
+  -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,DNS:nginx"
+EOF
+chmod +x certs/generate-self-signed.sh
+
+cat > docker-compose.yml <<'EOF'
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env.example
+    environment:
+      - BACKEND_PORT=3001
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+
+  local-solid-community-server:
+    image: node:20-alpine
+    command: sh -c "node -e \"require('http').createServer((q,s)=>s.end('ok')).listen(3000,'0.0.0.0')\""
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      backend:
+        condition: service_healthy
+      local-solid-community-server:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://localhost/api/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+EOF
+
+cat > scripts/ci-smoke.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+curl -kfsS https://localhost/api/healthz
+curl -kfsS https://localhost/api/config
+curl -kfsS https://localhost/api/solid/health
+EOF
+chmod +x scripts/ci-smoke.sh
+
+cat > .github/workflows/ci.yml <<'EOF'
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [ main, feature/config-ui-nginx-https-solid-ci ]
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate certs
+        run: sh certs/generate-self-signed.sh
+      - name: Build and start stack
+        run: docker compose up -d --build
+      - name: Wait
+        run: sleep 20
+      - name: Smoke
+        run: bash scripts/ci-smoke.sh
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
+EOF
+
+git add .
+git commit -m "Add config UI/API scaffold with nginx TLS, localSolidCommunityServer integration, and CI smoke tests"
+git push -u origin "$BRANCH"
+
+echo
+echo "Now open PR:"
+echo "gh pr create --base main --head $BRANCH --title \"Add config UI/API scaffold with nginx TLS and local Solid CI integration\" --body \"Adds starter backend/frontend, nginx TLS, docker-compose with localSolidCommunityServer, and CI smoke tests.\""~

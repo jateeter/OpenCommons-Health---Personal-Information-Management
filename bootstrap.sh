@@ -1,3 +1,4 @@
+cat > .github/workflows/ci.yml <<'EOF'
 name: ci
 on:
   pull_request:
@@ -19,3 +20,4 @@ jobs:
       - name: Teardown
         if: always()
         run: docker compose down -v
+EOF
