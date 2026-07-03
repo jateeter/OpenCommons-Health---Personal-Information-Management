@@ -63,6 +63,7 @@ export * from './pod';
 export * from './repositories';
 export * from './schemas';
 export * from './utils';
+export * from './errors';
 
 /** Options passed to {@link HealthPIM.create}. */
 export interface HealthPIMOptions {

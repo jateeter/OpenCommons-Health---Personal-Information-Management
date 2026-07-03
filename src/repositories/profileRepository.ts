@@ -21,7 +21,7 @@ export class ProfileRepository extends BaseRepository<PersonProfile> {
   }
 
   protected toThing(entity: PersonProfile, resourceUrl: string): Thing {
-    const { schema, health, xsd } = this.NS;
+    const { schema, health } = this.NS;
 
     let builder = buildThing(createThing({ url: resourceUrl }))
       .addUrl(`${this.NS.rdf}type`, `${schema}Person`)

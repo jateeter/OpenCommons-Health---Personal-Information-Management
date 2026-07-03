@@ -3,7 +3,13 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
-  testMatch: ['**/*.test.ts'],
+  testMatch: [
+    '**/unit/**/*.test.ts',
+    '**/roundtrip/**/*.test.ts',
+    '**/schemas/**/*.test.ts',
+    '**/types/**/*.test.ts',
+    '**/utils/**/*.test.ts',
+  ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
