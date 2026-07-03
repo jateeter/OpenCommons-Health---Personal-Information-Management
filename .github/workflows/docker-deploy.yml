@@ -17,9 +17,9 @@ name: Docker Deploy
 #   The `smoke-test` job runs `docker compose up --build -d` which starts
 #   both the PIM web app and the Community Solid Server (CSS), then calls
 #   `scripts/verify-deployment.sh` to assert:
-#     • CSS health    GET http://localhost:3000/       → HTTP 200
-#     • PIM root      GET http://localhost:8080/       → {"status":"running"}
-#     • PIM liveness  GET http://localhost:8080/healthz → {"ok":true}
+#     • CSS health    GET http://localhost:${CSS_PORT}/       → HTTP 200
+#     • PIM root      GET http://localhost:${APP_PORT}/       → {"status":"running"}
+#     • PIM liveness  GET http://localhost:${APP_PORT}/healthz → {"ok":true}
 #
 # Stage 3 – Image push (main branch only)
 #   The `push` job tags the validated image as `ghcr.io/<owner>/<repo>:latest`
@@ -50,6 +50,9 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # Configurable service ports – override via repository/environment variables.
+  CSS_PORT: "3000"
+  APP_PORT: "8080"
 
 jobs:
   # ── Stage 1: Build the production Docker image ─────────────────────────────
@@ -105,13 +108,15 @@ jobs:
           docker compose up --build -d
         env:
           COMPOSE_FILE: docker-compose.yml
+          CSS_PORT: ${{ env.CSS_PORT }}
+          APP_PORT: ${{ env.APP_PORT }}
 
       - name: Run deployment smoke tests
         run: |
           chmod +x scripts/verify-deployment.sh
           WAIT_TIMEOUT=120 ./scripts/verify-deployment.sh \
-            http://localhost:8080 \
-            http://localhost:3000
+            http://localhost:${{ env.APP_PORT }} \
+            http://localhost:${{ env.CSS_PORT }}
 
       - name: Show container logs on failure
         if: failure()

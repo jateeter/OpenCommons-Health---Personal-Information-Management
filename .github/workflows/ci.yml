@@ -87,13 +87,17 @@ jobs:
     needs: [lint, typecheck, test, build]
     permissions:
       contents: read
+    env:
+      # Configurable service ports – override via repository/environment variables.
+      CSS_PORT: "3000"
+      APP_PORT: "8080"
     services:
       css:
         image: solidproject/community-solid-server:latest
         ports:
-          - 3000:3000
+          - ${{ env.CSS_PORT }}:${{ env.CSS_PORT }}
         options: >-
-          --health-cmd "wget -qO- http://localhost:3000/ || exit 1"
+          --health-cmd "wget -qO- http://localhost:${{ env.CSS_PORT }}/ || exit 1"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
@@ -109,7 +113,7 @@ jobs:
       - name: Wait for CSS
         run: |
           chmod +x scripts/wait-for-pod.sh
-          ./scripts/wait-for-pod.sh http://localhost:3000
+          ./scripts/wait-for-pod.sh http://localhost:${CSS_PORT}
       # Provision a test account on the local CSS.
       # CSS v7+ exposes a /setup endpoint for the first-time user.
       # For CI we rely on the default open-registration CSS configuration and
@@ -118,13 +122,13 @@ jobs:
         id: provision
         run: |
           # Register a test account (CSS default config allows open registration).
-          curl -sf -X POST http://localhost:3000/idp/register/ \
+          curl -sf -X POST http://localhost:${CSS_PORT}/idp/register/ \
             -H "Content-Type: application/json" \
             -d '{"email":"test@example.com","password":"test-password","confirmPassword":"test-password","createPod":true,"podName":"alice"}' \
             || echo "Account may already exist or registration endpoint differs – continuing"
 
           # Obtain a client-credentials token pair.
-          TOKEN_RESP=$(curl -sf -X POST http://localhost:3000/alice/idp/credentials/ \
+          TOKEN_RESP=$(curl -sf -X POST http://localhost:${CSS_PORT}/alice/idp/credentials/ \
             -H "Content-Type: application/json" \
             -d '{"name":"ci-test-client","email":"test@example.com","password":"test-password"}' \
             2>/dev/null || echo '{}')
@@ -143,7 +147,7 @@ jobs:
       - name: Run integration tests
         if: env.INTEGRATION_SKIP != 'true'
         env:
-          INTEGRATION_TEST_BASE_URL: http://localhost:3000
-          INTEGRATION_POD_BASE_URL: http://localhost:3000/alice/
+          INTEGRATION_TEST_BASE_URL: http://localhost:${{ env.CSS_PORT }}
+          INTEGRATION_POD_BASE_URL: http://localhost:${{ env.CSS_PORT }}/alice/
         run: npm run test:integration
         continue-on-error: true

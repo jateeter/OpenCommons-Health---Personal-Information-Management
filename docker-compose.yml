@@ -1,5 +1,3 @@
-version: '3.9'
-
 # ─── Local / CI deployment stack ─────────────────────────────────────────────
 #
 # Brings up two services:
@@ -9,10 +7,14 @@ version: '3.9'
 # Quick-start:
 #   docker compose up --build
 #
+# Configurable ports (set in .env or shell before running):
+#   CSS_PORT   – Solid Community Server port  (default: 3000)
+#   APP_PORT   – PIM web app host port        (default: 8080)
+#
 # Visit:
-#   http://localhost:8080        PIM app root
-#   http://localhost:8080/healthz  PIM liveness probe
-#   http://localhost:3000        Solid Community Server
+#   http://localhost:${APP_PORT}        PIM app root
+#   http://localhost:${APP_PORT}/healthz  PIM liveness probe
+#   http://localhost:${CSS_PORT}        Solid Community Server
 #
 # Override defaults with a .env file (see .env.example).
 
@@ -24,13 +26,13 @@ services:
       - "-c"
       - "@css:config/default.json"
       - "-p"
-      - "3000"
+      - "${CSS_PORT:-3000}"
     ports:
-      - "3000:3000"
+      - "${CSS_PORT:-3000}:${CSS_PORT:-3000}"
     environment:
       CSS_LOGGING_LEVEL: warn
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-3000}/ || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 15
@@ -44,20 +46,20 @@ services:
       dockerfile: Dockerfile
     image: opencommons-health-pim:local
     ports:
-      - "${APP_PORT:-8080}:8080"
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
     environment:
       NODE_ENV: production
-      PORT: 8080
+      PORT: "${APP_PORT:-8080}"
       HOST: 0.0.0.0
-      SOLID_POD_SERVER_URL: http://css:3000
-      SOLID_OIDC_ISSUER: http://css:3000
+      SOLID_POD_SERVER_URL: "http://css:${CSS_PORT:-3000}"
+      SOLID_OIDC_ISSUER: "http://css:${CSS_PORT:-3000}"
       SOLID_POD_PATH: ${SOLID_POD_PATH:-/health-pim/}
-      SOLID_REDIRECT_URL: http://localhost:${APP_PORT:-8080}/callback
+      SOLID_REDIRECT_URL: "http://localhost:${APP_PORT:-8080}/callback"
     depends_on:
       css:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-8080}/healthz || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
