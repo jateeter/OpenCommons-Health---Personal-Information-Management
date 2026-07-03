@@ -1,0 +1,65 @@
+version: '3.9'
+
+# ─── Local / CI deployment stack ─────────────────────────────────────────────
+#
+# Brings up two services:
+#   css  – Community Solid Server (local identity + pod storage)
+#   pim  – OpenCommons Health PIM web app (connects to css)
+#
+# Quick-start:
+#   docker compose up --build
+#
+# Visit:
+#   http://localhost:8080        PIM app root
+#   http://localhost:8080/healthz  PIM liveness probe
+#   http://localhost:3000        Solid Community Server
+#
+# Override defaults with a .env file (see .env.example).
+
+services:
+  # ── Solid Community Server ──────────────────────────────────────────────────
+  css:
+    image: solidcommunityserver/community-solid-server:latest
+    command:
+      - "-c"
+      - "@css:config/default.json"
+      - "-p"
+      - "3000"
+    ports:
+      - "3000:3000"
+    environment:
+      CSS_LOGGING_LEVEL: warn
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── PIM web app ─────────────────────────────────────────────────────────────
+  pim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencommons-health-pim:local
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      HOST: 0.0.0.0
+      SOLID_POD_SERVER_URL: http://css:3000
+      SOLID_OIDC_ISSUER: http://css:3000
+      SOLID_POD_PATH: ${SOLID_POD_PATH:-/health-pim/}
+      SOLID_REDIRECT_URL: http://localhost:${APP_PORT:-8080}/callback
+    depends_on:
+      css:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
