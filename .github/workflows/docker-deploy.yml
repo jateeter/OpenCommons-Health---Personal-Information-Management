@@ -20,8 +20,9 @@ name: Docker Deploy
 #     • CSS health    GET http://localhost:${CSS_PORT}/       → HTTP 200
 #     • PIM root      GET http://localhost:${APP_PORT}/       → packaged HTML UI
 #     • PIM liveness  GET http://localhost:${APP_PORT}/livez  → {"ok":true}
+#     • API docs       GET http://localhost:${APP_PORT}/api/docs and /openapi.json
 #     • Solid auth     GET http://localhost:${APP_PORT}/api/status → {"ok":true}
-#     • Domain API     authenticated condition + insurance CRUD against the pod
+#     • Domain API     authenticated CRUD smoke coverage for all nine domains
 #     • Persistence    a condition remains readable after restarting CSS + PIM
 #
 # Stage 3 – Image push (main branch only)
@@ -113,6 +114,8 @@ jobs:
           done
           curl -sf http://127.0.0.1:18080/livez | grep -F '"ok":true'
           curl -sf http://127.0.0.1:18080/ | grep -F 'OpenCommons Health'
+          curl -sf http://127.0.0.1:18080/openapi.json | grep -F '"/api/resources/insurance-policies"'
+          curl -sf http://127.0.0.1:18080/api/docs | grep -F 'OpenCommons Health API Docs'
 
   # ── Stage 2: Smoke-test the full compose stack ─────────────────────────────
   smoke-test:

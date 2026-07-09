@@ -57,7 +57,7 @@ Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medicati
 - **Docker Engine** with Docker Compose v2 for the complete local deployment
 - **Node.js 22 or 24** for development without containers
 
-## Quickstart (under 10 minutes)
+## Quickstart: container deployment (under 10 minutes)
 
 ```bash
 # 1. Clone
@@ -68,21 +68,28 @@ cd OpenCommons-Health---Personal-Information-Management
 cp .env.example .env
 # Edit CSS_ACCOUNT_PASSWORD in .env
 
-# 3. Start CSS, provision the account/WebID/pod/client credentials, and start PIM
-docker compose up --build -d
+# 3. Start CSS, provision the account/WebID/pod/client credentials, start PIM,
+#    and verify UI, OpenAPI docs, readiness, and all nine domain APIs
+./scripts/local-container-up.sh
 
-# 4. Verify UI, authenticated readiness, and real domain CRUD
-./scripts/verify-deployment.sh
+# Optional: verify again with explicit, conflict-free ports
+APP_PORT=18080 CSS_PORT=13000 ./scripts/local-container-up.sh
 ```
 
-Open `http://localhost:8080`. CSS is available locally at
-`http://localhost:3000`. Pod data is retained in the `css_data` named volume;
+Open `http://localhost:${APP_PORT:-8080}`. CSS is available locally at
+`http://localhost:${CSS_PORT:-3000}`. Pod data is retained in the `css_data` named volume;
 generated client credentials are retained separately in `css_credentials` and
 mounted read-only into the PIM container. Normal `docker compose down` and
 container rebuilds preserve both. `docker compose down --volumes` deliberately
 deletes the local pod and generated credentials.
 
-Inside the Compose network the CSS base URL is `http://css.localhost:3000`.
+The helper scripts default `COMPOSE_PROJECT_NAME` to
+`opencommons-health-pim-${APP_PORT}-${CSS_PORT}`. That deliberately isolates
+local Solid volumes by port assignment, because Solid WebIDs and client
+credentials include the deployment base URL.
+
+Inside the Compose network the CSS base URL is
+`http://css.localhost:${CSS_PORT:-3000}`.
 That keeps container-to-container DNS working while satisfying Solid-OIDC's
 localhost-only allowance for non-HTTPS local WebIDs.
 
@@ -92,10 +99,49 @@ The bootstrap is safe to rerun:
 docker compose up bootstrap
 ```
 
+Stop the container stack without deleting Solid data:
+
+```bash
+./scripts/local-container-down.sh
+```
+
+## Quickstart: host-local app with containerized Solid
+
+Use this mode when you want the PIM HTTP server running directly on your host
+while keeping the local Solid Community Server repeatable in Docker.
+
+```bash
+cp .env.example .env
+# Edit CSS_ACCOUNT_PASSWORD in .env
+
+# Terminal 1: start/provision CSS and write .solid/host-local-${APP_PORT}-${CSS_PORT}.env
+APP_PORT=18080 CSS_PORT=13000 ./scripts/local-host-solid-up.sh
+
+# Terminal 1: start the host Node app using the generated Solid config
+./scripts/local-host-start.sh
+
+# Terminal 2: verify the running host-local deployment
+./scripts/verify-deployment.sh http://localhost:18080 http://localhost:13000
+```
+
+The host-local Solid stack uses a port-scoped Compose project and CSS volume,
+and stores generated client credentials under `.solid/host-${CSS_PORT}/`.
+The generated `.solid/host-local-${APP_PORT}-${CSS_PORT}.env` file derives all
+URLs from `APP_PORT`, `CSS_PORT`, and `CSS_POD_NAME`, avoiding manual URL/port
+drift. The `.solid/` directory is gitignored.
+
 ### Application UI and domain API
 
 The production server serves the browser application at `http://localhost:8080`
 and exposes the Solid-backed domain API under `/api/resources/:domain`.
+
+OpenAPI/Swagger-compatible documentation is available in every deployment:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /openapi.json` | OpenAPI 3.1 contract |
+| `GET /swagger.json` | Swagger-compatible alias for the same contract |
+| `GET /api/docs` | Local, offline API documentation and action runner |
 
 ```bash
 SOLID_POD_SERVER_URL=http://localhost:3000
@@ -124,6 +170,10 @@ Supported domain names are `profiles`, `conditions`, `medications`, `allergies`,
 `GET /livez` reports process liveness. `GET /healthz` and `GET /api/status`
 report readiness of the authenticated Solid-backed application and perform a
 read-only authenticated pod access probe.
+
+The deployment verifier exercises these operations for all supported domains:
+`profiles`, `conditions`, `medications`, `allergies`, `immunizations`,
+`vital-signs`, `providers`, `lab-results`, and `insurance-policies`.
 
 ### Sample usage
 
@@ -254,6 +304,11 @@ tests/
 
 ```bash
 npm run build              # Compile TypeScript → dist/
+npm run validate:openapi   # Verify OpenAPI coverage for all domain actions
+npm run local:container    # Start + verify full container deployment
+npm run local:host-solid   # Start/provision local CSS for host-run PIM
+npm run local:host-start   # Build + start host PIM from .solid/host-local.env
+npm run verify:deployment  # Smoke-test a running deployment
 npm test                   # Run Jest unit + round-trip tests (97+ tests)
 npm run test:integration   # Run integration tests (requires live CSS + env vars)
 npm run test:integration:docker  # Run integration tests in Docker

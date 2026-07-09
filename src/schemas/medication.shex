@@ -10,14 +10,20 @@ PREFIX rxnorm:   <http://www.nlm.nih.gov/research/umls/rxnorm/>
 
 <MedicationShape> {
   a                      [ schema:Drug ]              ;
-  health:medicationCode  <CodingShape>                ;
+  health:codingSystem    xsd:anyURI                   ;
+  health:codingCode      xsd:string                   ;
+  health:codingDisplay   xsd:string?                  ;
   health:medicationStatus [
     health:MedActive
     health:MedCompleted
     health:MedStopped
     health:MedOnHold
   ]                                                    ;
-  health:dosage          <DosageShape>?               ;
+  health:dosageText      xsd:string?                  ;
+  health:dosageTiming    xsd:string?                  ;
+  health:dosageRoute     xsd:string?                  ;
+  health:doseValue       xsd:decimal?                 ;
+  health:doseUnit        xsd:string?                  ;
   health:startDate       xsd:date?                    ;
   health:endDate         xsd:date?                    ;
   health:prescriber      xsd:string?                  ;
@@ -25,18 +31,4 @@ PREFIX rxnorm:   <http://www.nlm.nih.gov/research/umls/rxnorm/>
   schema:description     xsd:string?                  ;
   schema:dateCreated     xsd:dateTime?                ;
   schema:dateModified    xsd:dateTime?                ;
-}
-
-<DosageShape> {
-  health:dosageText      xsd:string?  ;
-  health:dosageTiming    xsd:string?  ;
-  health:dosageRoute     xsd:string?  ;
-  health:doseValue       xsd:decimal? ;
-  health:doseUnit        xsd:string?  ;
-}
-
-<CodingShape> {
-  health:codingSystem    xsd:anyURI   ;
-  health:codingCode      xsd:string   ;
-  health:codingDisplay   xsd:string?  ;
 }

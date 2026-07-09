@@ -3,6 +3,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import path from 'node:path';
 import type { HealthPIM } from './index';
 import { AuthError, ConflictError, NotFoundError, ValidationError } from './errors';
+import { DOMAIN_NAMES, OPENAPI_DOCUMENT } from './openapi';
 
 export interface DomainRepository {
   findAll(): Promise<unknown[]>;
@@ -21,18 +22,6 @@ export interface ApplicationContext {
 }
 
 export type ContextProvider = () => Promise<ApplicationContext>;
-
-export const DOMAIN_NAMES = [
-  'profiles',
-  'conditions',
-  'medications',
-  'allergies',
-  'immunizations',
-  'vital-signs',
-  'providers',
-  'lab-results',
-  'insurance-policies',
-] as const;
 
 export function contextFromPim(
   pim: HealthPIM,
@@ -70,6 +59,12 @@ export function createRequestHandler(
       }
       if (requestUrl.pathname === '/healthz' || requestUrl.pathname === '/api/status') {
         return await sendStatus(provideContext, res);
+      }
+      if (requestUrl.pathname === '/openapi.json' || requestUrl.pathname === '/swagger.json') {
+        return sendJson(res, 200, OPENAPI_DOCUMENT);
+      }
+      if (requestUrl.pathname === '/api/docs') {
+        return servePublicAsset('/api-docs.html', publicDirectory, res);
       }
       if (requestUrl.pathname.startsWith('/api/resources/')) {
         return await handleDomainRequest(req, res, requestUrl, provideContext);
@@ -195,7 +190,7 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 
 function servePublicAsset(requestPath: string, publicDirectory: string, res: ServerResponse): void {
   const asset = requestPath === '/' ? 'index.html' : requestPath.slice(1);
-  const allowed = new Set(['index.html', 'app.js', 'styles.css']);
+  const allowed = new Set(['index.html', 'app.js', 'styles.css', 'api-docs.html']);
   if (!allowed.has(asset)) return sendJson(res, 404, { error: 'Not found' });
   const filePath = path.join(publicDirectory, asset);
   if (!existsSync(filePath)) return sendJson(res, 404, { error: 'UI asset not found' });

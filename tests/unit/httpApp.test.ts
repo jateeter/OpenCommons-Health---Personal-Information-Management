@@ -53,6 +53,31 @@ describe('OpenCommons Health HTTP application', () => {
     });
   });
 
+  it('serves the OpenAPI contract for all domain APIs', async () => {
+    const response = await fetch(`${baseUrl}/openapi.json`);
+    expect(response.status).toBe(200);
+    const body = await response.json() as { openapi: string; paths: Record<string, Record<string, { operationId?: string }>> };
+    expect(body.openapi).toBe('3.1.0');
+    for (const domain of [
+      'profiles',
+      'conditions',
+      'medications',
+      'allergies',
+      'immunizations',
+      'vital-signs',
+      'providers',
+      'lab-results',
+      'insurance-policies',
+    ]) {
+      const operations = body.paths[`/api/resources/${domain}`];
+      expect(operations).toBeDefined();
+      expect(operations.get.operationId).toBeDefined();
+      expect(operations.post.operationId).toBeDefined();
+      expect(operations.put.operationId).toBeDefined();
+      expect(operations.delete.operationId).toBeDefined();
+    }
+  });
+
   it('reports not-ready when the authenticated pod probe fails', async () => {
     context.checkPodAccess = jest.fn(async () => {
       throw new Error('Solid pod read failed');

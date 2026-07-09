@@ -1,0 +1,63 @@
+# ─── Host-local deployment support stack ─────────────────────────────────────
+#
+# Starts only the local Solid infrastructure. Run the PIM app directly on the
+# host with npm start and the generated .solid/host-local.env file.
+#
+# This file intentionally uses localhost as the public CSS base URL because the
+# host Node process and browser call CSS through the host port. The bootstrap
+# service reaches CSS through the Docker service name internally.
+
+services:
+  css:
+    build:
+      context: .
+      dockerfile: Dockerfile.css
+    image: opencommons-health-css:7.1.8-local
+    command:
+      - "-c"
+      - "@css:config/file.json"
+      - "-f"
+      - "/data"
+      - "-p"
+      - "${CSS_PORT:-3000}"
+      - "-b"
+      - "http://localhost:${CSS_PORT:-3000}/"
+    ports:
+      - "127.0.0.1:${CSS_PORT:-3000}:${CSS_PORT:-3000}"
+    environment:
+      CSS_LOGGING_LEVEL: warn
+      OPENCOMMONS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
+      OPENCOMMONS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
+      OPENCOMMONS_POD_NAME: ${CSS_POD_NAME:-alice}
+    volumes:
+      - css_host_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-3000}/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    restart: unless-stopped
+
+  bootstrap:
+    image: node:22-alpine
+    command: ["node", "/bootstrap/provision-css.mjs"]
+    network_mode: "service:css"
+    environment:
+      CSS_BASE_URL: "http://localhost:${CSS_PORT:-3000}/"
+      CSS_PUBLIC_BASE_URL: "http://localhost:${CSS_PORT:-3000}/"
+      CSS_INTERNAL_BASE_URL: "http://localhost:${CSS_PORT:-3000}/"
+      CSS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
+      CSS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
+      CSS_POD_NAME: ${CSS_POD_NAME:-alice}
+      CSS_CLIENT_CREDENTIALS_FILE: /credentials/client-credentials.json
+    volumes:
+      - ./scripts/provision-css.mjs:/bootstrap/provision-css.mjs:ro
+      - ${HOST_CREDENTIALS_DIR:-./.solid/host-3000}:/credentials
+    depends_on:
+      css:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  css_host_data:
