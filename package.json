@@ -5,8 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "tsc && npm run copy:assets",
+    "copy:assets": "mkdir -p dist/public dist/schemas && cp public/* dist/public/ && cp src/schemas/*.shex dist/schemas/",
+    "start": "node dist/server.js",
     "dev": "ts-node src/index.ts",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
@@ -50,6 +51,6 @@
     "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "^22.0.0 || ^24.0.0"
   }
 }
