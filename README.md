@@ -58,7 +58,7 @@ Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medicati
 
 ## Prerequisites
 
-- **Node.js ≥ 18**
+- **Node.js 22 or 24**
 - A running **Solid Community Server** instance (see `localSolidCommunityServer`)
 
 ## Quickstart (under 10 minutes)

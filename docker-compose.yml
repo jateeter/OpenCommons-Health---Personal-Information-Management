@@ -21,7 +21,7 @@
 services:
   # ── Solid Community Server ──────────────────────────────────────────────────
   css:
-    image: solidcommunityserver/community-solid-server:latest
+    image: solidproject/community-server:7.1.8
     command:
       - "-c"
       - "@css:config/default.json"
@@ -62,7 +62,7 @@ services:
       css:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-8080}/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-8080}/livez || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10

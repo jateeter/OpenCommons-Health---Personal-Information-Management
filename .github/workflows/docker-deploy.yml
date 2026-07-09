@@ -18,8 +18,8 @@ name: Docker Deploy
 #   both the PIM web app and the Community Solid Server (CSS), then calls
 #   `scripts/verify-deployment.sh` to assert:
 #     • CSS health    GET http://localhost:${CSS_PORT}/       → HTTP 200
-#     • PIM root      GET http://localhost:${APP_PORT}/       → {"status":"running"}
-#     • PIM liveness  GET http://localhost:${APP_PORT}/healthz → {"ok":true}
+#     • PIM root      GET http://localhost:${APP_PORT}/       → packaged HTML UI
+#     • PIM liveness  GET http://localhost:${APP_PORT}/livez  → {"ok":true}
 #
 # Stage 3 – Image push (main branch only)
 #   The `push` job tags the validated image as `ghcr.io/<owner>/<repo>:latest`
@@ -89,6 +89,24 @@ jobs:
           tags: opencommons-health-pim:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Verify Node runtime and application entrypoint
+        run: |
+          docker run --rm --entrypoint node opencommons-health-pim:ci --version | grep -E '^v22\.'
+          test "$(docker image inspect opencommons-health-pim:ci --format '{{json .Config.Cmd}}')" = '["node","dist/server.js"]'
+
+      - name: Smoke-test the built image
+        run: |
+          docker run --rm -d --name opencommons-health-entrypoint \
+            -p 127.0.0.1:18080:8080 \
+            opencommons-health-pim:ci
+          trap 'docker stop opencommons-health-entrypoint' EXIT
+          for attempt in $(seq 1 20); do
+            curl -sf http://127.0.0.1:18080/livez && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:18080/livez | grep -F '"ok":true'
+          curl -sf http://127.0.0.1:18080/ | grep -F 'OpenCommons Health'
 
   # ── Stage 2: Smoke-test the full compose stack ─────────────────────────────
   smoke-test:
