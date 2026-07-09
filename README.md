@@ -8,6 +8,9 @@ A modern, privacy-first **Personal Information Management (PIM)** application fo
 
 OpenCommons Health PIM lets individuals own and control their health data by storing it in a personal **Solid pod** running on their own machine. All data is modelled as [Linked Data](https://www.w3.org/DesignIssues/LinkedData) (RDF/Turtle) and validated against [ShEx](https://shex.io/) schemas before being written to the pod.
 
+For the authoritative executive-level application summary, see
+[`docs/EXECUTIVE_OVERVIEW.md`](docs/EXECUTIVE_OVERVIEW.md).
+
 ### Architecture
 
 ```
@@ -49,6 +52,20 @@ The following health information categories are supported, each with a validated
 | Insurance Policies | `src/schemas/insurance.shex` | `InsuranceRepository` |
 
 Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medications), **CVX** (vaccines), **LOINC** (lab results, vital signs), **schema.org** (profiles, providers).
+
+See [`docs/HL7_FHIR_ALIGNMENT.md`](docs/HL7_FHIR_ALIGNMENT.md) for the
+HL7/FHIR reference model, domain-to-FHIR resource mapping, PHI schema, and
+owner-approved anonymized release contract.
+
+For the next Epic integration cycle, see:
+
+- [`docs/EPIC_INTEGRATION_ROADMAP.md`](docs/EPIC_INTEGRATION_ROADMAP.md) for
+  SMART on FHIR, Epic data stream, workflow, document, messaging, and issue
+  management roadmap.
+- [`docs/END_USER_EPIC_WORKFLOWS.md`](docs/END_USER_EPIC_WORKFLOWS.md) for the
+  patient-facing Epic/MyChart and Annual Medicare Wellness Evaluation workflow.
+- [`docs/OPERATIONAL_STACK_DEPLOYMENT.md`](docs/OPERATIONAL_STACK_DEPLOYMENT.md)
+  for the current local stack and target Epic-enabled deployment overview.
 
 ---
 
@@ -142,6 +159,14 @@ OpenAPI/Swagger-compatible documentation is available in every deployment:
 | `GET /openapi.json` | OpenAPI 3.1 contract |
 | `GET /swagger.json` | Swagger-compatible alias for the same contract |
 | `GET /api/docs` | Local, offline API documentation and action runner |
+| `GET /fhir/metadata` | FHIR CapabilityStatement-style metadata |
+| `GET /api/privacy/schema` | PHI and anonymized release schema artifacts |
+
+Identifiable PHI is only available through the authenticated owner-facing PIM
+resource API. External release flows must use `GET
+/api/anonymized/resources/:domain` with `x-opencommons-owner-approved: true`
+and a non-empty `x-opencommons-release-purpose` header; those responses remove
+direct identifiers and generalize exact dates.
 
 ```bash
 SOLID_POD_SERVER_URL=http://localhost:3000
@@ -174,6 +199,17 @@ read-only authenticated pod access probe.
 The deployment verifier exercises these operations for all supported domains:
 `profiles`, `conditions`, `medications`, `allergies`, `immunizations`,
 `vital-signs`, `providers`, `lab-results`, and `insurance-policies`.
+
+Optional Playwright E2E automation for the Annual Medicare Wellness Evaluation
+use case can be run against either local deployment mode:
+
+```bash
+APP_URL=http://localhost:18080 npm run test:e2e:playwright
+```
+
+See
+[`tests/e2e/playwright/medicare-wellness-evaluation.md`](tests/e2e/playwright/medicare-wellness-evaluation.md)
+for the use case and acceptance criteria.
 
 ### Sample usage
 

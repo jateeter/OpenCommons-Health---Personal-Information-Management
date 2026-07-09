@@ -1,6 +1,7 @@
 import http, { type Server } from 'node:http';
 import { createRequestHandler, type ApplicationContext, type DomainRepository } from '../../src/httpApp';
 import { ValidationError } from '../../src/errors';
+import { containsDirectIdentifier, OWNER_APPROVAL_HEADER, RELEASE_PURPOSE_HEADER } from '../../src/privacy';
 
 describe('OpenCommons Health HTTP application', () => {
   let server: Server;
@@ -9,7 +10,15 @@ describe('OpenCommons Health HTTP application', () => {
   let context: ApplicationContext;
 
   beforeEach(async () => {
-    records = [{ url: 'http://pod/conditions/1', status: 'active' }];
+    records = [{
+      url: 'http://pod/conditions/1',
+      code: { system: 'http://snomed.info/id/', code: '162864005', display: 'Smoke condition' },
+      status: 'active',
+      onsetDate: '2026-01-15',
+      notes: 'Jane Doe private note',
+      recordedBy: 'Dr Named Provider',
+      createdAt: '2026-01-15T12:00:00Z',
+    }];
     const repository: DomainRepository = {
       findAll: jest.fn(async () => records),
       findByUrl: jest.fn(async (url: string) => records.find((item) => item.url === url) ?? null),
@@ -78,6 +87,26 @@ describe('OpenCommons Health HTTP application', () => {
     }
   });
 
+  it('serves FHIR capability and PHI privacy schema metadata', async () => {
+    const metadata = await fetch(`${baseUrl}/fhir/metadata`);
+    expect(metadata.status).toBe(200);
+    await expect(metadata.json()).resolves.toMatchObject({
+      resourceType: 'CapabilityStatement',
+      fhirVersion: '5.0.0',
+    });
+
+    const schema = await fetch(`${baseUrl}/api/privacy/schema`);
+    expect(schema.status).toBe(200);
+    await expect(schema.json()).resolves.toMatchObject({
+      identifiable: {
+        title: 'OpenCommons Personal Health Information Pod Record',
+      },
+      anonymizedRelease: {
+        title: 'OpenCommons Anonymized Health Information Release',
+      },
+    });
+  });
+
   it('reports not-ready when the authenticated pod probe fails', async () => {
     context.checkPodAccess = jest.fn(async () => {
       throw new Error('Solid pod read failed');
@@ -123,6 +152,52 @@ describe('OpenCommons Health HTTP application', () => {
     await expect(response.json()).resolves.toEqual({
       error: 'The PIM is not authenticated with the configured Solid server.',
     });
+  });
+
+  it('rejects anonymized release when the Solid session is not authenticated', async () => {
+    context.authenticated = false;
+    const response = await fetch(`${baseUrl}/api/anonymized/resources/conditions`, {
+      headers: {
+        [OWNER_APPROVAL_HEADER]: 'true',
+        [RELEASE_PURPOSE_HEADER]: 'research-quality-check',
+      },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('requires explicit owner approval for anonymized release', async () => {
+    const response = await fetch(`${baseUrl}/api/anonymized/resources/conditions`);
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: expect.stringContaining(OWNER_APPROVAL_HEADER),
+    });
+  });
+
+  it('returns only anonymized data from owner-approved release endpoints', async () => {
+    const response = await fetch(`${baseUrl}/api/anonymized/resources/conditions`, {
+      headers: {
+        [OWNER_APPROVAL_HEADER]: 'true',
+        [RELEASE_PURPOSE_HEADER]: 'patient-approved-quality-study',
+      },
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { data: unknown[]; release: Record<string, unknown> };
+    expect(body.release).toMatchObject({
+      anonymized: true,
+      ownerApproved: true,
+      purpose: 'patient-approved-quality-study',
+    });
+    expect(body.data).toEqual([{
+      domain: 'conditions',
+      fhirResourceType: 'Condition',
+      anonymized: true,
+      data: {
+        code: { system: 'http://snomed.info/id/', code: '162864005', display: 'Smoke condition' },
+        status: 'active',
+        onsetYear: 2026,
+      },
+    }]);
+    expect(containsDirectIdentifier(body.data)).toBe(false);
   });
 
   it('reports not-ready without probing the pod when the session is unauthenticated', async () => {

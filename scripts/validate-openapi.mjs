@@ -24,12 +24,26 @@ for (const domain of domains) {
   if (!OPENAPI_DOCUMENT.components?.schemas?.[definition.title]) {
     throw new Error(`Missing component schema ${definition.title}`);
   }
+
+  const anonymizedPath = `/api/anonymized/resources/${domain}`;
+  const anonymized = OPENAPI_DOCUMENT.paths?.[anonymizedPath]?.get;
+  if (!anonymized) throw new Error(`Missing anonymized release action for ${anonymizedPath}`);
+  const headerNames = new Set((anonymized.parameters ?? []).map((parameter) => parameter.name));
+  for (const header of ['x-opencommons-owner-approved', 'x-opencommons-release-purpose']) {
+    if (!headerNames.has(header)) throw new Error(`Missing ${header} parameter for ${anonymizedPath}`);
+  }
 }
 
-for (const utilityPath of ['/livez', '/healthz', '/api/status']) {
+for (const utilityPath of ['/livez', '/healthz', '/api/status', '/fhir/metadata', '/api/privacy/schema']) {
   if (!OPENAPI_DOCUMENT.paths?.[utilityPath]?.get) {
     throw new Error(`Missing GET ${utilityPath}`);
   }
 }
 
-console.log(`OpenAPI contract covers ${domains.length} domains and ${domains.length * expectedMethods.length} domain actions.`);
+for (const schema of ['AnonymizedRelease', 'FhirCapabilityStatement']) {
+  if (!OPENAPI_DOCUMENT.components?.schemas?.[schema]) {
+    throw new Error(`Missing component schema ${schema}`);
+  }
+}
+
+console.log(`OpenAPI contract covers ${domains.length} domains, ${domains.length * expectedMethods.length} owner actions, and ${domains.length} anonymized release actions.`);
