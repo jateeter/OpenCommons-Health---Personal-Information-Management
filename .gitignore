@@ -30,3 +30,4 @@ config/local.json
 
 # ─── Solid Pod local data ────────────────────────────────────────────────────
 .solid/
+client-credentials.json

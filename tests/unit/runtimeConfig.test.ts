@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { loadServerRuntimeConfig, loadSolidRuntimeConfig } from '../../src/runtimeConfig';
 
 describe('runtime configuration', () => {
@@ -28,6 +31,43 @@ describe('runtime configuration', () => {
       SOLID_CLIENT_ID: 'client-id',
       SOLID_CLIENT_SECRET: 'client-secret',
     }).oidcIssuer).toBe('http://localhost:3000');
+  });
+
+  it('loads bootstrap-generated client credentials from a mounted file', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'opencommons-credentials-'));
+    const file = join(directory, 'client-credentials.json');
+    try {
+      writeFileSync(file, JSON.stringify({
+        clientId: 'file-client-id',
+        clientSecret: 'file-client-secret',
+        resource: 'http://css:3000/.account/client-credentials/1',
+      }));
+      expect(loadSolidRuntimeConfig({
+        SOLID_POD_SERVER_URL: 'http://css:3000',
+        SOLID_POD_BASE_URL: 'http://css:3000/alice/',
+        SOLID_CLIENT_CREDENTIALS_FILE: file,
+      })).toMatchObject({
+        clientId: 'file-client-id',
+        clientSecret: 'file-client-secret',
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an invalid client credentials file', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'opencommons-credentials-'));
+    const file = join(directory, 'client-credentials.json');
+    try {
+      writeFileSync(file, JSON.stringify({ clientId: 'missing-secret' }));
+      expect(() => loadSolidRuntimeConfig({
+        SOLID_POD_SERVER_URL: 'http://css:3000',
+        SOLID_POD_BASE_URL: 'http://css:3000/alice/',
+        SOLID_CLIENT_CREDENTIALS_FILE: file,
+      })).toThrow('must contain non-empty clientId and clientSecret strings');
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('fails with the exact missing runtime setting', () => {
