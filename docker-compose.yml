@@ -1,8 +1,9 @@
 # ─── Local / CI deployment stack ─────────────────────────────────────────────
 #
-# Brings up two services:
-#   css  – Community Solid Server (local identity + pod storage)
-#   pim  – OpenCommons Health PIM web app (connects to css)
+# Brings up three services:
+#   css        – persistent Community Solid Server identity + pod storage
+#   bootstrap  – idempotent account, pod, WebID, and credentials provisioning
+#   pim        – OpenCommons Health PIM web app
 #
 # Quick-start:
 #   docker compose up --build
@@ -21,16 +22,32 @@
 services:
   # ── Solid Community Server ──────────────────────────────────────────────────
   css:
-    image: solidproject/community-server:7.1.8
+    build:
+      context: .
+      dockerfile: Dockerfile.css
+    image: opencommons-health-css:7.1.8-local
     command:
       - "-c"
-      - "@css:config/default.json"
+      - "@css:config/file.json"
+      - "-f"
+      - "/data"
       - "-p"
       - "${CSS_PORT:-3000}"
+      - "-b"
+      - "http://css.localhost:${CSS_PORT:-3000}/"
     ports:
       - "127.0.0.1:${CSS_PORT:-3000}:${CSS_PORT:-3000}"
     environment:
       CSS_LOGGING_LEVEL: warn
+      OPENCOMMONS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
+      OPENCOMMONS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
+      OPENCOMMONS_POD_NAME: ${CSS_POD_NAME:-alice}
+    volumes:
+      - css_data:/data
+    networks:
+      default:
+        aliases:
+          - css.localhost
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-3000}/ || exit 1"]
       interval: 5s
@@ -38,6 +55,24 @@ services:
       retries: 15
       start_period: 15s
     restart: unless-stopped
+
+  # ── Idempotent CSS provisioning ────────────────────────────────────────────
+  bootstrap:
+    image: node:22-alpine
+    command: ["node", "/bootstrap/provision-css.mjs"]
+    environment:
+      CSS_BASE_URL: "http://css.localhost:${CSS_PORT:-3000}/"
+      CSS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
+      CSS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
+      CSS_POD_NAME: ${CSS_POD_NAME:-alice}
+      CSS_CLIENT_CREDENTIALS_FILE: /credentials/client-credentials.json
+    volumes:
+      - ./scripts/provision-css.mjs:/bootstrap/provision-css.mjs:ro
+      - css_credentials:/credentials
+    depends_on:
+      css:
+        condition: service_healthy
+    restart: "no"
 
   # ── PIM web app ─────────────────────────────────────────────────────────────
   pim:
@@ -51,16 +86,17 @@ services:
       NODE_ENV: production
       PORT: "${APP_PORT:-8080}"
       HOST: 0.0.0.0
-      SOLID_POD_SERVER_URL: "http://css:${CSS_PORT:-3000}"
-      SOLID_OIDC_ISSUER: "http://css:${CSS_PORT:-3000}"
-      SOLID_POD_BASE_URL: ${SOLID_POD_BASE_URL:-http://css:3000/alice/}
+      SOLID_POD_SERVER_URL: "http://css.localhost:${CSS_PORT:-3000}"
+      SOLID_OIDC_ISSUER: "http://css.localhost:${CSS_PORT:-3000}"
+      SOLID_POD_BASE_URL: "http://css.localhost:${CSS_PORT:-3000}/${CSS_POD_NAME:-alice}/"
       SOLID_POD_PATH: ${SOLID_POD_PATH:-/health-pim/}
       SOLID_REDIRECT_URL: "http://localhost:${APP_PORT:-8080}/callback"
-      SOLID_CLIENT_ID: ${SOLID_CLIENT_ID:-}
-      SOLID_CLIENT_SECRET: ${SOLID_CLIENT_SECRET:-}
+      SOLID_CLIENT_CREDENTIALS_FILE: /run/opencommons/client-credentials.json
+    volumes:
+      - css_credentials:/run/opencommons:ro
     depends_on:
-      css:
-        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-8080}/livez || exit 1"]
       interval: 5s
@@ -68,3 +104,7 @@ services:
       retries: 10
       start_period: 20s
     restart: unless-stopped
+
+volumes:
+  css_data:
+  css_credentials:

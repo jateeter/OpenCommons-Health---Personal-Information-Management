@@ -1,0 +1,6 @@
+FROM solidproject/community-server:7.1.8
+
+COPY scripts/css-entrypoint.sh /usr/local/bin/opencommons-css-entrypoint
+
+ENTRYPOINT ["/usr/local/bin/opencommons-css-entrypoint"]
+CMD ["-c", "@css:config/file.json", "-f", "/data", "-p", "3000", "-b", "http://css.localhost:3000/"]

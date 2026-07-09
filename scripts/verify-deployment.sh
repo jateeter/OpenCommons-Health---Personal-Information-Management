@@ -74,8 +74,27 @@ echo "${ui}" | grep -q "OpenCommons Health" || {
 }
 echo "  OK – packaged application UI is available"
 
+# ── 4. Validate authenticated Solid readiness and domain CRUD ─────────────────
+check_json "authenticated PIM readiness" "${PIM_URL}/api/status" "ok" "true"
+echo "Checking authenticated conditions CRUD..."
+created=$(curl -fsS -X POST "${PIM_URL}/api/resources/conditions" \
+  -H "content-type: application/json" \
+  --data '{"code":{"system":"http://snomed.info/id/","code":"162864005","display":"Deployment smoke test"},"status":"active","notes":"Created by verify-deployment.sh"}')
+resource_url=$(printf '%s' "${created}" | sed -n 's/.*"url":"\([^"]*\)".*/\1/p')
+if [ -z "${resource_url}" ]; then
+  echo "ERROR: create response did not contain a resource URL: ${created}"
+  exit 1
+fi
+curl -fsS --get "${PIM_URL}/api/resources/conditions" \
+  --data-urlencode "url=${resource_url}" | grep -q '"code":"162864005"' || {
+  echo "ERROR: created condition could not be read back."
+  exit 1
+}
+curl -fsS -X DELETE --get "${PIM_URL}/api/resources/conditions" \
+  --data-urlencode "url=${resource_url}"
+echo "  OK – create, read, and delete succeeded"
+
 echo ""
 echo "All deployment smoke tests passed."
 echo "  PIM  : ${PIM_URL}"
 echo "  CSS  : ${CSS_URL}"
-echo "  NOTE : authenticated pod readiness requires provisioned Solid credentials."

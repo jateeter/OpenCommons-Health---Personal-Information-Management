@@ -27,12 +27,8 @@ OpenCommons Health PIM lets individuals own and control their health data by sto
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Related Repositories
-
-| Repository | Purpose |
-|---|---|
-| **OpenCommons-Health---Personal-Information-Management** *(this repo)* | TypeScript PIM library – types, schemas, Solid auth, pod client, repositories |
-| **localSolidCommunityServer** *(coming soon)* | Docker / configuration for the local single-user CSS pod that backs this application |
+The deployment in this repository includes the application, persistent local
+Solid infrastructure, and an idempotent identity/pod bootstrap.
 
 ---
 
@@ -58,34 +54,42 @@ Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medicati
 
 ## Prerequisites
 
-- **Node.js 22 or 24**
-- A running **Solid Community Server** instance (see `localSolidCommunityServer`)
+- **Docker Engine** with Docker Compose v2 for the complete local deployment
+- **Node.js 22 or 24** for development without containers
 
 ## Quickstart (under 10 minutes)
 
 ```bash
-# 1. Clone and install
+# 1. Clone
 git clone https://github.com/jateeter/OpenCommons-Health---Personal-Information-Management.git
 cd OpenCommons-Health---Personal-Information-Management
-npm install                  # ~30 s
 
-# 2. Copy environment template
+# 2. Configure the local account (use a private, strong password)
 cp .env.example .env
-# Edit .env – fill in SOLID_CLIENT_ID / SOLID_CLIENT_SECRET if running against CSS
+# Edit CSS_ACCOUNT_PASSWORD in .env
 
-# 3. Build
-npm run build                # compile TypeScript → dist/
+# 3. Start CSS, provision the account/WebID/pod/client credentials, and start PIM
+docker compose up --build -d
 
-# 4. Run unit + round-trip tests (no server required)
-npm test                     # 97+ tests, should pass in < 10 s
+# 4. Verify UI, authenticated readiness, and real domain CRUD
+./scripts/verify-deployment.sh
+```
 
-# 5. (Optional) run integration tests against a live CSS endpoint
-#    Requires a running CSS and credentials in .env / environment:
-#    npm run test:integration
+Open `http://localhost:8080`. CSS is available locally at
+`http://localhost:3000`. Pod data is retained in the `css_data` named volume;
+generated client credentials are retained separately in `css_credentials` and
+mounted read-only into the PIM container. Normal `docker compose down` and
+container rebuilds preserve both. `docker compose down --volumes` deliberately
+deletes the local pod and generated credentials.
 
-# 6. (Optional) run integration tests in Docker (no local CSS required)
-#    Requires Docker + Docker Compose v2:
-#    npm run test:integration:docker
+Inside the Compose network the CSS base URL is `http://css.localhost:3000`.
+That keeps container-to-container DNS working while satisfying Solid-OIDC's
+localhost-only allowance for non-HTTPS local WebIDs.
+
+The bootstrap is safe to rerun:
+
+```bash
+docker compose up bootstrap
 ```
 
 ### Application UI and domain API
@@ -97,11 +101,13 @@ and exposes the Solid-backed domain API under `/api/resources/:domain`.
 SOLID_POD_SERVER_URL=http://localhost:3000
 SOLID_POD_BASE_URL=http://localhost:3000/alice/
 SOLID_POD_PATH=/health-pim/
-SOLID_CLIENT_ID=...
-SOLID_CLIENT_SECRET=...
+SOLID_CLIENT_CREDENTIALS_FILE=/secure/path/client-credentials.json
 npm run build
 npm start
 ```
+
+Direct `SOLID_CLIENT_ID` and `SOLID_CLIENT_SECRET` environment variables remain
+supported and take precedence over the credentials file.
 
 Supported domain names are `profiles`, `conditions`, `medications`, `allergies`,
 `immunizations`, `vital-signs`, `providers`, `lab-results`, and

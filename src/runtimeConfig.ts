@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 export interface ServerRuntimeConfig {
   host: string;
   port: number;
@@ -34,6 +36,7 @@ export function loadSolidRuntimeConfig(env: Environment = process.env): SolidRun
   const redirectUrl = optionalHttpUrl(env, 'SOLID_REDIRECT_URL');
   const rawPath = env.SOLID_POD_PATH?.trim() || '/health-pim/';
   const podPath = `/${rawPath.replace(/^\/+|\/+$/g, '')}/`;
+  const credentials = loadClientCredentials(env);
 
   return {
     podServerUrl,
@@ -41,9 +44,49 @@ export function loadSolidRuntimeConfig(env: Environment = process.env): SolidRun
     podBaseUrl: requiredHttpUrl(env, 'SOLID_POD_BASE_URL', true),
     podPath,
     redirectUrl,
-    clientId: required(env, 'SOLID_CLIENT_ID'),
-    clientSecret: required(env, 'SOLID_CLIENT_SECRET'),
+    clientId: credentials.clientId,
+    clientSecret: credentials.clientSecret,
   };
+}
+
+function loadClientCredentials(env: Environment): { clientId: string; clientSecret: string } {
+  const clientId = env.SOLID_CLIENT_ID?.trim();
+  const clientSecret = env.SOLID_CLIENT_SECRET?.trim();
+  if (clientId || clientSecret) {
+    if (!clientId) throw new Error('SOLID_CLIENT_ID is required when SOLID_CLIENT_SECRET is set.');
+    if (!clientSecret) throw new Error('SOLID_CLIENT_SECRET is required when SOLID_CLIENT_ID is set.');
+    return { clientId, clientSecret };
+  }
+
+  const file = env.SOLID_CLIENT_CREDENTIALS_FILE?.trim();
+  if (!file) {
+    throw new Error(
+      'SOLID_CLIENT_ID and SOLID_CLIENT_SECRET, or SOLID_CLIENT_CREDENTIALS_FILE, are required to initialize the Solid-backed domain APIs.',
+    );
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Unable to read SOLID_CLIENT_CREDENTIALS_FILE ${file}: ${reason}`);
+  }
+  if (!isCredentials(parsed)) {
+    throw new Error(
+      `SOLID_CLIENT_CREDENTIALS_FILE ${file} must contain non-empty clientId and clientSecret strings.`,
+    );
+  }
+  return { clientId: parsed.clientId.trim(), clientSecret: parsed.clientSecret.trim() };
+}
+
+function isCredentials(value: unknown): value is { clientId: string; clientSecret: string } {
+  if (!value || typeof value !== 'object') return false;
+  const credentials = value as Record<string, unknown>;
+  return typeof credentials.clientId === 'string'
+    && credentials.clientId.trim().length > 0
+    && typeof credentials.clientSecret === 'string'
+    && credentials.clientSecret.trim().length > 0;
 }
 
 function required(env: Environment, name: string): string {

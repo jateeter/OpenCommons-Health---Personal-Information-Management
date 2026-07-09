@@ -20,6 +20,9 @@ name: Docker Deploy
 #     • CSS health    GET http://localhost:${CSS_PORT}/       → HTTP 200
 #     • PIM root      GET http://localhost:${APP_PORT}/       → packaged HTML UI
 #     • PIM liveness  GET http://localhost:${APP_PORT}/livez  → {"ok":true}
+#     • Solid auth     GET http://localhost:${APP_PORT}/api/status → {"ok":true}
+#     • Domain API     authenticated create/read/delete against the local pod
+#     • Persistence    a condition remains readable after restarting CSS + PIM
 #
 # Stage 3 – Image push (main branch only)
 #   The `push` job tags the validated image as `ghcr.io/<owner>/<repo>:latest`
@@ -53,6 +56,9 @@ env:
   # Configurable service ports – override via repository/environment variables.
   CSS_PORT: "3000"
   APP_PORT: "8080"
+  CSS_ACCOUNT_EMAIL: alice@example.test
+  CSS_ACCOUNT_PASSWORD: ci-only-opencommons-password
+  CSS_POD_NAME: alice
 
 jobs:
   # ── Stage 1: Build the production Docker image ─────────────────────────────
@@ -136,6 +142,24 @@ jobs:
             http://localhost:${{ env.APP_PORT }} \
             http://localhost:${{ env.CSS_PORT }}
 
+      - name: Verify pod and credential persistence across restart
+        run: |
+          created="$(curl -fsS -X POST "http://localhost:${APP_PORT}/api/resources/conditions" \
+            -H "content-type: application/json" \
+            --data '{"code":{"system":"http://snomed.info/id/","code":"162864005","display":"Persistence test"},"status":"active"}')"
+          resource_url="$(printf '%s' "${created}" | jq -r '.data.url')"
+          test -n "${resource_url}"
+          test "${resource_url}" != "null"
+          docker compose restart css pim
+          for attempt in $(seq 1 40); do
+            curl -fsS "http://localhost:${APP_PORT}/api/status" | grep -F '"ok":true' && break
+            sleep 3
+          done
+          curl -fsS --get "http://localhost:${APP_PORT}/api/resources/conditions" \
+            --data-urlencode "url=${resource_url}" | grep -F '"code":"162864005"'
+          docker compose up --force-recreate --no-deps bootstrap
+          docker compose logs bootstrap | grep -F "Reusing client credentials"
+
       - name: Show container logs on failure
         if: failure()
         run: |
@@ -143,6 +167,8 @@ jobs:
           docker compose logs pim || true
           echo "=== CSS logs ==="
           docker compose logs css || true
+          echo "=== Bootstrap logs ==="
+          docker compose logs bootstrap || true
 
       - name: Tear down compose stack
         if: always()
