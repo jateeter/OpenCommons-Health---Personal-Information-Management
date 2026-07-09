@@ -184,8 +184,15 @@ describe('ConditionRepository', () => {
     });
 
     it('throws NotFoundError when the resource does not exist on the pod', async () => {
-      mockGetDataset.mockRejectedValue(new Error('404 Not Found'));
+      mockGetDataset.mockRejectedValue(fetchError(404));
       await expect(repo.update(savedCondition)).rejects.toThrow(NotFoundError);
+    });
+
+    it('does not collapse non-404 update failures into NotFoundError', async () => {
+      mockGetDataset.mockRejectedValue(fetchError(403));
+      await expect(repo.update(savedCondition)).rejects.toMatchObject({
+        response: { status: 403 },
+      });
     });
   });
 
@@ -193,9 +200,16 @@ describe('ConditionRepository', () => {
 
   describe('findByUrl()', () => {
     it('returns null when the resource is not found', async () => {
-      mockGetDataset.mockRejectedValue(new Error('404 Not Found'));
+      mockGetDataset.mockRejectedValue(fetchError(404));
       const result = await repo.findByUrl(RESOURCE_URL);
       expect(result).toBeNull();
+    });
+
+    it('propagates non-404 read failures instead of returning null', async () => {
+      mockGetDataset.mockRejectedValue(fetchError(401));
+      await expect(repo.findByUrl(RESOURCE_URL)).rejects.toMatchObject({
+        response: { status: 401 },
+      });
     });
 
     it('returns the condition when the dataset contains the expected Thing', async () => {
@@ -270,3 +284,7 @@ describe('ConditionRepository', () => {
     });
   });
 });
+
+function fetchError(status: number): Error & { response: { status: number } } {
+  return Object.assign(new Error(`${status} from Solid`), { response: { status } });
+}

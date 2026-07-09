@@ -27,4 +27,7 @@ jobs:
         run: |
           test -f dist/server.js
           test -f dist/public/index.html
-          test -f dist/schemas/condition.shex
+          for schema in src/schemas/*.shex; do
+            test -f "dist/schemas/$(basename "${schema}")"
+          done
+          node -e "const { loadAllSchemas } = require('./dist/schemas'); const schemas = loadAllSchemas(); if (Object.keys(schemas).length < 9) throw new Error('missing schemas from dist');"

@@ -21,7 +21,7 @@ name: Docker Deploy
 #     • PIM root      GET http://localhost:${APP_PORT}/       → packaged HTML UI
 #     • PIM liveness  GET http://localhost:${APP_PORT}/livez  → {"ok":true}
 #     • Solid auth     GET http://localhost:${APP_PORT}/api/status → {"ok":true}
-#     • Domain API     authenticated create/read/delete against the local pod
+#     • Domain API     authenticated condition + insurance CRUD against the pod
 #     • Persistence    a condition remains readable after restarting CSS + PIM
 #
 # Stage 3 – Image push (main branch only)

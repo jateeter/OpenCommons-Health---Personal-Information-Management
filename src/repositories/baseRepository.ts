@@ -13,6 +13,7 @@ import {
 } from '@inrupt/solid-client';
 import type { PodClient } from '../pod/podClient';
 import { ValidationError, NotFoundError } from '../errors';
+import { validateThingAgainstSchema } from '../schemas';
 import { NS, newResourceUrl, nowIso } from '../utils/rdfUtils';
 
 /**
@@ -41,13 +42,14 @@ export abstract class BaseRepository<T extends { url?: string }> {
 
   /**
    * Validate the entity before a create or update write.
-   * Concrete repositories should override this to enforce required-field rules.
-   * The default implementation is a no-op.
+   * Concrete repositories can override this to enforce domain-level rules before
+   * RDF mapping. The base class always performs ShEx-driven RDF validation after
+   * mapping, before any write reaches the pod.
    *
    * @throws {ValidationError} if the entity does not satisfy the shape.
    */
   protected validate(_entity: T): void {
-    // Default: no validation – subclasses override.
+    // Default: no domain-level validation – RDF shape validation always runs.
   }
 
   // ─── CRUD operations ─────────────────────────────────────────────────────
@@ -70,6 +72,7 @@ export abstract class BaseRepository<T extends { url?: string }> {
       { ...entity, createdAt: nowIso(), updatedAt: nowIso() } as T,
       resourceUrl,
     );
+    this.validateRdf(thing);
     let dataset = this.client.createEmptyDataset();
     dataset = setThing(dataset, thing);
     await this.client.saveDataset(resourceUrl, dataset);
@@ -86,8 +89,9 @@ export abstract class BaseRepository<T extends { url?: string }> {
       const thing = this.primaryThing(dataset, resourceUrl);
       if (!thing) return null;
       return this.fromThing(thing, resourceUrl);
-    } catch {
-      return null;
+    } catch (error) {
+      if (isNotFound(error)) return null;
+      throw error;
     }
   }
 
@@ -116,14 +120,16 @@ export abstract class BaseRepository<T extends { url?: string }> {
       ]);
     }
     this.validate(entity);
-    const dataset = await this.client.getDataset(entity.url).catch(() => {
-      throw new NotFoundError(entity.url as string);
+    const dataset = await this.client.getDataset(entity.url).catch((error: unknown) => {
+      if (isNotFound(error)) throw new NotFoundError(entity.url as string);
+      throw error;
     });
     const updated = {
       ...entity,
       updatedAt: nowIso(),
     } as T;
     const newThing = this.toThing(updated, entity.url);
+    this.validateRdf(newThing);
     const cleanDataset = removeThing(dataset, entity.url);
     const finalDataset = setThing(cleanDataset, newThing);
     await this.client.saveDataset(entity.url, finalDataset);
@@ -141,10 +147,14 @@ export abstract class BaseRepository<T extends { url?: string }> {
 
   /** Extract the primary Thing from a dataset by its URL. */
   protected primaryThing(dataset: SolidDataset, url: string): Thing | null {
-    try {
-      return getThing(dataset, url);
-    } catch {
-      return null;
+    return getThing(dataset, url);
+  }
+
+  /** Validate mapped RDF against the registered ShEx shape before writes. */
+  protected validateRdf(thing: Thing): void {
+    const issues = validateThingAgainstSchema(this.typeName, thing);
+    if (issues.length > 0) {
+      throw new ValidationError(`${this.typeName} RDF failed ShEx validation.`, issues);
     }
   }
 
@@ -189,4 +199,11 @@ export abstract class BaseRepository<T extends { url?: string }> {
   protected readonly getUrl = getUrl;
   protected readonly setThing = setThing;
   protected readonly NS = NS;
+}
+
+function isNotFound(error: unknown): boolean {
+  const response = (error as { response?: { status?: number } } | undefined)?.response;
+  if (response?.status === 404) return true;
+  const status = (error as { status?: number; statusCode?: number } | undefined);
+  return status?.status === 404 || status?.statusCode === 404;
 }

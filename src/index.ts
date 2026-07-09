@@ -180,6 +180,11 @@ export class HealthPIM {
     return this.auth.isLoggedIn;
   }
 
+  /** Verify the authenticated session can read the configured pod root. */
+  async checkPodAccess(): Promise<void> {
+    await this.pod.verifyPodAccess();
+  }
+
   /** WebID of the authenticated user (undefined if not logged in). */
   get webId(): string | undefined {
     return this.auth.webId;

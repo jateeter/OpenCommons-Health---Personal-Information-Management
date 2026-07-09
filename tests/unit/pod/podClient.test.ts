@@ -69,6 +69,7 @@ describe('PodClient', () => {
 
   describe('ensureContainer()', () => {
     it('calls createContainerAt with the correct URL and fetch', async () => {
+      mockGetSolidDataset.mockRejectedValue(fetchError(404));
       mockCreateContainerAt.mockResolvedValue(undefined);
       const client = makeClient();
       const url = await client.ensureContainer('MedicalCondition');
@@ -82,10 +83,50 @@ describe('PodClient', () => {
       );
     });
 
+    it('returns the container URL without creating when the container already exists', async () => {
+      mockGetSolidDataset.mockResolvedValue({} as SolidDataset);
+      const client = makeClient();
+      await expect(client.ensureContainer('MedicalCondition')).resolves.toBe(
+        'http://localhost:3000/alice/health-pim/medicalconditions/',
+      );
+      expect(mockCreateContainerAt).not.toHaveBeenCalled();
+    });
+
     it('ignores 409 Conflict errors (container already exists)', async () => {
-      mockCreateContainerAt.mockRejectedValue(new Error('409 Conflict'));
+      mockGetSolidDataset.mockRejectedValue(fetchError(404));
+      mockCreateContainerAt.mockRejectedValue(fetchError(409));
       const client = makeClient();
       await expect(client.ensureContainer('MedicalCondition')).resolves.toBeDefined();
+    });
+
+    it('propagates non-404 container lookup errors', async () => {
+      mockGetSolidDataset.mockRejectedValue(fetchError(401));
+      const client = makeClient();
+      await expect(client.ensureContainer('MedicalCondition')).rejects.toMatchObject({
+        response: { status: 401 },
+      });
+      expect(mockCreateContainerAt).not.toHaveBeenCalled();
+    });
+
+    it('propagates non-conflict container creation errors', async () => {
+      mockGetSolidDataset.mockRejectedValue(fetchError(404));
+      mockCreateContainerAt.mockRejectedValue(fetchError(403));
+      const client = makeClient();
+      await expect(client.ensureContainer('MedicalCondition')).rejects.toMatchObject({
+        response: { status: 403 },
+      });
+    });
+  });
+
+  describe('verifyPodAccess()', () => {
+    it('performs a read-only authenticated fetch of the pod root', async () => {
+      mockGetSolidDataset.mockResolvedValue({} as SolidDataset);
+      const client = makeClient();
+      await client.verifyPodAccess();
+      expect(mockGetSolidDataset).toHaveBeenCalledWith(
+        'http://localhost:3000/alice/',
+        { fetch: mockFetch },
+      );
     });
   });
 
@@ -168,3 +209,7 @@ describe('PodClient', () => {
     });
   });
 });
+
+function fetchError(status: number): Error & { response: { status: number } } {
+  return Object.assign(new Error(`${status} from Solid`), { response: { status } });
+}

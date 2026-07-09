@@ -10,7 +10,9 @@ PREFIX loinc:    <http://loinc.org/rdf/>
 
 <LabResultShape> {
   a                         [ health:LabResult ]         ;
-  health:observationCode    <CodingShape>                ;
+  health:codingSystem       xsd:anyURI                  ;
+  health:codingCode         xsd:string                  ;
+  health:codingDisplay      xsd:string?                 ;
   health:valueDecimal       xsd:decimal?                 ;
   health:valueString        xsd:string?                  ;
   health:unit               xsd:string?                  ;
@@ -31,10 +33,4 @@ PREFIX loinc:    <http://loinc.org/rdf/>
   schema:description        xsd:string?                  ;
   schema:dateCreated        xsd:dateTime?                ;
   schema:dateModified       xsd:dateTime?                ;
-}
-
-<CodingShape> {
-  health:codingSystem    xsd:anyURI   ;
-  health:codingCode      xsd:string   ;
-  health:codingDisplay   xsd:string?  ;
 }
