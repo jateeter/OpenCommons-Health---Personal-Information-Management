@@ -255,10 +255,14 @@ export const OPENAPI_DOCUMENT = {
       description: 'Current local deployment',
     },
   ],
-  tags: DOMAIN_NAMES.map((name) => ({
-    name,
-    description: DOMAIN_API_DEFINITIONS[name].description,
-  })),
+  tags: [
+    ...DOMAIN_NAMES.map((name) => ({
+      name,
+      description: DOMAIN_API_DEFINITIONS[name].description,
+    })),
+    { name: 'standards', description: 'HL7/FHIR capability and PHI schema documentation.' },
+    { name: 'privacy', description: 'Owner-approved anonymized release operations.' },
+  ],
   paths: {
     '/livez': {
       get: {
@@ -281,7 +285,27 @@ export const OPENAPI_DOCUMENT = {
         responses: statusResponses(),
       },
     },
+    '/fhir/metadata': {
+      get: {
+        tags: ['standards'],
+        operationId: 'getFhirCapabilityStatement',
+        summary: 'FHIR CapabilityStatement-style metadata for OpenCommons Health PIM',
+        responses: okResponse('FHIR CapabilityStatement resource.', { $ref: '#/components/schemas/FhirCapabilityStatement' }),
+      },
+    },
+    '/api/privacy/schema': {
+      get: {
+        tags: ['privacy', 'standards'],
+        operationId: 'getPrivacySchema',
+        summary: 'FHIR-aligned PHI and anonymized-release JSON schemas',
+        responses: okResponse('PHI schema and anonymized-release schema.', objectSchema(['identifiable', 'anonymizedRelease'], {
+          identifiable: { type: 'object' },
+          anonymizedRelease: { type: 'object' },
+        })),
+      },
+    },
     ...domainPaths(),
+    ...anonymizedDomainPaths(),
   },
   components: {
     schemas: {
@@ -303,6 +327,20 @@ export const OPENAPI_DOCUMENT = {
         podBaseUrl: uri('Configured Solid pod base URL'),
         podAccess: { type: 'boolean' },
         domains: { type: 'array', items: { type: 'string', enum: DOMAIN_NAMES } },
+      }),
+      AnonymizedRelease: objectSchema(['domain', 'fhirResourceType', 'anonymized', 'data'], {
+        domain: { type: 'string', enum: DOMAIN_NAMES },
+        fhirResourceType: { type: 'string' },
+        anonymized: { type: 'boolean', const: true },
+        data: { type: 'object' },
+      }),
+      FhirCapabilityStatement: objectSchema(['resourceType', 'status', 'kind', 'fhirVersion', 'format', 'rest'], {
+        resourceType: { type: 'string', const: 'CapabilityStatement' },
+        status: { type: 'string', enum: ['draft', 'active', 'retired', 'unknown'] },
+        kind: { type: 'string', enum: ['instance', 'capability', 'requirements'] },
+        fhirVersion: { type: 'string', example: '5.0.0' },
+        format: { type: 'array', items: { type: 'string' } },
+        rest: { type: 'array', items: { type: 'object' } },
       }),
       ...Object.fromEntries(
         Object.values(DOMAIN_API_DEFINITIONS).map((definition) => [definition.title, definition.schema]),
@@ -395,6 +433,61 @@ function domainPaths(): Record<string, unknown> {
   }));
 }
 
+function anonymizedDomainPaths(): Record<string, unknown> {
+  return Object.fromEntries(DOMAIN_NAMES.map((domain) => {
+    const releaseResponse = objectSchema(['data', 'release'], {
+      data: {
+        oneOf: [
+          { $ref: '#/components/schemas/AnonymizedRelease' },
+          { type: 'array', items: { $ref: '#/components/schemas/AnonymizedRelease' } },
+        ],
+      },
+      release: objectSchema(['anonymized', 'ownerApproved', 'purpose'], {
+        anonymized: { type: 'boolean', const: true },
+        ownerApproved: { type: 'boolean', const: true },
+        purpose: string('Owner-approved release purpose.'),
+      }),
+    });
+    return [`/api/anonymized/resources/${domain}`, {
+      get: {
+        tags: ['privacy', domain],
+        operationId: `readOrListAnonymized${pascal(domain)}`,
+        summary: `Release anonymized ${domain} data after owner approval`,
+        parameters: [
+          {
+            name: 'url',
+            in: 'query',
+            required: false,
+            description: 'Absolute pod resource URL. Omit to list anonymized resources in the domain.',
+            schema: resourceUrl(),
+          },
+          {
+            name: 'x-opencommons-owner-approved',
+            in: 'header',
+            required: true,
+            description: 'Must be true. Indicates authenticated pod owner approval for anonymized release.',
+            schema: { type: 'string', enum: ['true'] },
+          },
+          {
+            name: 'x-opencommons-release-purpose',
+            in: 'header',
+            required: true,
+            description: 'Human-readable purpose for the owner-approved anonymized release.',
+            schema: { type: 'string', minLength: 1 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: `Anonymized ${domain} release payload.`,
+            content: { 'application/json': { schema: releaseResponse } },
+          },
+          ...errorResponses(),
+        },
+      },
+    }];
+  }));
+}
+
 function jsonRequest(schemaRef: string, example: Record<string, unknown>): Record<string, unknown> {
   return {
     required: true,
@@ -433,6 +526,7 @@ function errorResponses(): Record<string, unknown> {
   return {
     '400': { description: 'Invalid request.', content: errorContent() },
     '401': { description: 'The PIM is not authenticated with Solid.', content: errorContent() },
+    '403': { description: 'Authenticated caller lacks owner approval for this operation.', content: errorContent() },
     '404': { description: 'The domain or resource was not found.', content: errorContent() },
     '409': { description: 'Write conflict.', content: errorContent() },
     '502': { description: 'Solid/API dependency failure.', content: errorContent() },

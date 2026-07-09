@@ -67,6 +67,18 @@ export class AuthError extends Error {
   }
 }
 
+/**
+ * Thrown when a caller is authenticated but lacks an explicit authorization or
+ * owner approval required for the requested action (HTTP 403 equivalent).
+ */
+export class AuthorizationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthorizationError';
+    Object.setPrototypeOf(this, AuthorizationError.prototype);
+  }
+}
+
 // ─── Write Conflict ───────────────────────────────────────────────────────────
 
 /**

@@ -2,8 +2,14 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createReadStream, existsSync } from 'node:fs';
 import path from 'node:path';
 import type { HealthPIM } from './index';
-import { AuthError, ConflictError, NotFoundError, ValidationError } from './errors';
+import { AuthError, AuthorizationError, ConflictError, NotFoundError, ValidationError } from './errors';
 import { DOMAIN_NAMES, OPENAPI_DOCUMENT } from './openapi';
+import { anonymizeResource, anonymizeResources, OWNER_APPROVAL_HEADER, RELEASE_PURPOSE_HEADER } from './privacy';
+import {
+  ANONYMIZED_HEALTH_INFORMATION_SCHEMA,
+  OPENCOMMONS_FHIR_CAPABILITY_STATEMENT,
+  PERSONAL_HEALTH_INFORMATION_SCHEMA,
+} from './standards/fhir';
 
 export interface DomainRepository {
   findAll(): Promise<unknown[]>;
@@ -63,8 +69,20 @@ export function createRequestHandler(
       if (requestUrl.pathname === '/openapi.json' || requestUrl.pathname === '/swagger.json') {
         return sendJson(res, 200, OPENAPI_DOCUMENT);
       }
+      if (requestUrl.pathname === '/fhir/metadata') {
+        return sendJson(res, 200, OPENCOMMONS_FHIR_CAPABILITY_STATEMENT);
+      }
+      if (requestUrl.pathname === '/api/privacy/schema') {
+        return sendJson(res, 200, {
+          identifiable: PERSONAL_HEALTH_INFORMATION_SCHEMA,
+          anonymizedRelease: ANONYMIZED_HEALTH_INFORMATION_SCHEMA,
+        });
+      }
       if (requestUrl.pathname === '/api/docs') {
         return servePublicAsset('/api-docs.html', publicDirectory, res);
+      }
+      if (requestUrl.pathname.startsWith('/api/anonymized/resources/')) {
+        return await handleAnonymizedDomainRequest(req, res, requestUrl, provideContext);
       }
       if (requestUrl.pathname.startsWith('/api/resources/')) {
         return await handleDomainRequest(req, res, requestUrl, provideContext);
@@ -157,6 +175,71 @@ async function handleDomainRequest(
   sendJson(res, 405, { error: 'Method not allowed' });
 }
 
+async function handleAnonymizedDomainRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  requestUrl: URL,
+  provideContext: ContextProvider,
+): Promise<void> {
+  if (req.method !== 'GET') {
+    res.setHeader('allow', 'GET');
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+
+  const domain = decodeURIComponent(requestUrl.pathname.slice('/api/anonymized/resources/'.length));
+  const context = await provideContext();
+  if (!context.authenticated) {
+    throw new AuthError('The PIM is not authenticated with the configured Solid server.');
+  }
+  assertOwnerApprovedRelease(req);
+
+  const repository = context.repositories[domain];
+  if (!repository) {
+    return sendJson(res, 404, { error: `Unknown domain: ${domain}`, domains: DOMAIN_NAMES });
+  }
+
+  const resourceUrl = requestUrl.searchParams.get('url');
+  if (resourceUrl) {
+    assertPodResourceUrl(resourceUrl, context.podBaseUrl);
+    const entity = await repository.findByUrl(resourceUrl);
+    if (!entity) throw new NotFoundError(resourceUrl);
+    return sendJson(res, 200, {
+      data: anonymizeResource(domain, entity),
+      release: releaseMetadata(req),
+    });
+  }
+
+  return sendJson(res, 200, {
+    data: anonymizeResources(domain, await repository.findAll()),
+    release: releaseMetadata(req),
+  });
+}
+
+function assertOwnerApprovedRelease(req: IncomingMessage): void {
+  const approved = headerValue(req, OWNER_APPROVAL_HEADER);
+  if (approved !== 'true') {
+    throw new AuthorizationError(`Anonymized release requires ${OWNER_APPROVAL_HEADER}: true from the authenticated pod owner.`);
+  }
+  const purpose = headerValue(req, RELEASE_PURPOSE_HEADER);
+  if (!purpose) {
+    throw new AuthorizationError(`Anonymized release requires a non-empty ${RELEASE_PURPOSE_HEADER} header.`);
+  }
+}
+
+function releaseMetadata(req: IncomingMessage): Record<string, unknown> {
+  return {
+    anonymized: true,
+    ownerApproved: true,
+    purpose: headerValue(req, RELEASE_PURPOSE_HEADER),
+  };
+}
+
+function headerValue(req: IncomingMessage, name: string): string | undefined {
+  const raw = req.headers[name];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return value?.trim();
+}
+
 function assertPodResourceUrl(resourceUrl: string, podBaseUrl: string): void {
   let normalizedResource: URL;
   let normalizedPod: URL;
@@ -209,6 +292,7 @@ function servePublicAsset(requestPath: string, publicDirectory: string, res: Ser
 function sendError(res: ServerResponse, error: unknown): void {
   if (error instanceof ValidationError) return sendJson(res, 400, { error: error.message, issues: error.issues });
   if (error instanceof AuthError) return sendJson(res, 401, { error: error.message });
+  if (error instanceof AuthorizationError) return sendJson(res, 403, { error: error.message });
   if (error instanceof NotFoundError) return sendJson(res, 404, { error: error.message });
   if (error instanceof ConflictError) return sendJson(res, 409, { error: error.message });
   const message = error instanceof Error ? error.message : 'Internal server error';
