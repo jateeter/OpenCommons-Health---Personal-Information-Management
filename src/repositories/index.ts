@@ -7,3 +7,4 @@ export { ImmunizationRepository } from './immunizationRepository';
 export { VitalSignsRepository } from './vitalSignsRepository';
 export { ProviderRepository } from './providerRepository';
 export { LabResultRepository } from './labResultRepository';
+export { InsuranceRepository } from './insuranceRepository';

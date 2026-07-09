@@ -55,6 +55,7 @@ import {
   ProfileRepository,
   ProviderRepository,
   VitalSignsRepository,
+  InsuranceRepository,
 } from './repositories';
 
 export * from './types';
@@ -69,6 +70,8 @@ export * from './errors';
 export interface HealthPIMOptions {
   /** OIDC issuer / CSS base URL (e.g. http://localhost:3000). */
   podServerUrl: string;
+  /** Explicit OIDC issuer when it differs from the pod server URL. */
+  oidcIssuer?: string;
   /** Base URL of the user's pod (e.g. http://localhost:3000/alice/). */
   podBaseUrl: string;
   /** Sub-path within the pod reserved for the health PIM (e.g. /health-pim/). */
@@ -120,6 +123,9 @@ export class HealthPIM {
   /** Laboratory results. */
   readonly labResults: LabResultRepository;
 
+  /** Health insurance policies. */
+  readonly insurancePolicies: InsuranceRepository;
+
   private constructor(
     auth: SolidAuthService,
     pod: PodClient,
@@ -134,6 +140,7 @@ export class HealthPIM {
     this.vitalSigns = new VitalSignsRepository(pod);
     this.providers = new ProviderRepository(pod);
     this.labResults = new LabResultRepository(pod);
+    this.insurancePolicies = new InsuranceRepository(pod);
   }
 
   /**
@@ -146,7 +153,7 @@ export class HealthPIM {
    */
   static async create(options: HealthPIMOptions): Promise<HealthPIM> {
     const authService = new SolidAuthService({
-      oidcIssuer: options.podServerUrl,
+      oidcIssuer: options.oidcIssuer ?? options.podServerUrl,
       clientId: options.clientId,
       clientSecret: options.clientSecret,
       clientName: options.clientName ?? 'OpenCommons Health PIM',

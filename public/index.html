@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Private, Solid-backed personal health records.">
+    <title>OpenCommons Health</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">OC</span>
+        <span><strong>OpenCommons</strong><small>Personal health, held by you</small></span>
+      </a>
+      <div id="connection" class="connection checking"><span></span>Checking your pod</div>
+    </header>
+
+    <div class="shell">
+      <nav id="domain-nav" class="domain-nav" aria-label="Health record categories"></nav>
+      <main>
+        <section class="hero">
+          <div>
+            <p class="eyebrow">Your private health commons</p>
+            <h1 id="page-title">Health overview</h1>
+            <p id="page-description">Review and maintain the records stored in your personal Solid pod.</p>
+          </div>
+          <button id="add-button" class="primary" type="button">Add record</button>
+        </section>
+
+        <section id="setup-warning" class="notice hidden" role="status">
+          <strong>The interface is ready, but the pod connection is not.</strong>
+          <span id="setup-message"></span>
+        </section>
+
+        <section class="summary" aria-label="Record summary">
+          <article><span id="record-count">—</span><small>Records in this category</small></article>
+          <article><span id="pod-state">Checking</span><small>Solid pod</small></article>
+          <article><span>Local</span><small>Data residency</small></article>
+        </section>
+
+        <section class="records-panel">
+          <div class="panel-heading">
+            <h2 id="table-title">Records</h2>
+            <input id="search" type="search" placeholder="Filter records" aria-label="Filter records">
+          </div>
+          <div id="loading" class="empty-state">Loading records…</div>
+          <div id="empty" class="empty-state hidden">
+            <span aria-hidden="true">✦</span>
+            <h3>No records here yet</h3>
+            <p>Add the first entry to this part of your health record.</p>
+          </div>
+          <div id="record-list" class="record-list" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="record-dialog">
+      <form id="record-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow" id="form-eyebrow">New record</p>
+            <h2 id="form-title">Add record</h2>
+          </div>
+          <button class="icon-button" value="cancel" formmethod="dialog" aria-label="Close">×</button>
+        </div>
+        <div id="form-fields" class="form-fields"></div>
+        <div id="form-error" class="form-error hidden" role="alert"></div>
+        <div class="dialog-actions">
+          <button class="secondary" value="cancel" formmethod="dialog">Cancel</button>
+          <button class="primary" type="submit">Save to pod</button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="record-template">
+      <article class="record">
+        <div class="record-icon"></div>
+        <div class="record-copy"><h3></h3><p></p><small></small></div>
+        <div class="record-actions">
+          <button class="text-button edit" type="button">Edit</button>
+          <button class="text-button danger delete" type="button">Delete</button>
+        </div>
+      </article>
+    </template>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

@@ -71,7 +71,7 @@ npm install                  # ~30 s
 
 # 2. Copy environment template
 cp .env.example .env
-# Edit .env – fill in CSS_CLIENT_ID / CSS_CLIENT_SECRET if running against CSS
+# Edit .env – fill in SOLID_CLIENT_ID / SOLID_CLIENT_SECRET if running against CSS
 
 # 3. Build
 npm run build                # compile TypeScript → dist/
@@ -87,6 +87,36 @@ npm test                     # 97+ tests, should pass in < 10 s
 #    Requires Docker + Docker Compose v2:
 #    npm run test:integration:docker
 ```
+
+### Application UI and domain API
+
+The production server serves the browser application at `http://localhost:8080`
+and exposes the Solid-backed domain API under `/api/resources/:domain`.
+
+```bash
+SOLID_POD_SERVER_URL=http://localhost:3000
+SOLID_POD_BASE_URL=http://localhost:3000/alice/
+SOLID_POD_PATH=/health-pim/
+SOLID_CLIENT_ID=...
+SOLID_CLIENT_SECRET=...
+npm run build
+npm start
+```
+
+Supported domain names are `profiles`, `conditions`, `medications`, `allergies`,
+`immunizations`, `vital-signs`, `providers`, `lab-results`, and
+`insurance-policies`.
+
+| Operation | Request |
+|---|---|
+| List | `GET /api/resources/conditions` |
+| Read | `GET /api/resources/conditions?url=<absolute-pod-resource-url>` |
+| Create | `POST /api/resources/conditions` with a JSON entity |
+| Update | `PUT /api/resources/conditions` with a JSON entity containing `url` |
+| Delete | `DELETE /api/resources/conditions?url=<absolute-pod-resource-url>` |
+
+`GET /livez` reports process liveness. `GET /healthz` and `GET /api/status`
+report readiness of the authenticated Solid-backed application.
 
 ### Sample usage
 
