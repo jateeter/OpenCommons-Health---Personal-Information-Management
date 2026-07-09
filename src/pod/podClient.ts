@@ -51,13 +51,29 @@ export class PodClient {
       typeName,
     );
     try {
+      await getSolidDataset(url, {
+        fetch: this.auth.authenticatedFetch,
+      });
+      return url;
+    } catch (error) {
+      if (!isNotFound(error)) throw error;
+    }
+
+    try {
       await createContainerAt(url, {
         fetch: this.auth.authenticatedFetch,
       });
-    } catch {
-      // Container may already exist; ignore 409 Conflict errors.
+    } catch (error) {
+      if (!isConflict(error)) throw error;
     }
     return url;
+  }
+
+  /** Perform a read-only authenticated probe against the configured pod root. */
+  async verifyPodAccess(): Promise<void> {
+    await getSolidDataset(this.config.podBaseUrl, {
+      fetch: this.auth.authenticatedFetch,
+    });
   }
 
   // ─── Dataset CRUD ────────────────────────────────────────────────────────
@@ -128,4 +144,18 @@ export class PodClient {
       typeName,
     );
   }
+}
+
+function isConflict(error: unknown): boolean {
+  const response = (error as { response?: { status?: number } } | undefined)?.response;
+  if (response?.status === 409) return true;
+  const status = (error as { status?: number; statusCode?: number } | undefined);
+  return status?.status === 409 || status?.statusCode === 409;
+}
+
+function isNotFound(error: unknown): boolean {
+  const response = (error as { response?: { status?: number } } | undefined)?.response;
+  if (response?.status === 404) return true;
+  const status = (error as { status?: number; statusCode?: number } | undefined);
+  return status?.status === 404 || status?.statusCode === 404;
 }

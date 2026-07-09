@@ -10,7 +10,9 @@ PREFIX cvx:      <https://www2.cdc.gov/vaccines/iis/iisstandards/vaccines.asp?rp
 
 <ImmunizationShape> {
   a                         [ health:Immunization ]       ;
-  health:vaccineCode        <CodingShape>                 ;
+  health:codingSystem       xsd:anyURI                    ;
+  health:codingCode         xsd:string                    ;
+  health:codingDisplay      xsd:string?                   ;
   health:immunizationStatus [
     health:ImmCompleted
     health:ImmNotDone
@@ -26,10 +28,4 @@ PREFIX cvx:      <https://www2.cdc.gov/vaccines/iis/iisstandards/vaccines.asp?rp
   schema:description        xsd:string?                   ;
   schema:dateCreated        xsd:dateTime?                 ;
   schema:dateModified       xsd:dateTime?                 ;
-}
-
-<CodingShape> {
-  health:codingSystem    xsd:anyURI   ;
-  health:codingCode      xsd:string   ;
-  health:codingDisplay   xsd:string?  ;
 }

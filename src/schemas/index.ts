@@ -46,3 +46,5 @@ export function loadAllSchemas(): Record<string, string> {
 
 /** Supported health resource type names. */
 export type HealthResourceType = keyof typeof SCHEMA_FILES;
+
+export { validateThingAgainstSchema } from './shexValidation';

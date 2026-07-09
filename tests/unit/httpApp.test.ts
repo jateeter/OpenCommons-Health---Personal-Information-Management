@@ -27,6 +27,7 @@ describe('OpenCommons Health HTTP application', () => {
       authenticated: true,
       podServerUrl: 'http://solid',
       podBaseUrl: 'http://pod/',
+      checkPodAccess: jest.fn(async () => undefined),
       repositories: { conditions: repository },
     };
     server = http.createServer((req, res) => {
@@ -48,6 +49,20 @@ describe('OpenCommons Health HTTP application', () => {
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
       podBaseUrl: 'http://pod/',
+      podAccess: true,
+    });
+  });
+
+  it('reports not-ready when the authenticated pod probe fails', async () => {
+    context.checkPodAccess = jest.fn(async () => {
+      throw new Error('Solid pod read failed');
+    });
+    const response = await fetch(`${baseUrl}/api/status`);
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      podAccess: false,
+      error: 'Solid pod read failed',
     });
   });
 
@@ -82,6 +97,19 @@ describe('OpenCommons Health HTTP application', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
       error: 'The PIM is not authenticated with the configured Solid server.',
+    });
+  });
+
+  it('reports not-ready without probing the pod when the session is unauthenticated', async () => {
+    context.authenticated = false;
+    const probe = jest.fn(async () => undefined);
+    context.checkPodAccess = probe;
+    const response = await fetch(`${baseUrl}/api/status`);
+    expect(response.status).toBe(503);
+    expect(probe).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      podAccess: false,
     });
   });
 

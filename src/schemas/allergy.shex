@@ -10,7 +10,9 @@ PREFIX fhir:     <http://hl7.org/fhir/>
 
 <AllergyIntoleranceShape> {
   a                      [ health:AllergyIntolerance ] ;
-  health:substance       <CodingShape>                 ;
+  health:codingSystem    xsd:anyURI                    ;
+  health:codingCode      xsd:string                    ;
+  health:codingDisplay   xsd:string?                   ;
   health:allergyCategory [
     health:AllergyFood
     health:AllergyMedication
@@ -37,10 +39,4 @@ PREFIX fhir:     <http://hl7.org/fhir/>
     health:SeverityModerate
     health:SeveritySevere
   ]?                                           ;
-}
-
-<CodingShape> {
-  health:codingSystem    xsd:anyURI   ;
-  health:codingCode      xsd:string   ;
-  health:codingDisplay   xsd:string?  ;
 }

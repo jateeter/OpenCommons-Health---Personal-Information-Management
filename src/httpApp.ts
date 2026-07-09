@@ -17,6 +17,7 @@ export interface ApplicationContext {
   podServerUrl: string;
   podBaseUrl: string;
   authenticated: boolean;
+  checkPodAccess(): Promise<void>;
 }
 
 export type ContextProvider = () => Promise<ApplicationContext>;
@@ -42,6 +43,7 @@ export function contextFromPim(
     podServerUrl,
     podBaseUrl,
     authenticated: pim.isAuthenticated,
+    checkPodAccess: () => pim.checkPodAccess(),
     repositories: {
       profiles: pim.profile,
       conditions: pim.conditions,
@@ -85,17 +87,22 @@ export function createRequestHandler(
 async function sendStatus(provideContext: ContextProvider, res: ServerResponse): Promise<void> {
   try {
     const context = await provideContext();
+    if (context.authenticated) {
+      await context.checkPodAccess();
+    }
     sendJson(res, context.authenticated ? 200 : 503, {
       ok: context.authenticated,
       service: 'opencommons-health-pim',
       podServerUrl: context.podServerUrl,
       podBaseUrl: context.podBaseUrl,
+      podAccess: context.authenticated,
       domains: DOMAIN_NAMES,
     });
   } catch (error) {
     sendJson(res, 503, {
       ok: false,
       service: 'opencommons-health-pim',
+      podAccess: false,
       error: error instanceof Error ? error.message : 'Application initialization failed',
     });
   }

@@ -10,7 +10,9 @@ PREFIX snomed:   <http://snomed.info/id/>
 
 <MedicalConditionShape> {
   a                      [ schema:MedicalCondition ] ;
-  schema:code            <CodingShape>               ;
+  health:codingSystem    xsd:anyURI                  ;
+  health:codingCode      xsd:string                  ;
+  health:codingDisplay   xsd:string?                 ;
   health:conditionStatus [
     health:ConditionActive
     health:ConditionRecurrence
@@ -30,10 +32,4 @@ PREFIX snomed:   <http://snomed.info/id/>
   health:recordedBy      xsd:string?                 ;
   schema:dateCreated     xsd:dateTime?               ;
   schema:dateModified    xsd:dateTime?               ;
-}
-
-<CodingShape> {
-  health:codingSystem    xsd:anyURI   ;
-  health:codingCode      xsd:string   ;
-  health:codingDisplay   xsd:string?  ;
 }

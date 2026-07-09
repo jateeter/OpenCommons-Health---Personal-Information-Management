@@ -46,7 +46,7 @@ The following health information categories are supported, each with a validated
 | Vital Signs | `src/schemas/vitalSigns.shex` | `VitalSignsRepository` |
 | Healthcare Providers | `src/schemas/provider.shex` | `ProviderRepository` |
 | Laboratory Results | `src/schemas/labResult.shex` | `LabResultRepository` |
-| Insurance Policies | `src/schemas/insurance.shex` | *(planned)* |
+| Insurance Policies | `src/schemas/insurance.shex` | `InsuranceRepository` |
 
 Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medications), **CVX** (vaccines), **LOINC** (lab results, vital signs), **schema.org** (profiles, providers).
 
@@ -122,7 +122,8 @@ Supported domain names are `profiles`, `conditions`, `medications`, `allergies`,
 | Delete | `DELETE /api/resources/conditions?url=<absolute-pod-resource-url>` |
 
 `GET /livez` reports process liveness. `GET /healthz` and `GET /api/status`
-report readiness of the authenticated Solid-backed application.
+report readiness of the authenticated Solid-backed application and perform a
+read-only authenticated pod access probe.
 
 ### Sample usage
 
