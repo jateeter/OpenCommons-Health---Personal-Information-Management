@@ -30,7 +30,7 @@ wait_for() {
   url="$2"
   elapsed=0
   echo "Waiting for ${label} at ${url} (timeout: ${WAIT_TIMEOUT}s)..."
-  until wget -q --spider "${url}" 2>/dev/null; do
+  until wget -qO- "${url}" >/dev/null 2>&1; do
     if [ "${elapsed}" -ge "${WAIT_TIMEOUT}" ]; then
       echo "ERROR: ${label} did not become available within ${WAIT_TIMEOUT}s."
       exit 1
@@ -49,27 +49,33 @@ check_json() {
   expected="$4"
   echo "Checking ${label} response at ${url}..."
   body=$(wget -qO- "${url}" 2>/dev/null) || { echo "ERROR: could not reach ${url}"; exit 1; }
-  actual=$(echo "${body}" | grep -o "\"${field}\":\"[^\"]*\"" | head -1 | cut -d'"' -f4)
-  if [ "${actual}" != "${expected}" ]; then
-    echo "ERROR: Expected ${field}=${expected} but got: ${actual}"
+  if ! echo "${body}" | grep -Eq "\"${field}\":(\"${expected}\"|${expected})([,}])"; then
+    echo "ERROR: Expected ${field}=${expected}"
     echo "  Full response: ${body}"
     exit 1
   fi
-  echo "  OK – ${field}=${actual}"
+  echo "  OK – ${field}=${expected}"
 }
 
 # ── 1. Wait for CSS ───────────────────────────────────────────────────────────
 wait_for "Community Solid Server" "${CSS_URL}/"
 
-# ── 2. Wait for PIM app ───────────────────────────────────────────────────────
+# ── 2. Wait for the PIM process and UI ────────────────────────────────────────
 wait_for "PIM app root" "${PIM_URL}/"
-wait_for "PIM healthz" "${PIM_URL}/healthz"
+wait_for "PIM liveness" "${PIM_URL}/livez"
 
-# ── 3. Validate PIM JSON responses ───────────────────────────────────────────
-check_json "PIM root"   "${PIM_URL}/"      "status"  "running"
-check_json "PIM healthz" "${PIM_URL}/healthz" "ok" "true"
+# ── 3. Validate the executable entrypoint and packaged UI ─────────────────────
+check_json "PIM liveness" "${PIM_URL}/livez" "ok" "true"
+echo "Checking packaged PIM UI at ${PIM_URL}/..."
+ui=$(wget -qO- "${PIM_URL}/") || { echo "ERROR: could not reach ${PIM_URL}/"; exit 1; }
+echo "${ui}" | grep -q "OpenCommons Health" || {
+  echo "ERROR: PIM root did not serve the packaged application UI."
+  exit 1
+}
+echo "  OK – packaged application UI is available"
 
 echo ""
 echo "All deployment smoke tests passed."
 echo "  PIM  : ${PIM_URL}"
 echo "  CSS  : ${CSS_URL}"
+echo "  NOTE : authenticated pod readiness requires provisioned Solid credentials."

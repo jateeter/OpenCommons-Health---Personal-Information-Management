@@ -15,7 +15,7 @@
 services:
   # ── Solid Community Server ──────────────────────────────────────────────────
   css:
-    image: solidcommunityserver/community-solid-server:latest
+    image: solidproject/community-server:7.1.8
     command:
       - "-c"
       - "@css:config/default.json"

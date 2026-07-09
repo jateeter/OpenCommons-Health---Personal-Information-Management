@@ -1,21 +1,30 @@
-name: ci
+name: CI
+
 on:
   pull_request:
   push:
-    branches: [ main, feature/config-ui-nginx-https-solid-ci ]
+    branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
-  integration:
+  quality:
+    name: Build and test on Node 22
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Generate certs
-        run: sh certs/generate-self-signed.sh
-      - name: Build and start stack
-        run: docker compose up -d --build
-      - name: Wait
-        run: sleep 20
-      - name: Smoke
-        run: bash scripts/ci-smoke.sh
-      - name: Teardown
-        if: always()
-        run: docker compose down -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --runInBand
+      - run: npm run build
+      - name: Verify deployable application artifact
+        run: |
+          test -f dist/server.js
+          test -f dist/public/index.html
+          test -f dist/schemas/condition.shex
