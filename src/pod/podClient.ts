@@ -45,16 +45,23 @@ export class PodClient {
    * @param typeName - Resource type name (e.g. "MedicalCondition").
    */
   async ensureContainer(typeName: string): Promise<string> {
+    await this.ensureContainerAt(this.rootContainerUrl());
+
     const url = containerUrl(
       this.config.podBaseUrl,
       this.config.podPath,
       typeName,
     );
+    await this.ensureContainerAt(url);
+    return url;
+  }
+
+  private async ensureContainerAt(url: string): Promise<void> {
     try {
       await getSolidDataset(url, {
         fetch: this.auth.authenticatedFetch,
       });
-      return url;
+      return;
     } catch (error) {
       if (!isNotFound(error)) throw error;
     }
@@ -66,7 +73,14 @@ export class PodClient {
     } catch (error) {
       if (!isConflict(error)) throw error;
     }
-    return url;
+  }
+
+  private rootContainerUrl(): string {
+    const base = this.config.podBaseUrl.endsWith('/')
+      ? this.config.podBaseUrl
+      : `${this.config.podBaseUrl}/`;
+    const relative = this.config.podPath.replace(/^\/+|\/+$/g, '');
+    return relative ? `${base}${relative}/` : base;
   }
 
   /** Perform a read-only authenticated probe against the configured pod root. */

@@ -23,10 +23,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --runInBand
       - run: npm run build
+      - run: npm run validate:openapi
       - name: Verify deployable application artifact
         run: |
           test -f dist/server.js
           test -f dist/public/index.html
+          test -f dist/public/api-docs.html
           for schema in src/schemas/*.shex; do
             test -f "dist/schemas/$(basename "${schema}")"
           done

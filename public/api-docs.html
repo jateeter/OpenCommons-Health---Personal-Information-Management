@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenCommons Health API Docs</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #14213d;
+        --muted: #596477;
+        --line: #dce4ef;
+        --card: #ffffff;
+        --bg: #f6f9fc;
+        --teal: #007c89;
+        --mint: #e5f6f3;
+        --code: #101828;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+      header {
+        padding: 32px clamp(18px, 5vw, 64px);
+        background: linear-gradient(135deg, #ffffff, var(--mint));
+        border-bottom: 1px solid var(--line);
+      }
+      h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 48px); }
+      h2 { margin: 0 0 12px; }
+      h3 { margin: 0; }
+      p { color: var(--muted); line-height: 1.55; }
+      main {
+        display: grid;
+        grid-template-columns: minmax(220px, 300px) 1fr;
+        gap: 24px;
+        padding: 24px clamp(18px, 5vw, 64px) 64px;
+      }
+      nav {
+        position: sticky;
+        top: 18px;
+        align-self: start;
+        border: 1px solid var(--line);
+        background: var(--card);
+        border-radius: 18px;
+        padding: 14px;
+      }
+      nav a {
+        display: block;
+        padding: 10px 12px;
+        color: var(--ink);
+        text-decoration: none;
+        border-radius: 12px;
+      }
+      nav a:hover { background: var(--mint); }
+      section {
+        border: 1px solid var(--line);
+        background: var(--card);
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 18px;
+        box-shadow: 0 10px 30px rgba(20, 33, 61, .06);
+      }
+      .operation {
+        border-top: 1px solid var(--line);
+        padding: 16px 0;
+      }
+      .operation:first-of-type { border-top: 0; }
+      .method {
+        display: inline-block;
+        min-width: 62px;
+        margin-right: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        color: #fff;
+        background: var(--teal);
+        font-weight: 800;
+        font-size: 12px;
+        text-align: center;
+      }
+      code, pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+      pre {
+        overflow-x: auto;
+        padding: 12px;
+        border-radius: 12px;
+        color: #e6edf3;
+        background: var(--code);
+      }
+      button, a.button {
+        display: inline-block;
+        margin-top: 8px;
+        border: 0;
+        border-radius: 12px;
+        padding: 9px 12px;
+        background: var(--teal);
+        color: #fff;
+        font-weight: 750;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        font: inherit;
+      }
+      .result {
+        margin-top: 10px;
+        white-space: pre-wrap;
+      }
+      @media (max-width: 840px) {
+        main { grid-template-columns: 1fr; }
+        nav { position: static; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>OpenCommons Health API Docs</h1>
+      <p>Local OpenAPI/Swagger-compatible documentation for the Solid-backed health domain APIs.</p>
+      <a class="button" href="/openapi.json">Download OpenAPI JSON</a>
+    </header>
+    <main>
+      <nav id="nav" aria-label="API domains"></nav>
+      <div id="content">Loading OpenAPI contract…</div>
+    </main>
+    <script>
+      const methodOrder = ['get', 'post', 'put', 'delete'];
+
+      async function main() {
+        const response = await fetch('/openapi.json');
+        const spec = await response.json();
+        const domainPaths = Object.entries(spec.paths).filter(([path]) => path.startsWith('/api/resources/'));
+        renderNav(domainPaths);
+        renderContent(spec, domainPaths);
+      }
+
+      function renderNav(domainPaths) {
+        const nav = document.getElementById('nav');
+        nav.replaceChildren();
+        for (const [path] of domainPaths) {
+          const domain = path.split('/').pop();
+          const link = document.createElement('a');
+          link.href = `#${domain}`;
+          link.textContent = domain;
+          nav.append(link);
+        }
+      }
+
+      function renderContent(spec, domainPaths) {
+        const content = document.getElementById('content');
+        content.replaceChildren();
+        for (const [path, operations] of domainPaths) {
+          const domain = path.split('/').pop();
+          const section = document.createElement('section');
+          section.id = domain;
+          section.innerHTML = `<h2>${domain}</h2><p>${tagDescription(spec, domain)}</p>`;
+          for (const method of methodOrder) {
+            if (operations[method]) section.append(operationCard(method.toUpperCase(), path, operations[method]));
+          }
+          content.append(section);
+        }
+      }
+
+      function operationCard(method, path, operation) {
+        const article = document.createElement('article');
+        article.className = 'operation';
+        const example = operation.requestBody?.content?.['application/json']?.example;
+        article.innerHTML = `
+          <h3><span class="method">${method}</span><code>${path}</code></h3>
+          <p>${operation.summary || ''}</p>
+          ${example ? `<textarea aria-label="${operation.operationId} request body">${JSON.stringify(example, null, 2)}</textarea>` : ''}
+          <button type="button">Try local action</button>
+          <pre class="result" hidden></pre>
+        `;
+        article.querySelector('button').addEventListener('click', () => tryOperation(method, path, article));
+        return article;
+      }
+
+      async function tryOperation(method, path, article) {
+        const result = article.querySelector('.result');
+        const textarea = article.querySelector('textarea');
+        result.hidden = false;
+        try {
+          let url = path;
+          const init = { method };
+          if (textarea) {
+            init.headers = { 'content-type': 'application/json' };
+            init.body = textarea.value;
+          }
+          if (method === 'DELETE' || (method === 'GET' && !textarea)) {
+            result.textContent = 'For read/delete actions, call the endpoint with ?url=<absolute-pod-resource-url> after creating a record.';
+            return;
+          }
+          const response = await fetch(url, init);
+          const text = await response.text();
+          result.textContent = `HTTP ${response.status}\n${formatJson(text)}`;
+        } catch (error) {
+          result.textContent = error.message;
+        }
+      }
+
+      function tagDescription(spec, domain) {
+        return spec.tags.find((tag) => tag.name === domain)?.description || '';
+      }
+
+      function formatJson(text) {
+        try {
+          return JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          return text;
+        }
+      }
+
+      main().catch((error) => {
+        document.getElementById('content').textContent = `Unable to load OpenAPI contract: ${error.message}`;
+      });
+    </script>
+  </body>
+</html>
