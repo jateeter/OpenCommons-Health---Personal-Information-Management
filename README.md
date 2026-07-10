@@ -53,6 +53,12 @@ The following health information categories are supported, each with a validated
 
 Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medications), **CVX** (vaccines), **LOINC** (lab results, vital signs), **schema.org** (profiles, providers).
 
+The browser UI includes SNOMED CT quick-pick dropdowns for common condition and
+allergy concepts while keeping the underlying SNOMED system, code, and display
+name fields editable for manual entry of additional concepts. Hover help in
+those fields summarizes SNOMED CT's NLM-designated role in electronic exchange
+of clinical health information.
+
 See [`docs/HL7_FHIR_ALIGNMENT.md`](docs/HL7_FHIR_ALIGNMENT.md) for the
 HL7/FHIR reference model, domain-to-FHIR resource mapping, PHI schema, and
 owner-approved anonymized release contract.
