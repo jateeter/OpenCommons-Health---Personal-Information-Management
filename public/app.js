@@ -1,7 +1,43 @@
+const SNOMED_CT_SYSTEM = 'http://snomed.info/sct';
+const SNOMED_CT_HELP = 'SNOMED CT is designated by NLM as a standard for electronic exchange of clinical health information. Pick a common code/name or enter another SNOMED CT concept manually.';
+
+const snomedConditionPresets = [
+  { code: '38341003', display: 'Hypertensive disorder, systemic arterial' },
+  { code: '44054006', display: 'Type 2 diabetes mellitus' },
+  { code: '195967001', display: 'Asthma' },
+  { code: '13645005', display: 'Chronic obstructive lung disease' },
+  { code: '53741008', display: 'Coronary arteriosclerosis' },
+  { code: '84114007', display: 'Heart failure' },
+  { code: '431855005', display: 'Chronic kidney disease stage 3' },
+  { code: '35489007', display: 'Depressive disorder' },
+  { code: '40930008', display: 'Hypothyroidism' },
+  { code: '55822004', display: 'Hyperlipidemia' },
+];
+
+const snomedAllergyPresets = [
+  { code: '294954005', display: 'Allergy to penicillin' },
+  { code: '91936005', display: 'Allergy to peanuts' },
+  { code: '300913006', display: 'Shellfish allergy' },
+  { code: '91934008', display: 'Allergy to sulfonamide' },
+  { code: '293586001', display: 'Allergy to aspirin' },
+  { code: '419199007', display: 'Allergy to substance' },
+];
+
+const snomedPreset = (label, prefix, options) => ({
+  name: `${prefix}.snomedPreset`,
+  label,
+  type: 'coding-preset',
+  prefix,
+  system: SNOMED_CT_SYSTEM,
+  options,
+  wide: true,
+  help: SNOMED_CT_HELP,
+});
+
 const coding = (label, prefix = 'code') => [
-  { name: `${prefix}.system`, label: `${label} system`, required: true, placeholder: 'https://…' },
-  { name: `${prefix}.code`, label: `${label} code`, required: true },
-  { name: `${prefix}.display`, label: `${label} name` },
+  { name: `${prefix}.system`, label: `${label} system`, required: true, placeholder: 'https://…', help: label === 'SNOMED CT' ? SNOMED_CT_HELP : '' },
+  { name: `${prefix}.code`, label: `${label} code`, required: true, help: label === 'SNOMED CT' ? 'Use the numeric SNOMED CT concept identifier.' : '' },
+  { name: `${prefix}.display`, label: `${label} name`, help: label === 'SNOMED CT' ? 'Use the human-readable SNOMED CT preferred name or synonym.' : '' },
 ];
 
 const domains = {
@@ -21,7 +57,7 @@ const domains = {
   conditions: {
     label: 'Condition', plural: 'Conditions', icon: '◇',
     description: 'Diagnoses, ongoing conditions, and resolved health concerns.',
-    fields: [...coding('SNOMED CT'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'], required: true }, { name: 'severity', label: 'Severity', type: 'select', options: ['', 'mild', 'moderate', 'severe'] }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'abatementDate', label: 'Resolved date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [snomedPreset('SNOMED CT condition quick pick', 'code', snomedConditionPresets), ...coding('SNOMED CT'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'], required: true }, { name: 'severity', label: 'Severity', type: 'select', options: ['', 'mild', 'moderate', 'severe'] }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'abatementDate', label: 'Resolved date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.code?.display || x.code?.code || 'Condition',
     detail: (x) => [x.status, x.severity, x.onsetDate].filter(Boolean).join(' · '),
   },
@@ -35,7 +71,7 @@ const domains = {
   allergies: {
     label: 'Allergy', plural: 'Allergies', icon: '△',
     description: 'Allergies and intolerances that matter to your care.',
-    fields: [...coding('Substance', 'substance'), { name: 'category', label: 'Category', type: 'select', options: ['food', 'medication', 'environment', 'biologic'], required: true }, { name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'resolved'], required: true }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [snomedPreset('SNOMED CT allergy quick pick', 'substance', snomedAllergyPresets), ...coding('SNOMED CT', 'substance'), { name: 'category', label: 'Category', type: 'select', options: ['food', 'medication', 'environment', 'biologic'], required: true }, { name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'resolved'], required: true }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.substance?.display || x.substance?.code || 'Allergy',
     detail: (x) => [x.category, x.status, x.onsetDate].filter(Boolean).join(' · '),
   },
@@ -195,9 +231,15 @@ function createField(field, record) {
   wrapper.className = `field ${field.wide ? 'wide' : ''}`;
   const label = document.createElement('label');
   label.htmlFor = `field-${field.name}`;
-  label.innerHTML = `${field.label}${field.required ? ' <span class="required">*</span>' : ''}`;
+  label.innerHTML = `${field.label}${field.required ? ' <span class="required">*</span>' : ''}${field.help ? ' <span class="tooltip" aria-label="Help" title=""></span>' : ''}`;
+  if (field.help) {
+    label.title = field.help;
+    label.querySelector('.tooltip').title = field.help;
+  }
   let input;
-  if (field.type === 'select') {
+  if (field.type === 'coding-preset') {
+    input = createCodingPreset(field, record);
+  } else if (field.type === 'select') {
     input = document.createElement('select');
     for (const option of field.options) {
       const element = document.createElement('option');
@@ -216,15 +258,57 @@ function createField(field, record) {
   input.required = Boolean(field.required);
   input.placeholder = field.placeholder || '';
   const current = getPath(record || {}, field.name);
-  input.value = field.list && Array.isArray(current) ? current.join(', ') : normalizeInputValue(current, field.type);
+  if (field.type !== 'coding-preset') {
+    input.value = field.list && Array.isArray(current) ? current.join(', ') : normalizeInputValue(current, field.type);
+  }
   wrapper.append(label, input);
+  if (field.help) {
+    const help = document.createElement('small');
+    help.className = 'field-help';
+    help.textContent = field.help;
+    wrapper.append(help);
+  }
   return wrapper;
+}
+
+function createCodingPreset(field, record) {
+  const input = document.createElement('select');
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'Choose a common SNOMED CT concept…';
+  input.append(empty);
+  for (const option of field.options) {
+    const element = document.createElement('option');
+    element.value = option.code;
+    element.textContent = `${option.code} — ${option.display}`;
+    element.dataset.system = field.system;
+    element.dataset.display = option.display;
+    input.append(element);
+  }
+  const currentCode = getPath(record || {}, `${field.prefix}.code`);
+  if (currentCode && field.options.some((option) => option.code === currentCode)) input.value = currentCode;
+  input.addEventListener('change', () => applyCodingPreset(field, input));
+  return input;
+}
+
+function applyCodingPreset(field, input) {
+  const selected = input.selectedOptions[0];
+  if (!selected || !selected.value) return;
+  setInputValue(`${field.prefix}.system`, selected.dataset.system || field.system);
+  setInputValue(`${field.prefix}.code`, selected.value);
+  setInputValue(`${field.prefix}.display`, selected.dataset.display || selected.textContent);
+}
+
+function setInputValue(name, value) {
+  const input = document.getElementById(`field-${name}`);
+  if (input) input.value = value;
 }
 
 async function saveRecord(event) {
   event.preventDefault();
   const entity = editing ? structuredClone(editing) : {};
   for (const field of domains[activeDomain].fields) {
+    if (field.type === 'coding-preset') continue;
     const input = event.currentTarget.elements.namedItem(field.name);
     if (!input.value && !field.required) continue;
     let value = input.value;
