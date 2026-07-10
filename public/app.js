@@ -1,5 +1,18 @@
 const SNOMED_CT_SYSTEM = 'http://snomed.info/sct';
-const SNOMED_CT_HELP = 'SNOMED CT is designated by NLM as a standard for electronic exchange of clinical health information. Pick a common code/name or enter another SNOMED CT concept manually.';
+const LOINC_SYSTEM = 'http://loinc.org';
+const RXNORM_SYSTEM = 'http://www.nlm.nih.gov/research/umls/rxnorm';
+const RXTERMS_SYSTEM = 'https://www.nlm.nih.gov/research/umls/rxnorm/rxterms';
+const MEDRT_SYSTEM = 'https://www.nlm.nih.gov/research/umls/sourcereleasedocs/current/MED-RT';
+
+const TERMINOLOGY_HELP = {
+  'SNOMED CT': 'SNOMED CT is designated by NLM as a standard for electronic exchange of clinical health information. Pick a common code/name or enter another SNOMED CT concept manually.',
+  LOINC: 'LOINC provides common identifiers, names, and codes for health measurements, observations, labs, and documents. Required FHIR Coding parameters are system and code; display/name is recommended.',
+  RxNorm: 'RxNorm provides normalized clinical drug names and links across drug vocabularies. Required FHIR Coding parameters are system and code; display/name is recommended.',
+  RxTerms: 'RxTerms is an NLM drug interface terminology derived from RxNorm for easier medication name selection.',
+  'MED-RT': 'MED-RT provides medication reference terminology such as therapeutic class and mechanism concepts. Use when a class-level medication concept is more appropriate than a product code.',
+};
+
+const REQUIRED_CODING_HELP = 'Required FHIR Coding parameters: terminology system URI and code. Display/name is stored when supplied for review and interoperability.';
 
 const snomedConditionPresets = [
   { code: '38341003', display: 'Hypertensive disorder, systemic arterial' },
@@ -23,21 +36,72 @@ const snomedAllergyPresets = [
   { code: '419199007', display: 'Allergy to substance' },
 ];
 
-const snomedPreset = (label, prefix, options) => ({
-  name: `${prefix}.snomedPreset`,
+const loincVitalPresets = [
+  { code: '8302-2', display: 'Body height', domainCode: 'body-height', unit: 'cm' },
+  { code: '29463-7', display: 'Body weight', domainCode: 'body-weight', unit: 'kg' },
+  { code: '39156-5', display: 'Body mass index (BMI)', domainCode: 'bmi', unit: 'kg/m2' },
+  { code: '85354-9', display: 'Blood pressure panel with all children optional', domainCode: 'blood-pressure', unit: 'mmHg' },
+  { code: '8867-4', display: 'Heart rate', domainCode: 'heart-rate', unit: 'beats/min' },
+  { code: '9279-1', display: 'Respiratory rate', domainCode: 'respiratory-rate', unit: 'breaths/min' },
+  { code: '8310-5', display: 'Body temperature', domainCode: 'body-temperature', unit: 'Cel' },
+  { code: '59408-5', display: 'Oxygen saturation in arterial blood by pulse oximetry', domainCode: 'oxygen-saturation', unit: '%' },
+  { code: '2339-0', display: 'Glucose mass/volume in blood', domainCode: 'blood-glucose', unit: 'mg/dL' },
+];
+
+const loincLabPresets = [
+  { code: '4548-4', display: 'Hemoglobin A1c/Hemoglobin.total in Blood' },
+  { code: '718-7', display: 'Hemoglobin mass/volume in Blood' },
+  { code: '6690-2', display: 'Leukocytes number/volume in Blood' },
+  { code: '777-3', display: 'Platelets number/volume in Blood' },
+  { code: '2951-2', display: 'Sodium moles/volume in Serum or Plasma' },
+  { code: '2823-3', display: 'Potassium moles/volume in Serum or Plasma' },
+  { code: '2160-0', display: 'Creatinine mass/volume in Serum or Plasma' },
+  { code: '2345-7', display: 'Glucose mass/volume in Serum or Plasma' },
+  { code: '2093-3', display: 'Cholesterol mass/volume in Serum or Plasma' },
+  { code: '2085-9', display: 'Cholesterol in HDL mass/volume in Serum or Plasma' },
+  { code: '2089-1', display: 'Cholesterol in LDL mass/volume in Serum or Plasma' },
+  { code: '2571-8', display: 'Triglyceride mass/volume in Serum or Plasma' },
+];
+
+const medicationTerminologyPresets = [
+  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '860975', display: 'Metformin hydrochloride 500 MG Oral Tablet' },
+  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '617314', display: 'Atorvastatin 20 MG Oral Tablet' },
+  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '197361', display: 'Amlodipine 5 MG Oral Tablet' },
+  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '198440', display: 'Lisinopril 10 MG Oral Tablet' },
+  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '313782', display: 'Acetaminophen 325 MG Oral Tablet' },
+  { source: 'RxTerms', system: RXTERMS_SYSTEM, code: '860975', display: 'metformin 500 mg tablet' },
+  { source: 'RxTerms', system: RXTERMS_SYSTEM, code: '617314', display: 'atorvastatin 20 mg tablet' },
+  { source: 'RxTerms', system: RXTERMS_SYSTEM, code: '197361', display: 'amlodipine 5 mg tablet' },
+  { source: 'MED-RT', system: MEDRT_SYSTEM, code: 'N0000175503', display: 'Antihyperglycemic agent' },
+  { source: 'MED-RT', system: MEDRT_SYSTEM, code: 'N0000175443', display: 'Antihypertensive agent' },
+  { source: 'MED-RT', system: MEDRT_SYSTEM, code: 'N0000175622', display: 'Lipid lowering agent' },
+];
+
+const withSystem = (system, source, options) => options.map((option) => ({ ...option, system, source }));
+const sortTerms = (options) => [...options].sort((a, b) => a.display.localeCompare(b.display) || a.code.localeCompare(b.code));
+
+const terminologySearch = (label, prefix, source, options, extra = {}) => ({
+  name: `${prefix}.terminologySearch`,
   label,
-  type: 'coding-preset',
+  type: 'terminology-search',
   prefix,
-  system: SNOMED_CT_SYSTEM,
-  options,
+  options: sortTerms(options),
+  source,
   wide: true,
-  help: SNOMED_CT_HELP,
+  help: extra.help || TERMINOLOGY_HELP[source] || REQUIRED_CODING_HELP,
+  apply: extra.apply || {},
 });
 
-const coding = (label, prefix = 'code') => [
-  { name: `${prefix}.system`, label: `${label} system`, required: true, placeholder: 'https://…', help: label === 'SNOMED CT' ? SNOMED_CT_HELP : '' },
-  { name: `${prefix}.code`, label: `${label} code`, required: true, help: label === 'SNOMED CT' ? 'Use the numeric SNOMED CT concept identifier.' : '' },
-  { name: `${prefix}.display`, label: `${label} name`, help: label === 'SNOMED CT' ? 'Use the human-readable SNOMED CT preferred name or synonym.' : '' },
+const codingHelp = (label, part) => {
+  if (part === 'system') return `${REQUIRED_CODING_HELP} ${TERMINOLOGY_HELP[label] || ''}`.trim();
+  if (part === 'code') return `Required ${label} code or concept identifier.`;
+  return `${label} display/name for human review and FHIR Coding.display.`;
+};
+
+const coding = (label, prefix = 'code', options = {}) => [
+  { name: `${prefix}.system`, label: `${label} system`, required: options.required !== false, placeholder: 'https://…', help: codingHelp(label, 'system') },
+  { name: `${prefix}.code`, label: `${label} code`, required: options.required !== false, help: codingHelp(label, 'code') },
+  { name: `${prefix}.display`, label: `${label} name`, help: codingHelp(label, 'display') },
 ];
 
 const domains = {
@@ -57,21 +121,21 @@ const domains = {
   conditions: {
     label: 'Condition', plural: 'Conditions', icon: '◇',
     description: 'Diagnoses, ongoing conditions, and resolved health concerns.',
-    fields: [snomedPreset('SNOMED CT condition quick pick', 'code', snomedConditionPresets), ...coding('SNOMED CT'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'], required: true }, { name: 'severity', label: 'Severity', type: 'select', options: ['', 'mild', 'moderate', 'severe'] }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'abatementDate', label: 'Resolved date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [terminologySearch('SNOMED CT condition search', 'code', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedConditionPresets)), ...coding('SNOMED CT'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'], required: true }, { name: 'severity', label: 'Severity', type: 'select', options: ['', 'mild', 'moderate', 'severe'] }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'abatementDate', label: 'Resolved date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.code?.display || x.code?.code || 'Condition',
     detail: (x) => [x.status, x.severity, x.onsetDate].filter(Boolean).join(' · '),
   },
   medications: {
     label: 'Medication', plural: 'Medications', icon: '✣',
     description: 'Current and historical medicines, doses, and prescribers.',
-    fields: [...coding('RxNorm', 'medicationCode'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'completed', 'stopped', 'on-hold'], required: true }, { name: 'dosage.text', label: 'Dosage instructions' }, { name: 'startDate', label: 'Start date', type: 'date' }, { name: 'endDate', label: 'End date', type: 'date' }, { name: 'prescriber', label: 'Prescriber' }, { name: 'reason', label: 'Reason' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [terminologySearch('RxNorm / RxTerms / MED-RT medication search', 'medicationCode', 'RxNorm', medicationTerminologyPresets, { help: `${TERMINOLOGY_HELP.RxNorm} ${TERMINOLOGY_HELP.RxTerms} ${TERMINOLOGY_HELP['MED-RT']}` }), ...coding('RxNorm', 'medicationCode'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'completed', 'stopped', 'on-hold'], required: true }, { name: 'dosage.text', label: 'Dosage instructions' }, { name: 'startDate', label: 'Start date', type: 'date' }, { name: 'endDate', label: 'End date', type: 'date' }, { name: 'prescriber', label: 'Prescriber' }, { name: 'reason', label: 'Reason' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.medicationCode?.display || x.medicationCode?.code || 'Medication',
     detail: (x) => [x.status, x.dosage?.text, x.startDate].filter(Boolean).join(' · '),
   },
   allergies: {
     label: 'Allergy', plural: 'Allergies', icon: '△',
     description: 'Allergies and intolerances that matter to your care.',
-    fields: [snomedPreset('SNOMED CT allergy quick pick', 'substance', snomedAllergyPresets), ...coding('SNOMED CT', 'substance'), { name: 'category', label: 'Category', type: 'select', options: ['food', 'medication', 'environment', 'biologic'], required: true }, { name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'resolved'], required: true }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [terminologySearch('SNOMED CT allergy/substance search', 'substance', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedAllergyPresets)), ...coding('SNOMED CT', 'substance'), { name: 'category', label: 'Category', type: 'select', options: ['food', 'medication', 'environment', 'biologic'], required: true }, { name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'resolved'], required: true }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.substance?.display || x.substance?.code || 'Allergy',
     detail: (x) => [x.category, x.status, x.onsetDate].filter(Boolean).join(' · '),
   },
@@ -85,7 +149,7 @@ const domains = {
   'vital-signs': {
     label: 'Vital sign', plural: 'Vital signs', icon: '⌁',
     description: 'Measurements and observations that track your health over time.',
-    fields: [{ name: 'code', label: 'Measurement', type: 'select', options: ['body-weight', 'body-height', 'bmi', 'heart-rate', 'respiratory-rate', 'body-temperature', 'oxygen-saturation', 'blood-glucose'], required: true }, { name: 'value', label: 'Value', type: 'number', required: true }, { name: 'unit', label: 'Unit', required: true }, { name: 'effectiveDateTime', label: 'Measured at', type: 'datetime-local', required: true }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [terminologySearch('LOINC vital sign search', 'loincCode', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincVitalPresets), { apply: { code: 'domainCode', unit: 'unit' } }), { name: 'code', label: 'Measurement', type: 'select', options: ['body-weight', 'body-height', 'bmi', 'blood-pressure', 'heart-rate', 'respiratory-rate', 'body-temperature', 'oxygen-saturation', 'blood-glucose'], required: true }, ...coding('LOINC', 'loincCode', { required: false }), { name: 'value', label: 'Value', type: 'number', required: true }, { name: 'unit', label: 'Unit', required: true }, { name: 'effectiveDateTime', label: 'Measured at', type: 'datetime-local', required: true }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => String(x.code || 'Vital sign').replaceAll('-', ' '),
     detail: (x) => `${typeof x.value === 'object' ? JSON.stringify(x.value) : x.value} ${x.unit || ''} · ${formatDate(x.effectiveDateTime)}`,
   },
@@ -99,7 +163,7 @@ const domains = {
   'lab-results': {
     label: 'Lab result', plural: 'Lab results', icon: '◉',
     description: 'Laboratory observations, values, and reference ranges.',
-    fields: [...coding('LOINC'), { name: 'value', label: 'Result', required: true }, { name: 'unit', label: 'Unit' }, { name: 'interpretation', label: 'Interpretation', type: 'select', options: ['', 'normal', 'high', 'low', 'critical-high', 'critical-low', 'abnormal'] }, { name: 'effectiveDateTime', label: 'Observed at', type: 'datetime-local', required: true }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [terminologySearch('LOINC lab result search', 'code', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincLabPresets)), ...coding('LOINC'), { name: 'value', label: 'Result', required: true }, { name: 'unit', label: 'Unit' }, { name: 'interpretation', label: 'Interpretation', type: 'select', options: ['', 'normal', 'high', 'low', 'critical-high', 'critical-low', 'abnormal'] }, { name: 'effectiveDateTime', label: 'Observed at', type: 'datetime-local', required: true }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.code?.display || x.code?.code || 'Lab result',
     detail: (x) => [x.value !== undefined ? `${x.value} ${x.unit || ''}` : '', x.interpretation, formatDate(x.effectiveDateTime)].filter(Boolean).join(' · '),
   },
@@ -237,8 +301,8 @@ function createField(field, record) {
     label.querySelector('.tooltip').title = field.help;
   }
   let input;
-  if (field.type === 'coding-preset') {
-    input = createCodingPreset(field, record);
+  if (field.type === 'terminology-search') {
+    input = createTerminologySearch(field, record);
   } else if (field.type === 'select') {
     input = document.createElement('select');
     for (const option of field.options) {
@@ -258,10 +322,11 @@ function createField(field, record) {
   input.required = Boolean(field.required);
   input.placeholder = field.placeholder || '';
   const current = getPath(record || {}, field.name);
-  if (field.type !== 'coding-preset') {
+  if (field.type !== 'terminology-search') {
     input.value = field.list && Array.isArray(current) ? current.join(', ') : normalizeInputValue(current, field.type);
   }
   wrapper.append(label, input);
+  if (input._terminologyList) wrapper.append(input._terminologyList);
   if (field.help) {
     const help = document.createElement('small');
     help.className = 'field-help';
@@ -271,32 +336,50 @@ function createField(field, record) {
   return wrapper;
 }
 
-function createCodingPreset(field, record) {
-  const input = document.createElement('select');
-  const empty = document.createElement('option');
-  empty.value = '';
-  empty.textContent = 'Choose a common SNOMED CT concept…';
-  input.append(empty);
+function createTerminologySearch(field, record) {
+  const input = document.createElement('input');
+  const listId = `list-${field.name.replaceAll('.', '-')}`;
+  input.type = 'search';
+  input.setAttribute('list', listId);
+  input.autocomplete = 'off';
+  input.placeholder = 'Start typing a name or code…';
+
+  const list = document.createElement('datalist');
+  list.id = listId;
   for (const option of field.options) {
     const element = document.createElement('option');
-    element.value = option.code;
-    element.textContent = `${option.code} — ${option.display}`;
-    element.dataset.system = field.system;
-    element.dataset.display = option.display;
-    input.append(element);
+    element.value = terminologyOptionValue(option);
+    element.label = `${option.code} · ${option.source || field.source}`;
+    list.append(element);
   }
+
   const currentCode = getPath(record || {}, `${field.prefix}.code`);
-  if (currentCode && field.options.some((option) => option.code === currentCode)) input.value = currentCode;
-  input.addEventListener('change', () => applyCodingPreset(field, input));
+  const current = field.options.find((option) => option.code === currentCode);
+  if (current) input.value = terminologyOptionValue(current);
+  input.addEventListener('input', () => applyTerminologySearch(field, input));
+  input.addEventListener('change', () => applyTerminologySearch(field, input));
+  input._terminologyList = list;
   return input;
 }
 
-function applyCodingPreset(field, input) {
-  const selected = input.selectedOptions[0];
-  if (!selected || !selected.value) return;
-  setInputValue(`${field.prefix}.system`, selected.dataset.system || field.system);
-  setInputValue(`${field.prefix}.code`, selected.value);
-  setInputValue(`${field.prefix}.display`, selected.dataset.display || selected.textContent);
+function terminologyOptionValue(option) {
+  return `${option.display} — ${option.code} [${option.source || 'terminology'}]`;
+}
+
+function applyTerminologySearch(field, input) {
+  const typed = input.value.trim().toLowerCase();
+  if (!typed) return;
+  const selected = field.options.find((option) => {
+    const value = terminologyOptionValue(option).toLowerCase();
+    return value === typed || option.code.toLowerCase() === typed || option.display.toLowerCase() === typed;
+  });
+  if (!selected) return;
+  setInputValue(`${field.prefix}.system`, selected.system);
+  setInputValue(`${field.prefix}.code`, selected.code);
+  setInputValue(`${field.prefix}.display`, selected.display);
+  for (const [fieldName, selectedKey] of Object.entries(field.apply || {})) {
+    setInputValue(fieldName, selected[selectedKey]);
+  }
 }
 
 function setInputValue(name, value) {
@@ -308,7 +391,7 @@ async function saveRecord(event) {
   event.preventDefault();
   const entity = editing ? structuredClone(editing) : {};
   for (const field of domains[activeDomain].fields) {
-    if (field.type === 'coding-preset') continue;
+    if (field.type === 'terminology-search') continue;
     const input = event.currentTarget.elements.namedItem(field.name);
     if (!input.value && !field.required) continue;
     let value = input.value;

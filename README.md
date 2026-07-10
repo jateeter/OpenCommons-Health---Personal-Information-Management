@@ -51,13 +51,16 @@ The following health information categories are supported, each with a validated
 | Laboratory Results | `src/schemas/labResult.shex` | `LabResultRepository` |
 | Insurance Policies | `src/schemas/insurance.shex` | `InsuranceRepository` |
 
-Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm** (medications), **CVX** (vaccines), **LOINC** (lab results, vital signs), **schema.org** (profiles, providers).
+Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm**,
+**RxTerms**, and **MED-RT** (medications), **CVX** (vaccines), **LOINC** (lab
+results, vital signs), and **schema.org** (profiles, providers).
 
-The browser UI includes SNOMED CT quick-pick dropdowns for common condition and
-allergy concepts while keeping the underlying SNOMED system, code, and display
-name fields editable for manual entry of additional concepts. Hover help in
-those fields summarizes SNOMED CT's NLM-designated role in electronic exchange
-of clinical health information.
+The browser UI includes searchable code/name helpers for SNOMED CT, LOINC,
+RxNorm, RxTerms, and MED-RT while keeping the underlying FHIR-style
+`system`/`code`/`display` fields editable for manual entry of additional
+concepts. See
+[`docs/TERMINOLOGY_AND_TRANSPORT_SECURITY.md`](docs/TERMINOLOGY_AND_TRANSPORT_SECURITY.md)
+for the terminology coding contract and encrypted-in-motion deployment posture.
 
 See [`docs/HL7_FHIR_ALIGNMENT.md`](docs/HL7_FHIR_ALIGNMENT.md) for the
 HL7/FHIR reference model, domain-to-FHIR resource mapping, PHI schema, and
