@@ -31,6 +31,18 @@ The current deployment has two supported happy paths:
 Both modes use configurable ports. Continue to avoid hard-coded ports in new
 Epic integration work.
 
+## MVP boundary
+
+The active MVP scope is localhost-only. Container-local and host-local notebook
+deployments are the supported release targets. Native iPad/iPhone packaging,
+embedded mobile pod storage, HealthKit/Spezi work, and mobile SMART redirect
+implementation are on hold for a future phase.
+
+The localhost MVP is documented in
+[`LOCALHOST_MVP_SCOPE.md`](./LOCALHOST_MVP_SCOPE.md). Any new deployment work
+for the current MVP should improve one of the two localhost happy paths or the
+validation gates that prove those paths remain repeatable.
+
 ## Target Epic-enabled stack
 
 ```mermaid
@@ -111,6 +123,11 @@ Every Epic-enabled deployment should pass these gates:
    - requested scopes match configured feature lanes;
    - no secrets appear in logs or OpenAPI examples.
 6. Playwright Medicare Wellness E2E passes against the selected local stack.
+
+For the localhost MVP, the repository also provides
+`npm run validate:localhost-mvp` as a static contract check that confirms the
+MVP remains scoped to localhost deployment and that the required local scripts,
+configuration defaults, and documentation anchors are present.
 
 ## Security and privacy operations
 

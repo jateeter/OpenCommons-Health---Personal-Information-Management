@@ -113,6 +113,10 @@ resource concepts for interoperability planning.
 
 ## Deployment model
 
+The current MVP is restricted to localhost deployment on a personally
+controlled notebook or developer workstation. Native iPad/iPhone deployment is
+on hold for a future implementation phase.
+
 The repository supports two local deployment modes.
 
 | Mode | Description | Primary use |
@@ -130,6 +134,11 @@ validation. The current operational contract includes:
 - OpenAPI/Swagger documentation;
 - FHIR metadata and privacy schema endpoints;
 - deployment verification for all nine domain APIs.
+
+The localhost-only MVP boundary is documented in
+[`LOCALHOST_MVP_SCOPE.md`](./LOCALHOST_MVP_SCOPE.md). Mobile/native packaging,
+embedded iPad pod storage, and mobile SMART redirect handling are not part of
+the current MVP release bar.
 
 ## Epic integration direction
 
@@ -155,6 +164,13 @@ The Annual Medicare Wellness Evaluation is the anchor use case for the first
 Epic-enabled workflow. That use case should update profile, conditions,
 medications, allergies, immunizations, vitals, labs, insurance, documents, and
 preventive-care workflow state after patient review.
+
+The current implementation includes the local Epic connector foundation,
+deterministic mock mode, SMART discovery, PKCE authorization request generation,
+token exchange, refresh handling, patient-scoped FHIR reads, and pod-owned
+encrypted grant storage. Live Epic access still depends on approved Epic
+registration values, requested scopes, redirect URI acceptance, and the target
+Epic/MyChart organization.
 
 ## Validation and quality posture
 
@@ -187,12 +203,14 @@ Current strengths:
 - OpenAPI/Swagger documentation;
 - FHIR alignment artifacts;
 - anonymized release controls;
-- clear Epic integration roadmap.
+- clear Epic integration roadmap;
+- localhost Epic connector foundation with mock and SMART token-exchange paths.
 
 Current next-cycle priorities:
 
-- implement SMART on FHIR authorization;
-- add Epic connector configuration and health checks;
+- preserve the localhost-only MVP scope and keep native/iPad work parked;
+- harden container-local and host-local deployment validation;
+- add Epic connector health checks that do not require live credentials in CI;
 - build import preview and reconciliation;
 - add document and workflow repositories;
 - implement Medicare Wellness Evaluation E2E workflow;
