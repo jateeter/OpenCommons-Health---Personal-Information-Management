@@ -24,6 +24,7 @@ jobs:
       - run: npm test -- --runInBand
       - run: npm run build
       - run: npm run validate:openapi
+      - run: npm run validate:localhost-mvp
       - name: Verify deployable application artifact
         run: |
           test -f dist/server.js

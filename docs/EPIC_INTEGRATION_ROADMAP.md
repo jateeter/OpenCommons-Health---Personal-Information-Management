@@ -11,6 +11,12 @@ an external clinical system of record. The integration must never assume that
 Epic data can be copied or redistributed without the authenticated
 owner/patient's authorization and the health system's configured access rules.
 
+The active MVP scope is restricted to localhost notebook deployment. The
+supported MVP targets are the container-local and host-local flows documented in
+[`LOCALHOST_MVP_SCOPE.md`](./LOCALHOST_MVP_SCOPE.md). Native iPad/iPhone
+deployment, mobile SMART redirect handling, embedded mobile pod storage, and
+HealthKit/Spezi work are deferred until after the localhost MVP is stable.
+
 Standards and source-of-truth references:
 
 - SMART App Launch / OAuth 2.0 for patient-facing and clinician-facing
@@ -270,6 +276,34 @@ contract without requiring live Epic sandbox credentials:
 - Apply-to-pod remains owner-mediated and uses the same domain repositories and
   ShEx/RDF validation path as manual records.
 
-This slice intentionally keeps outbound Epic writes, production customer
-activation, real token exchange, and document/message writeback out of the MVP
-until the local happy path is fully repeatable.
+The current implementation also includes live SMART discovery, authorization
+code with PKCE request generation, callback token exchange, refresh-token
+handling, and patient-scoped FHIR read support when real Epic registration
+values are supplied. Those capabilities remain inside the localhost deployment
+contract and must not require public hosting or mobile packaging for MVP
+validation.
+
+This slice intentionally keeps native iPad/iPhone deployment, outbound Epic
+writes, production customer activation, and document/message writeback out of
+the MVP until the localhost happy path is fully repeatable.
+
+## Current non-iPad implementation sequence
+
+The active development sequence for the localhost MVP is:
+
+1. Keep Epic disabled by default and preserve the Solid-only local deployment.
+2. Keep mock Epic mode deterministic for CI, local release review, and
+   Playwright automation.
+3. Validate the localhost MVP scope with `npm run validate:localhost-mvp`.
+4. Extend optional Epic sandbox diagnostics without making sandbox credentials a
+   CI requirement.
+5. Improve Annual Medicare Wellness import preview and apply UX against local
+   mock data first.
+6. Add document/workflow read-only repositories and schemas as localhost APIs
+   before any mobile implementation.
+7. Continue to require owner approval and anonymization controls for any
+   non-owner release.
+
+Native iPad/mobile issues should remain parked as future work unless the
+localhost MVP milestone is complete and a new implementation phase is
+explicitly opened.

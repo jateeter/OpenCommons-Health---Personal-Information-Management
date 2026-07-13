@@ -13,6 +13,7 @@
     "local:host-start": "./scripts/local-host-start.sh",
     "verify:deployment": "./scripts/verify-deployment.sh",
     "validate:openapi": "node scripts/validate-openapi.mjs",
+    "validate:localhost-mvp": "node scripts/validate-localhost-mvp.mjs",
     "dev": "ts-node src/index.ts",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
