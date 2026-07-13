@@ -37,6 +37,7 @@ for (const script of [
   'local:container',
   'local:host-solid',
   'local:host-start',
+  'local:host-smoke',
   'verify:deployment',
   'test:e2e:playwright',
   'validate:openapi',
@@ -56,6 +57,7 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/integrations/ep
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'LOCALHOST_MVP_DEPLOYMENT_ISSUES.md');
 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-01');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'local:host-smoke');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-03');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');

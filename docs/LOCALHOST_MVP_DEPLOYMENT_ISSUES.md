@@ -15,6 +15,8 @@ also outside the current MVP unless a later milestone explicitly opens it.
 Host-local deployment uses the same Solid infrastructure but should have an
 equally explicit release gate.
 
+**Status:** Implemented by `npm run local:host-smoke`.
+
 **Scope:** localhost only.
 
 **Acceptance criteria:**
@@ -22,6 +24,8 @@ equally explicit release gate.
 - `./scripts/local-host-solid-up.sh` provisions CSS and writes a port-scoped
   `.solid/host-local-<app>-<css>.env`.
 - `./scripts/local-host-start.sh` starts the PIM against that env file.
+- `./scripts/local-host-smoke.sh` starts CSS, starts the host PIM in the
+  background, runs deployment verification, and stops only the host PIM process.
 - `./scripts/verify-deployment.sh` passes against the configured host-local
   ports.
 - The workflow avoids hard-coded `8080` and `3000` assumptions.

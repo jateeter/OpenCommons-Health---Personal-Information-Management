@@ -11,6 +11,7 @@
     "local:container": "./scripts/local-container-up.sh",
     "local:host-solid": "./scripts/local-host-solid-up.sh",
     "local:host-start": "./scripts/local-host-start.sh",
+    "local:host-smoke": "./scripts/local-host-smoke.sh",
     "verify:deployment": "./scripts/verify-deployment.sh",
     "validate:openapi": "node scripts/validate-openapi.mjs",
     "validate:localhost-mvp": "node scripts/validate-localhost-mvp.mjs",
