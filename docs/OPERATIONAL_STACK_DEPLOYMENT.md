@@ -31,6 +31,16 @@ The current deployment has two supported happy paths:
 Both modes use configurable ports. Continue to avoid hard-coded ports in new
 Epic integration work.
 
+Host-local smoke automation is available through:
+
+```bash
+APP_PORT=18080 CSS_PORT=13000 npm run local:host-smoke
+```
+
+The smoke workflow starts local CSS, starts the host PIM process in the
+background, runs `verify-deployment.sh`, and then stops only the host PIM
+process. CSS pod data and generated credentials are preserved.
+
 ## MVP boundary
 
 The active MVP scope is localhost-only. Container-local and host-local notebook

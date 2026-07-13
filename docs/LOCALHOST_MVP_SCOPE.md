@@ -92,6 +92,7 @@ npm run build
 npm run validate:openapi
 npm run validate:localhost-mvp
 APP_PORT=<free-port> CSS_PORT=<free-port> ./scripts/local-container-up.sh
+APP_PORT=<free-port> CSS_PORT=<free-port> npm run local:host-smoke
 APP_URL=http://localhost:<app-port> npm run test:e2e:playwright
 ```
 
