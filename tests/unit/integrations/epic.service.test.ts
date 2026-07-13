@@ -75,6 +75,25 @@ describe('Epic MVP integration service', () => {
     expect(preview.changes.every((change) => change.provenance.sourceSystem === 'epic')).toBe(true);
   });
 
+  it('reports localhost MVP diagnostics in mock mode without live network checks', async () => {
+    const repository = new FakeEpicRepository();
+    const service = new EpicIntegrationService(config, repository as never, {});
+
+    const diagnostics = await service.diagnostics();
+
+    expect(diagnostics).toMatchObject({
+      enabled: true,
+      mode: 'mock',
+      readiness: 'ready',
+      live: false,
+      localhostMvp: true,
+    });
+    expect(diagnostics.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'epic-enabled', status: 'ok' }),
+      expect.objectContaining({ name: 'smart-discovery', status: 'skipped' }),
+    ]));
+  });
+
   it('applies selected Epic import candidates through existing domain repositories', async () => {
     const repository = new FakeEpicRepository();
     const saved: Record<string, unknown[]> = {};
@@ -154,6 +173,48 @@ describe('Epic MVP integration service', () => {
     expect(JSON.stringify(status)).not.toContain('live-access-token');
     expect(JSON.stringify(status)).not.toContain('live-refresh-token');
     expect(repository.record?.encryptedGrant).toBeDefined();
+  });
+
+  it('can run optional live SMART discovery diagnostics without token exchange', async () => {
+    const sandboxConfig = {
+      enabled: true,
+      mode: 'sandbox' as const,
+      fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
+      clientId: 'smart-client-id',
+      redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
+      scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
+      encryptionKey: 'unit-test-epic-grant-key',
+      syncOnStartup: false,
+    };
+    const fetchMock = jest.fn(async (url: string) => {
+      if (url.endsWith('/.well-known/smart-configuration')) {
+        return jsonResponse({
+          authorization_endpoint: 'https://epic.example.test/oauth2/authorize',
+          token_endpoint: 'https://epic.example.test/oauth2/token',
+          scopes_supported: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
+        });
+      }
+      throw new Error(`Unexpected URL ${url}`);
+    });
+    const service = new EpicIntegrationService(sandboxConfig, new FakeEpicRepository() as never, {}, fetchMock as never);
+
+    const diagnostics = await service.diagnostics({ live: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(diagnostics).toMatchObject({
+      enabled: true,
+      mode: 'sandbox',
+      readiness: 'ready',
+      live: true,
+      localhostMvp: true,
+    });
+    expect(diagnostics.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'smart-discovery', status: 'ok' }),
+      expect.objectContaining({ name: 'authorization-endpoint', status: 'ok' }),
+      expect.objectContaining({ name: 'token-endpoint', status: 'ok' }),
+      expect.objectContaining({ name: 'scope-support', status: 'ok' }),
+    ]));
+    expect(JSON.stringify(diagnostics)).not.toContain('unit-test-epic-grant-key');
   });
 });
 

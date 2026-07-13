@@ -62,6 +62,58 @@ describe('OpenCommons Health HTTP application', () => {
     });
   });
 
+  it('serves Epic localhost MVP diagnostics when the connector is configured', async () => {
+    const diagnostics = jest.fn(async () => ({
+      enabled: true,
+      mode: 'mock',
+      readiness: 'ready',
+      checkedAt: '2026-07-13T12:00:00.000Z',
+      live: false,
+      localhostMvp: true,
+      checks: [{ name: 'epic-enabled', status: 'ok', detail: 'Epic integration is enabled.' }],
+    }));
+    context.epic = {
+      diagnostics,
+    } as never;
+
+    const response = await fetch(`${baseUrl}/api/integrations/epic/diagnostics`);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        readiness: 'ready',
+        localhostMvp: true,
+      },
+    });
+    expect(diagnostics).toHaveBeenCalledWith({ live: false });
+  });
+
+  it('allows explicit live Epic diagnostics through a query flag', async () => {
+    const diagnostics = jest.fn(async ({ live }: { live?: boolean }) => ({
+      enabled: true,
+      mode: 'sandbox',
+      readiness: 'ready',
+      checkedAt: '2026-07-13T12:00:00.000Z',
+      live,
+      localhostMvp: true,
+      checks: [{ name: 'smart-discovery', status: 'ok', detail: 'SMART discovery succeeded.' }],
+    }));
+    context.epic = {
+      diagnostics,
+    } as never;
+
+    const response = await fetch(`${baseUrl}/api/integrations/epic/diagnostics?live=true`);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        live: true,
+        readiness: 'ready',
+      },
+    });
+    expect(diagnostics).toHaveBeenCalledWith({ live: true });
+  });
+
   it('serves the OpenAPI contract for all domain APIs', async () => {
     const response = await fetch(`${baseUrl}/openapi.json`);
     expect(response.status).toBe(200);

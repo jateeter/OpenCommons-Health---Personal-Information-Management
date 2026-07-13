@@ -149,6 +149,9 @@ async function handleEpicIntegrationRequest(
   if (requestUrl.pathname === '/api/integrations/epic/status' && req.method === 'GET') {
     return sendJson(res, 200, { data: await epic.status() });
   }
+  if (requestUrl.pathname === '/api/integrations/epic/diagnostics' && req.method === 'GET') {
+    return sendJson(res, 200, { data: await epic.diagnostics({ live: requestUrl.searchParams.get('live') === 'true' }) });
+  }
   if (requestUrl.pathname === '/api/integrations/epic/connect/start' && req.method === 'POST') {
     return sendJson(res, 200, { data: await epic.connectStart() });
   }
@@ -333,7 +336,7 @@ async function readJsonBodyOrEmpty(req: IncomingMessage): Promise<Record<string,
 }
 
 function allowedEpicMethods(pathname: string): string {
-  if (pathname.endsWith('/status') || pathname.endsWith('/connect/callback') || pathname.endsWith('/audit')) return 'GET';
+  if (pathname.endsWith('/status') || pathname.endsWith('/diagnostics') || pathname.endsWith('/connect/callback') || pathname.endsWith('/audit')) return 'GET';
   if (pathname.endsWith('/connect/start') || pathname.endsWith('/disconnect') || pathname.endsWith('/sync/preview') || pathname.endsWith('/sync/apply')) return 'POST';
   return 'GET, POST';
 }

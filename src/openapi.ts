@@ -353,6 +353,22 @@ export const OPENAPI_DOCUMENT = {
         scopes: { type: 'array', items: { type: 'string' } },
         startedAt: dateTime(),
       }),
+      EpicDiagnostics: objectSchema(['enabled', 'mode', 'readiness', 'checkedAt', 'live', 'localhostMvp', 'checks'], {
+        enabled: { type: 'boolean' },
+        mode: enumSchema(['mock', 'sandbox', 'production']),
+        readiness: enumSchema(['disabled', 'ready', 'attention', 'failed']),
+        checkedAt: dateTime(),
+        live: { type: 'boolean' },
+        localhostMvp: { type: 'boolean', const: true },
+        checks: {
+          type: 'array',
+          items: objectSchema(['name', 'status', 'detail'], {
+            name: string('Diagnostic check name'),
+            status: enumSchema(['ok', 'warning', 'failed', 'skipped']),
+            detail: string('Diagnostic check detail without secrets'),
+          }),
+        },
+      }),
       EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'patientId', 'changes'], {
         importJobId: string('Import job id'),
         source: enumSchema(['mock', 'epic']),
@@ -441,6 +457,25 @@ function epicIntegrationPaths(): Record<string, unknown> {
         summary: 'Start Epic SMART authorization with discovery, state, and PKCE, then store request state in the owner pod',
         responses: okResponse('Epic SMART authorization start response.', objectSchema(['data'], {
           data: { $ref: '#/components/schemas/EpicConnectStart' },
+        })),
+      },
+    },
+    '/api/integrations/epic/diagnostics': {
+      get: {
+        tags: ['epic'],
+        operationId: 'diagnoseEpicLocalhostMvpConfiguration',
+        summary: 'Run localhost MVP Epic configuration diagnostics without requiring live credentials by default',
+        parameters: [
+          {
+            name: 'live',
+            in: 'query',
+            required: false,
+            schema: { type: 'boolean', default: false },
+            description: 'When true, performs live SMART discovery against the configured Epic FHIR base URL.',
+          },
+        ],
+        responses: okResponse('Epic localhost MVP diagnostics.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/EpicDiagnostics' },
         })),
       },
     },

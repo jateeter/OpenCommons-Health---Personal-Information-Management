@@ -74,6 +74,24 @@ export interface EpicConnectionPublicStatus {
   lastError?: string;
 }
 
+export type EpicDiagnosticCheckStatus = 'ok' | 'warning' | 'failed' | 'skipped';
+
+export interface EpicDiagnosticCheck {
+  name: string;
+  status: EpicDiagnosticCheckStatus;
+  detail: string;
+}
+
+export interface EpicDiagnostics {
+  enabled: boolean;
+  mode: 'mock' | 'sandbox' | 'production';
+  readiness: 'disabled' | 'ready' | 'attention' | 'failed';
+  checkedAt: string;
+  live: boolean;
+  localhostMvp: true;
+  checks: EpicDiagnosticCheck[];
+}
+
 export interface EpicFhirResource {
   resourceType: string;
   id?: string;

@@ -90,6 +90,15 @@ check_epic_mock_flow() {
     echo "ERROR: Epic status did not report enabled=true: ${status}"
     exit 1
   }
+  diagnostics=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/diagnostics")
+  echo "${diagnostics}" | grep -q '"readiness":"ready"' || {
+    echo "ERROR: Epic diagnostics did not report readiness=ready: ${diagnostics}"
+    exit 1
+  }
+  echo "${diagnostics}" | grep -q '"localhostMvp":true' || {
+    echo "ERROR: Epic diagnostics did not report localhostMvp=true: ${diagnostics}"
+    exit 1
+  }
   start=$(curl -fsS -X POST --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/connect/start")
   callback_url=$(printf '%s' "${start}" | sed -n 's/.*"authorizationUrl":"\([^"]*\)".*/\1/p')
   if [ -z "${callback_url}" ]; then

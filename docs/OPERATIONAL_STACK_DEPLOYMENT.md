@@ -98,6 +98,7 @@ Implemented MVP API endpoints:
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/integrations/epic/status` | Read sanitized Epic connection status from the Solid pod. |
+| `GET /api/integrations/epic/diagnostics` | Check localhost MVP Epic configuration without live credentials by default; use `?live=true` only for explicit SMART discovery. |
 | `POST /api/integrations/epic/connect/start` | Start SMART authorization and persist OAuth state in the pod. |
 | `GET /api/integrations/epic/connect/callback` | Complete authorization and store encrypted grant material in the pod. |
 | `POST /api/integrations/epic/disconnect` | Clear the active grant from pod-owned connection state. |
@@ -117,6 +118,7 @@ Every Epic-enabled deployment should pass these gates:
    verification.
 5. Epic enabled mode verifies:
    - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
+   - diagnostics report localhost MVP readiness without exposing secrets;
    - sandbox/production SMART discovery document is reachable;
    - authorization and token endpoints are configured;
    - FHIR capability metadata is reachable;

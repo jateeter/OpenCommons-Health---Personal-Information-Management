@@ -12,6 +12,8 @@ import type {
   EpicAuditEvent,
   EpicConnectionPublicStatus,
   EpicConnectionRecord,
+  EpicDiagnosticCheck,
+  EpicDiagnostics,
   EpicGrant,
   EpicImportPreview,
   EpicMvpDomain,
@@ -68,6 +70,85 @@ export class EpicIntegrationService {
       };
     }
     return this.publicStatus(record);
+  }
+
+  async diagnostics(options: { live?: boolean } = {}): Promise<EpicDiagnostics> {
+    const checks: EpicDiagnosticCheck[] = [];
+    const checkedAt = nowIso();
+    const live = options.live === true;
+    const add = (name: string, status: EpicDiagnosticCheck['status'], detail: string): void => {
+      checks.push({ name, status, detail });
+    };
+
+    if (!this.config.enabled) {
+      add('epic-enabled', 'skipped', 'Epic integration is disabled; localhost MVP can run Solid-only.');
+      return {
+        enabled: false,
+        mode: this.config.mode,
+        readiness: 'disabled',
+        checkedAt,
+        live,
+        localhostMvp: true,
+        checks,
+      };
+    }
+
+    add('epic-enabled', 'ok', 'Epic integration is enabled for this localhost deployment.');
+    add('mode', 'ok', `Epic mode is ${this.config.mode}.`);
+    add('grant-encryption-key', this.config.encryptionKey ? 'ok' : 'failed', this.config.encryptionKey
+      ? 'Grant encryption key is configured; value is not reported.'
+      : 'EPIC_GRANT_ENCRYPTION_KEY is required when Epic is enabled.');
+    add('scopes', this.config.scopes.length > 0 ? 'ok' : 'failed', this.config.scopes.length > 0
+      ? `${this.config.scopes.length} SMART/FHIR scopes are configured.`
+      : 'At least one SMART/FHIR scope is required.');
+
+    if (this.config.mode === 'mock') {
+      add('fhir-base-url', 'skipped', 'Mock mode uses deterministic synthetic FHIR resources and does not require EPIC_FHIR_BASE_URL.');
+      add('client-id', 'skipped', 'Mock mode does not require EPIC_CLIENT_ID.');
+      add('redirect-uri', 'ok', this.config.redirectUri
+        ? 'Mock mode redirect URI is configured.'
+        : 'Mock mode will use the local Epic callback path.');
+      add('smart-discovery', 'skipped', 'SMART discovery is skipped in mock mode.');
+      return this.diagnosticsResult(checks, checkedAt, live);
+    }
+
+    add('fhir-base-url', this.config.fhirBaseUrl ? 'ok' : 'failed', this.config.fhirBaseUrl
+      ? 'Epic FHIR base URL is configured.'
+      : 'EPIC_FHIR_BASE_URL is required for sandbox/production mode.');
+    add('client-id', this.config.clientId ? 'ok' : 'failed', this.config.clientId
+      ? 'Epic SMART client id is configured.'
+      : 'EPIC_CLIENT_ID is required for sandbox/production mode.');
+    add('redirect-uri', this.config.redirectUri ? 'ok' : 'failed', this.config.redirectUri
+      ? 'Epic SMART redirect URI is configured.'
+      : 'EPIC_REDIRECT_URI is required for sandbox/production mode.');
+
+    if (!live) {
+      add('smart-discovery', 'skipped', 'Live SMART discovery was not requested; use ?live=true for a network diagnostic.');
+      return this.diagnosticsResult(checks, checkedAt, live);
+    }
+
+    try {
+      const discovery = await this.smartClient.discover();
+      add('smart-discovery', 'ok', 'SMART configuration was discovered from the Epic FHIR base URL.');
+      add('authorization-endpoint', discovery.authorization_endpoint ? 'ok' : 'failed', discovery.authorization_endpoint
+        ? 'SMART authorization endpoint is present.'
+        : 'SMART discovery did not report authorization_endpoint.');
+      add('token-endpoint', discovery.token_endpoint ? 'ok' : 'failed', discovery.token_endpoint
+        ? 'SMART token endpoint is present.'
+        : 'SMART discovery did not report token_endpoint.');
+      if (Array.isArray(discovery.scopes_supported) && discovery.scopes_supported.length > 0) {
+        const missing = this.config.scopes.filter((scope) => !discovery.scopes_supported?.includes(scope));
+        add('scope-support', missing.length === 0 ? 'ok' : 'warning', missing.length === 0
+          ? 'Configured scopes are listed by SMART discovery.'
+          : `SMART discovery did not list ${missing.length} configured scope(s): ${missing.join(', ')}`);
+      } else {
+        add('scope-support', 'warning', 'SMART discovery did not publish scopes_supported; configured scopes could not be compared.');
+      }
+    } catch (error) {
+      add('smart-discovery', 'failed', error instanceof Error ? error.message : 'SMART discovery failed.');
+    }
+
+    return this.diagnosticsResult(checks, checkedAt, live);
   }
 
   async connectStart(): Promise<Record<string, unknown>> {
@@ -308,6 +389,20 @@ export class EpicIntegrationService {
       lastSyncAt: record.lastSyncAt,
       lastImportJobId: record.lastImportJobId,
       lastError: record.lastError,
+    };
+  }
+
+  private diagnosticsResult(checks: EpicDiagnosticCheck[], checkedAt: string, live: boolean): EpicDiagnostics {
+    const hasFailure = checks.some((check) => check.status === 'failed');
+    const hasWarning = checks.some((check) => check.status === 'warning');
+    return {
+      enabled: this.config.enabled,
+      mode: this.config.mode,
+      readiness: hasFailure ? 'failed' : hasWarning ? 'attention' : 'ready',
+      checkedAt,
+      live,
+      localhostMvp: true,
+      checks,
     };
   }
 
