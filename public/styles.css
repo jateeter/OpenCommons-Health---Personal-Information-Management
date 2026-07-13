@@ -91,7 +91,30 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 .records-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; padding: 19px 22px; border-bottom: 1px solid var(--line); }
 .panel-heading h2 { margin: 0; font: 20px Georgia, serif; }
+.panel-heading p { margin: 4px 0 0; color: var(--muted); }
 .panel-heading input { width: 220px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px; background: #fff; }
+.epic-panel {
+  margin: 0 0 22px;
+  background: rgba(255,253,247,.86);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.epic-actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: flex-end; }
+.epic-actions button:disabled { cursor: not-allowed; opacity: .45; box-shadow: none; }
+.epic-preview-list { padding: 14px 22px 20px; border-top: 1px solid var(--line); }
+.epic-preview-list p { margin-bottom: 12px; color: var(--muted); }
+.epic-preview-list article {
+  display: grid;
+  grid-template-columns: 170px 1fr auto;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid #edf0eb;
+}
+.epic-preview-list article:first-of-type { border-top: 0; }
+.epic-preview-list span { color: var(--ink); }
+.epic-preview-list small { color: var(--muted); }
 .record { display: grid; grid-template-columns: 42px 1fr auto; gap: 15px; align-items: center; padding: 17px 22px; border-bottom: 1px solid #e8ece7; }
 .record:last-child { border-bottom: 0; }
 .record-icon { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--mint); font-size: 18px; }
@@ -147,6 +170,8 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   main { padding: 30px 18px 60px; }
   h1 { font-size: 36px; }
   .summary { grid-template-columns: 1fr; }
+  .epic-actions { justify-content: flex-start; }
+  .epic-preview-list article { grid-template-columns: 1fr; gap: 2px; }
   .panel-heading { align-items: flex-start; gap: 12px; flex-direction: column; }
   .panel-heading input { width: 100%; }
   .record { grid-template-columns: 40px 1fr; }

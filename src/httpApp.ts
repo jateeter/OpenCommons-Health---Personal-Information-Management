@@ -10,6 +10,7 @@ import {
   OPENCOMMONS_FHIR_CAPABILITY_STATEMENT,
   PERSONAL_HEALTH_INFORMATION_SCHEMA,
 } from './standards/fhir';
+import type { EpicIntegrationService } from './integrations/epic';
 
 export interface DomainRepository {
   findAll(): Promise<unknown[]>;
@@ -25,6 +26,7 @@ export interface ApplicationContext {
   podBaseUrl: string;
   authenticated: boolean;
   checkPodAccess(): Promise<void>;
+  epic?: EpicIntegrationService;
 }
 
 export type ContextProvider = () => Promise<ApplicationContext>;
@@ -33,12 +35,14 @@ export function contextFromPim(
   pim: HealthPIM,
   podServerUrl: string,
   podBaseUrl: string,
+  epic?: EpicIntegrationService,
 ): ApplicationContext {
   return {
     podServerUrl,
     podBaseUrl,
     authenticated: pim.isAuthenticated,
     checkPodAccess: () => pim.checkPodAccess(),
+    epic,
     repositories: {
       profiles: pim.profile,
       conditions: pim.conditions,
@@ -78,6 +82,9 @@ export function createRequestHandler(
           anonymizedRelease: ANONYMIZED_HEALTH_INFORMATION_SCHEMA,
         });
       }
+      if (requestUrl.pathname.startsWith('/api/integrations/epic')) {
+        return await handleEpicIntegrationRequest(req, res, requestUrl, provideContext);
+      }
       if (requestUrl.pathname === '/api/docs') {
         return servePublicAsset('/api-docs.html', publicDirectory, res);
       }
@@ -110,6 +117,7 @@ async function sendStatus(provideContext: ContextProvider, res: ServerResponse):
       podBaseUrl: context.podBaseUrl,
       podAccess: context.authenticated,
       domains: DOMAIN_NAMES,
+      epic: context.epic ? await context.epic.status() : { enabled: false, status: 'disabled' },
     });
   } catch (error) {
     sendJson(res, 503, {
@@ -119,6 +127,49 @@ async function sendStatus(provideContext: ContextProvider, res: ServerResponse):
       error: error instanceof Error ? error.message : 'Application initialization failed',
     });
   }
+}
+
+async function handleEpicIntegrationRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  requestUrl: URL,
+  provideContext: ContextProvider,
+): Promise<void> {
+  const context = await provideContext();
+  if (!context.authenticated) {
+    throw new AuthError('The PIM is not authenticated with the configured Solid server.');
+  }
+  const epic = context.epic;
+  if (!epic) {
+    throw new ValidationError('Epic integration is not configured for this deployment.', [
+      { field: 'EPIC_ENABLED', reason: 'set EPIC_ENABLED=true to configure Epic integration APIs' },
+    ]);
+  }
+
+  if (requestUrl.pathname === '/api/integrations/epic/status' && req.method === 'GET') {
+    return sendJson(res, 200, { data: await epic.status() });
+  }
+  if (requestUrl.pathname === '/api/integrations/epic/connect/start' && req.method === 'POST') {
+    return sendJson(res, 200, { data: await epic.connectStart() });
+  }
+  if (requestUrl.pathname === '/api/integrations/epic/connect/callback' && req.method === 'GET') {
+    return sendJson(res, 200, { data: await epic.connectCallback(requestUrl.searchParams) });
+  }
+  if (requestUrl.pathname === '/api/integrations/epic/disconnect' && req.method === 'POST') {
+    return sendJson(res, 200, { data: await epic.disconnect() });
+  }
+  if (requestUrl.pathname === '/api/integrations/epic/sync/preview' && req.method === 'POST') {
+    return sendJson(res, 200, { data: await epic.preview(await readJsonBodyOrEmpty(req)) });
+  }
+  if (requestUrl.pathname === '/api/integrations/epic/sync/apply' && req.method === 'POST') {
+    return sendJson(res, 200, { data: await epic.apply(await readJsonBodyOrEmpty(req)) });
+  }
+  if (requestUrl.pathname === '/api/integrations/epic/audit' && req.method === 'GET') {
+    return sendJson(res, 200, { data: await epic.audit() });
+  }
+
+  res.setHeader('allow', allowedEpicMethods(requestUrl.pathname));
+  sendJson(res, 404, { error: 'Epic integration endpoint not found' });
 }
 
 async function handleDomainRequest(
@@ -269,6 +320,22 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   } catch {
     throw new ValidationError('Request body must be valid JSON.', []);
   }
+}
+
+async function readJsonBodyOrEmpty(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const contentLength = req.headers['content-length'];
+  if (contentLength === '0' || contentLength === undefined) return {};
+  const body = await readJsonBody(req);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ValidationError('Request body must be a JSON object.', []);
+  }
+  return body as Record<string, unknown>;
+}
+
+function allowedEpicMethods(pathname: string): string {
+  if (pathname.endsWith('/status') || pathname.endsWith('/connect/callback') || pathname.endsWith('/audit')) return 'GET';
+  if (pathname.endsWith('/connect/start') || pathname.endsWith('/disconnect') || pathname.endsWith('/sync/preview') || pathname.endsWith('/sync/apply')) return 'POST';
+  return 'GET, POST';
 }
 
 function servePublicAsset(requestPath: string, publicDirectory: string, res: ServerResponse): void {

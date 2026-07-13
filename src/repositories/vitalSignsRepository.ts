@@ -20,7 +20,7 @@ export class VitalSignsRepository extends BaseRepository<VitalSign> {
 
   protected toThing(entity: VitalSign, resourceUrl: string): Thing {
     const { schema, health, rdf } = this.NS;
-    const vitalIri = `${health}Vital${this.camel(entity.code)}`;
+    const vitalIri = `${health}Vital${this.vitalCodeSuffix(entity.code)}`;
 
     let builder = buildThing(createThing({ url: resourceUrl }))
       .addUrl(`${rdf}type`, `${health}VitalSign`)
@@ -46,7 +46,7 @@ export class VitalSignsRepository extends BaseRepository<VitalSign> {
     const { schema, health } = this.NS;
 
     const codeUrl = getUrl(thing, `${health}vitalSignCode`) ?? '';
-    const code = codeUrl.replace(`${health}Vital`, '').replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '') as VitalSign['code'];
+    const code = this.vitalSuffixToCode(codeUrl.replace(`${health}Vital`, ''));
 
     const scalar = getDecimal(thing, `${health}valueDecimal`);
     const systolic = getDecimal(thing, `${health}valueSystolic`);
@@ -59,7 +59,7 @@ export class VitalSignsRepository extends BaseRepository<VitalSign> {
 
     return {
       url: resourceUrl,
-      code: code || 'heart-rate',
+      code,
       value,
       unit: getStringNoLocale(thing, `${health}unit`) ?? '',
       effectiveDateTime: getStringNoLocale(thing, `${health}effectiveDateTime`) ?? '',
@@ -69,10 +69,33 @@ export class VitalSignsRepository extends BaseRepository<VitalSign> {
     };
   }
 
-  private camel(s: string): string {
-    return s
-      .split(/[-_]/)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join('');
+  private vitalCodeSuffix(code: VitalSign['code']): string {
+    const suffixes: Record<VitalSign['code'], string> = {
+      'body-weight': 'BodyWeight',
+      'body-height': 'BodyHeight',
+      bmi: 'BMI',
+      'blood-pressure': 'BloodPressure',
+      'heart-rate': 'HeartRate',
+      'respiratory-rate': 'RespiratoryRate',
+      'body-temperature': 'BodyTemperature',
+      'oxygen-saturation': 'OxygenSaturation',
+      'blood-glucose': 'BloodGlucose',
+    };
+    return suffixes[code];
+  }
+
+  private vitalSuffixToCode(suffix: string): VitalSign['code'] {
+    const codes: Record<string, VitalSign['code']> = {
+      BodyWeight: 'body-weight',
+      BodyHeight: 'body-height',
+      BMI: 'bmi',
+      BloodPressure: 'blood-pressure',
+      HeartRate: 'heart-rate',
+      RespiratoryRate: 'respiratory-rate',
+      BodyTemperature: 'body-temperature',
+      OxygenSaturation: 'oxygen-saturation',
+      BloodGlucose: 'blood-glucose',
+    };
+    return codes[suffix] ?? 'heart-rate';
   }
 }

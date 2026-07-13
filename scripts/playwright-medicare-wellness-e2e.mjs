@@ -9,16 +9,48 @@ const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
 const browser = await chromium.launch({ headless: process.env.PLAYWRIGHT_HEADED !== 'true' });
 const page = await browser.newPage();
+page.on('dialog', async (dialog) => dialog.accept());
+
+const domainTitles = {
+  Profiles: 'Profiles',
+  Insurance: 'Insurance',
+  Providers: 'Providers',
+  Conditions: 'Conditions',
+  Medications: 'Medications',
+  Allergies: 'Allergies',
+  Immunizations: 'Immunizations',
+  'Vital signs': 'Vital signs',
+  'Lab results': 'Lab results',
+};
 
 function textPattern(label) {
   return new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 }
 
+function fieldLabelPattern(label) {
+  return new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?: \\*)?\\s*$`);
+}
+
+async function controlForLabel(label) {
+  const labelNode = page.locator('label').filter({ hasText: fieldLabelPattern(label) }).first();
+  await labelNode.waitFor({ timeout: 10000 });
+  const id = await labelNode.getAttribute('for');
+  if (!id) throw new Error(`Label ${label} is not associated with a form control.`);
+  return page.locator(`[id="${id.replace(/"/g, '\\"')}"]`);
+}
+
 async function saveRecord(domainLabel, values, expectedText) {
   await page.getByRole('button', { name: textPattern(domainLabel) }).click();
+  await page.locator('#page-title').waitFor({ timeout: 10000 });
+  await page.locator('#page-title').getByText(domainTitles[domainLabel] || domainLabel, { exact: true }).waitFor({ timeout: 10000 });
   await page.getByRole('button', { name: 'Add record' }).click();
+  await page.locator('#record-dialog').evaluate((dialog) => {
+    if (!dialog.open) {
+      throw new Error('Record dialog did not open');
+    }
+  });
   for (const [label, value] of Object.entries(values)) {
-    const control = page.getByLabel(label, { exact: true });
+    const control = await controlForLabel(label);
     if (Array.isArray(value)) {
       await control.selectOption(value);
     } else {
@@ -26,7 +58,23 @@ async function saveRecord(domainLabel, values, expectedText) {
     }
   }
   await page.getByRole('button', { name: 'Save to pod' }).click();
-  await page.getByText(expectedText, { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#record-list').getByText(expectedText, { exact: false }).first().waitFor({ timeout: 10000 });
+}
+
+async function exerciseEpicImportPanel() {
+  const summary = await page.locator('#epic-summary').textContent();
+  if (summary?.includes('Epic integration is disabled')) return;
+
+  if (!await page.locator('#epic-connect').isDisabled()) {
+    await page.locator('#epic-connect').click();
+    await page.locator('#epic-summary').getByText(/Status: connected/).waitFor({ timeout: 10000 });
+  }
+
+  await page.locator('#epic-preview').click();
+  await page.locator('#epic-preview-list').getByText('mapped FHIR resources', { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#epic-preview-list').getByText('Hypertensive disorder', { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#epic-apply').click();
+  await page.locator('#epic-preview-list').getByText('Applied', { exact: false }).waitFor({ timeout: 10000 });
 }
 
 function assertNoDirectIdentifiers(value) {
@@ -47,8 +95,9 @@ function assertNoDirectIdentifiers(value) {
 
 try {
   await mkdir(outputDir, { recursive: true });
-  await page.goto(appUrl, { waitUntil: 'networkidle' });
+  await page.goto(appUrl, { waitUntil: 'domcontentloaded' });
   await page.getByText('Pod connected', { exact: false }).waitFor({ timeout: 15000 });
+  await exerciseEpicImportPanel();
 
   await saveRecord('Profiles', {
     'Family name': 'Wellness-Owner',
@@ -95,9 +144,9 @@ try {
   }, 'Atorvastatin 20 MG Oral Tablet');
 
   await saveRecord('Allergies', {
-    'Substance system': 'http://snomed.info/id/',
-    'Substance code': '91936005',
-    'Substance name': 'Allergy to peanuts',
+    'SNOMED CT system': 'http://snomed.info/sct',
+    'SNOMED CT code': '91936005',
+    'SNOMED CT name': 'Allergy to peanuts',
     'Category': ['food'],
     'Status': ['active'],
     'Notes': 'Annual wellness allergy review',

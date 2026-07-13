@@ -83,6 +83,50 @@ check_domain_crud() {
   echo "  OK – ${domain} create, read, and delete succeeded"
 }
 
+check_epic_mock_flow() {
+  echo "Checking Epic MVP mock connector flow..."
+  status=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/status")
+  echo "${status}" | grep -q '"enabled":true' || {
+    echo "ERROR: Epic status did not report enabled=true: ${status}"
+    exit 1
+  }
+  start=$(curl -fsS -X POST --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/connect/start")
+  callback_url=$(printf '%s' "${start}" | sed -n 's/.*"authorizationUrl":"\([^"]*\)".*/\1/p')
+  if [ -z "${callback_url}" ]; then
+    echo "ERROR: Epic connect/start did not return authorizationUrl: ${start}"
+    exit 1
+  fi
+  case "${callback_url}" in
+    http*) callback="${callback_url}" ;;
+    *) callback="${PIM_URL}${callback_url}" ;;
+  esac
+  connected=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${callback}")
+  echo "${connected}" | grep -q '"status":"connected"' || {
+    echo "ERROR: Epic callback did not connect: ${connected}"
+    exit 1
+  }
+  preview=$(curl -fsS -X POST --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/sync/preview" \
+    -H "content-type: application/json" \
+    --data '{"workflow":"annual-medicare-wellness"}')
+  echo "${preview}" | grep -q '"domain":"conditions"' || {
+    echo "ERROR: Epic preview did not include conditions: ${preview}"
+    exit 1
+  }
+  apply=$(curl -fsS -X POST --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/sync/apply" \
+    -H "content-type: application/json" \
+    --data '{"domains":["conditions"]}')
+  echo "${apply}" | grep -q '"conditions":1' || {
+    echo "ERROR: Epic apply did not create a condition: ${apply}"
+    exit 1
+  }
+  audit=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/audit")
+  echo "${audit}" | grep -q '"action":"sync-apply"' || {
+    echo "ERROR: Epic audit did not include sync-apply: ${audit}"
+    exit 1
+  }
+  echo "  OK – Epic mock connect, preview, apply, and audit succeeded"
+}
+
 # ── 1. Wait for CSS ───────────────────────────────────────────────────────────
 wait_for "Community Solid Server" "${CSS_URL}/"
 
@@ -158,6 +202,10 @@ check_domain_crud \
   "insurance-policies" \
   '{"type":"medical","insurerName":"OpenCommons Smoke Plan","memberId":"SMOKE-42","effectiveDate":"2026-01-01"}' \
   '"memberId":"SMOKE-42"'
+
+if [ "${EPIC_ENABLED:-false}" = "true" ]; then
+  check_epic_mock_flow
+fi
 
 echo ""
 echo "All deployment smoke tests passed."

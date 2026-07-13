@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadServerRuntimeConfig, loadSolidRuntimeConfig } from '../../src/runtimeConfig';
+import { loadEpicRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from '../../src/runtimeConfig';
 
 describe('runtime configuration', () => {
   it('loads every Solid setting supplied by Compose or .env', () => {
@@ -93,5 +93,50 @@ describe('runtime configuration', () => {
     expect(() => loadServerRuntimeConfig({ PORT: '70000' })).toThrow(
       'PORT/APP_PORT must be an integer between 1 and 65535',
     );
+  });
+
+  it('keeps Epic integration disabled by default with MVP SMART scopes declared', () => {
+    expect(loadEpicRuntimeConfig({})).toMatchObject({
+      enabled: false,
+      mode: 'mock',
+      syncOnStartup: false,
+      scopes: expect.arrayContaining([
+        'openid',
+        'fhirUser',
+        'launch/patient',
+        'offline_access',
+        'patient/Condition.rs',
+        'patient/Observation.rs',
+        'patient/Coverage.rs',
+      ]),
+    });
+  });
+
+  it('requires grant encryption when Epic is enabled', () => {
+    expect(() => loadEpicRuntimeConfig({ EPIC_ENABLED: 'true' })).toThrow(
+      'EPIC_GRANT_ENCRYPTION_KEY is required when EPIC_ENABLED=true.',
+    );
+  });
+
+  it('loads Epic sandbox settings when explicitly enabled', () => {
+    expect(loadEpicRuntimeConfig({
+      EPIC_ENABLED: 'true',
+      EPIC_MODE: 'sandbox',
+      EPIC_FHIR_BASE_URL: 'https://example.org/fhir/R4',
+      EPIC_CLIENT_ID: 'epic-client',
+      EPIC_REDIRECT_URI: 'https://app.example.org/api/integrations/epic/connect/callback',
+      EPIC_GRANT_ENCRYPTION_KEY: 'local-test-key',
+      EPIC_SCOPES: 'openid fhirUser patient/Patient.rs',
+      EPIC_SYNC_ON_STARTUP: 'yes',
+    })).toEqual({
+      enabled: true,
+      mode: 'sandbox',
+      fhirBaseUrl: 'https://example.org/fhir/R4',
+      clientId: 'epic-client',
+      redirectUri: 'https://app.example.org/api/integrations/epic/connect/callback',
+      encryptionKey: 'local-test-key',
+      scopes: ['openid', 'fhirUser', 'patient/Patient.rs'],
+      syncOnStartup: true,
+    });
   });
 });
