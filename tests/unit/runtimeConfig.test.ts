@@ -124,6 +124,7 @@ describe('runtime configuration', () => {
       EPIC_MODE: 'sandbox',
       EPIC_FHIR_BASE_URL: 'https://example.org/fhir/R4',
       EPIC_CLIENT_ID: 'epic-client',
+      EPIC_CLIENT_SECRET: 'epic-secret',
       EPIC_REDIRECT_URI: 'https://app.example.org/api/integrations/epic/connect/callback',
       EPIC_GRANT_ENCRYPTION_KEY: 'local-test-key',
       EPIC_SCOPES: 'openid fhirUser patient/Patient.rs',
@@ -133,10 +134,32 @@ describe('runtime configuration', () => {
       mode: 'sandbox',
       fhirBaseUrl: 'https://example.org/fhir/R4',
       clientId: 'epic-client',
+      clientSecret: 'epic-secret',
       redirectUri: 'https://app.example.org/api/integrations/epic/connect/callback',
       encryptionKey: 'local-test-key',
       scopes: ['openid', 'fhirUser', 'patient/Patient.rs'],
       syncOnStartup: true,
     });
+  });
+
+  it('loads an optional Epic client secret from an untracked file', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'opencommons-epic-secret-'));
+    const file = join(directory, 'epic-client-secret');
+    try {
+      writeFileSync(file, 'file-secret\n');
+      expect(loadEpicRuntimeConfig({
+        EPIC_ENABLED: 'true',
+        EPIC_MODE: 'sandbox',
+        EPIC_FHIR_BASE_URL: 'https://example.org/fhir/R4',
+        EPIC_CLIENT_ID: 'epic-client',
+        EPIC_CLIENT_SECRET_FILE: file,
+        EPIC_REDIRECT_URI: 'https://app.example.org/api/integrations/epic/connect/callback',
+        EPIC_GRANT_ENCRYPTION_KEY: 'local-test-key',
+      })).toMatchObject({
+        clientSecret: 'file-secret',
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

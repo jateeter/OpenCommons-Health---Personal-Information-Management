@@ -24,6 +24,9 @@ export interface EpicGrant {
   expiresAt?: string;
   tokenType?: string;
   scope?: string;
+  idToken?: string;
+  patient?: string;
+  issuedAt?: string;
 }
 
 export interface EpicConnectionRecord {
@@ -35,6 +38,9 @@ export interface EpicConnectionRecord {
   requestedScopes: string[];
   grantedScopes: string[];
   lastAuthorizationState?: string;
+  encryptedPkceCodeVerifier?: string;
+  authorizationEndpoint?: string;
+  tokenEndpoint?: string;
   connectedAt?: string;
   disconnectedAt?: string;
   lastStartupAt?: string;
@@ -140,4 +146,3 @@ export interface EpicApplyResult {
     provenance: EpicImportProvenance;
   }>;
 }
-

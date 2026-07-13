@@ -22,6 +22,7 @@ export interface EpicRuntimeConfig {
   mode: EpicIntegrationMode;
   fhirBaseUrl?: string;
   clientId?: string;
+  clientSecret?: string;
   redirectUri?: string;
   scopes: string[];
   encryptionKey?: string;
@@ -89,6 +90,7 @@ export function loadEpicRuntimeConfig(env: Environment = process.env): EpicRunti
     mode,
     fhirBaseUrl: optionalHttpUrl(env, 'EPIC_FHIR_BASE_URL'),
     clientId: env.EPIC_CLIENT_ID?.trim() || undefined,
+    clientSecret: loadOptionalSecret(env, 'EPIC_CLIENT_SECRET', 'EPIC_CLIENT_SECRET_FILE'),
     redirectUri: optionalHttpUrl(env, 'EPIC_REDIRECT_URI'),
     scopes,
     encryptionKey: env.EPIC_GRANT_ENCRYPTION_KEY?.trim() || undefined,
@@ -138,6 +140,20 @@ function loadClientCredentials(env: Environment): { clientId: string; clientSecr
     );
   }
   return { clientId: parsed.clientId.trim(), clientSecret: parsed.clientSecret.trim() };
+}
+
+function loadOptionalSecret(env: Environment, inlineName: string, fileName: string): string | undefined {
+  const inline = env[inlineName]?.trim();
+  if (inline) return inline;
+  const file = env[fileName]?.trim();
+  if (!file) return undefined;
+  try {
+    const value = readFileSync(file, 'utf8').trim();
+    return value || undefined;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Unable to read ${fileName} ${file}: ${reason}`);
+  }
 }
 
 function isCredentials(value: unknown): value is { clientId: string; clientSecret: string } {
