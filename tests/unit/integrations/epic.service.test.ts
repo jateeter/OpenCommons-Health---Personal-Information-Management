@@ -105,4 +105,62 @@ describe('Epic MVP integration service', () => {
     expect(repository.record?.lastImportJobId).toBe(result.importJobId);
     expect(repository.record?.audit.some((event) => event.action === 'sync-apply')).toBe(true);
   });
+
+  it('uses live SMART token exchange in sandbox mode and stores only encrypted grant material publicly', async () => {
+    const sandboxConfig = {
+      enabled: true,
+      mode: 'sandbox' as const,
+      fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
+      clientId: 'smart-client-id',
+      redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
+      scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
+      encryptionKey: 'unit-test-epic-grant-key',
+      syncOnStartup: false,
+    };
+    const fetchMock = jest.fn(async (url: string) => {
+      if (url.endsWith('/.well-known/smart-configuration')) {
+        return jsonResponse({
+          authorization_endpoint: 'https://epic.example.test/oauth2/authorize',
+          token_endpoint: 'https://epic.example.test/oauth2/token',
+        });
+      }
+      if (url === 'https://epic.example.test/oauth2/token') {
+        return jsonResponse({
+          access_token: 'live-access-token',
+          refresh_token: 'live-refresh-token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+          scope: 'openid fhirUser patient/Patient.rs',
+          patient: 'live-patient-id',
+        });
+      }
+      throw new Error(`Unexpected URL ${url}`);
+    });
+    const repository = new FakeEpicRepository();
+    const service = new EpicIntegrationService(sandboxConfig, repository as never, {}, fetchMock as never);
+
+    const start = await service.connectStart();
+    expect(String(start.authorizationUrl)).toContain('code_challenge_method=S256');
+    expect(repository.record?.encryptedPkceCodeVerifier).toBeDefined();
+    expect(JSON.stringify(repository.record)).not.toContain('codeVerifier');
+    const status = await service.connectCallback(new URLSearchParams({ code: 'live-code', state: String(start.state) }));
+
+    expect(status).toMatchObject({
+      mode: 'sandbox',
+      status: 'connected',
+      patientId: 'live-patient-id',
+      grantedScopes: ['openid', 'fhirUser', 'patient/Patient.rs'],
+    });
+    expect(JSON.stringify(status)).not.toContain('live-access-token');
+    expect(JSON.stringify(status)).not.toContain('live-refresh-token');
+    expect(repository.record?.encryptedGrant).toBeDefined();
+  });
 });
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  } as Response;
+}

@@ -438,7 +438,7 @@ function epicIntegrationPaths(): Record<string, unknown> {
       post: {
         tags: ['epic'],
         operationId: 'startEpicSmartAuthorization',
-        summary: 'Start Epic SMART authorization and store request state in the owner pod',
+        summary: 'Start Epic SMART authorization with discovery, state, and PKCE, then store request state in the owner pod',
         responses: okResponse('Epic SMART authorization start response.', objectSchema(['data'], {
           data: { $ref: '#/components/schemas/EpicConnectStart' },
         })),
@@ -448,7 +448,7 @@ function epicIntegrationPaths(): Record<string, unknown> {
       get: {
         tags: ['epic'],
         operationId: 'completeEpicSmartAuthorization',
-        summary: 'Complete Epic SMART authorization and store encrypted grant state in the owner pod',
+        summary: 'Exchange the Epic SMART authorization code and store encrypted grant state in the owner pod',
         parameters: [
           { name: 'code', in: 'query', required: true, schema: { type: 'string' } },
           { name: 'state', in: 'query', required: true, schema: { type: 'string' } },

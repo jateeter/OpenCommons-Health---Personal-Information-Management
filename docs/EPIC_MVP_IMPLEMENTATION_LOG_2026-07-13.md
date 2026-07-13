@@ -18,6 +18,9 @@ repeatability focus:
 7. Docker and host-local configuration contracts carry the same `EPIC_*`
    settings.
 8. Deployment verification now validates the optional Epic mock flow.
+9. SMART discovery, authorization-code-with-PKCE URL generation, token
+   exchange, refresh-token handling, and patient-scoped FHIR reads are now
+   implemented for sandbox/production connector modes.
 
 ## Implemented API surface
 
@@ -73,6 +76,9 @@ Outcome:
 - `/livez`, `/api/status`, `/openapi.json`, `/api/docs` passed
 - all nine owner domain CRUD smoke tests passed
 - Epic mock connect, preview, apply, and audit smoke tests passed
+- SMART token exchange unit coverage validates discovery, PKCE, code exchange,
+  grant redaction, refresh-expiry detection, and patient-scoped FHIR resource
+  reads.
 
 Browser E2E proof:
 
@@ -104,13 +110,14 @@ controls.
 
 ## Remaining MVP gaps
 
-- Real Epic sandbox SMART token exchange is not implemented in this slice.
-- SMART discovery and customer-specific Epic metadata checks need live sandbox
-  credentials.
+- Real Epic sandbox SMART token exchange was added after the original MVP mock
+  slice. Live validation still requires provider-specific Epic FHIR base URL,
+  client id, redirect URI registration, allowed scopes, and patient login.
+- OpenCommons must not prompt for or store Epic/MyChart passwords; the credential
+  prompt must occur on the Epic/MyChart authorization page.
 - DocumentReference/Binary and messaging/workflow resources remain roadmap
   lanes, not completed MVP features.
 - Production Epic app registration, customer download, JWK/JWKS management, and
   non-mock refresh-token rotation remain future work.
 - Imported clinical records preserve provenance in preview/apply audit output;
   deeper per-record RDF provenance links should be added before production use.
-

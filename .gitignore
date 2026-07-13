@@ -21,6 +21,7 @@ yarn-error.log*
 .env.local
 .env.*.local
 config/local.json
+.secrets/
 
 # ─── Editor ──────────────────────────────────────────────────────────────────
 .DS_Store
