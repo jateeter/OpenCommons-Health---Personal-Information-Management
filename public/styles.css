@@ -105,6 +105,39 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 .epic-actions button:disabled { cursor: not-allowed; opacity: .45; box-shadow: none; }
 .epic-preview-list { padding: 14px 22px 20px; border-top: 1px solid var(--line); }
 .epic-preview-list p { margin-bottom: 12px; color: var(--muted); }
+.epic-review-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.epic-review-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.epic-selection-summary {
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--mint);
+  color: var(--teal-dark) !important;
+  font-weight: 750;
+}
+.epic-domain-section {
+  padding-top: 10px;
+  border-top: 1px solid #edf0eb;
+}
+.epic-domain-section h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--teal-dark);
+}
 .epic-preview-list article {
   display: grid;
   grid-template-columns: 170px 1fr auto;

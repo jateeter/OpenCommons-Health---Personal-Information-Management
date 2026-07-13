@@ -44,4 +44,14 @@ describe('browser terminology manual-entry support', () => {
   it('allows decimal clinical measurements in numeric fields', () => {
     expect(appSource).toContain("if (field.type === 'number') input.step = 'any';");
   });
+
+  it('supports owner-mediated Epic import section review before pod writes', () => {
+    expect(appSource).toContain('epicSelectedDomains = new Set(epicPreview.changes.map((change) => change.domain))');
+    expect(appSource).toContain('Review each section and choose what to apply.');
+    expect(appSource).toContain("className = 'epic-review-checklist'");
+    expect(appSource).toContain("body: JSON.stringify({ importJobId: epicPreview.importJobId, domains: selectedDomains })");
+    expect(appSource).toContain('owner-reviewed section');
+    expect(styleSource).toContain('.epic-review-checklist');
+    expect(styleSource).toContain('.epic-selection-summary');
+  });
 });

@@ -76,6 +76,9 @@ The next non-iPad work should stay inside the localhost contract:
 7. Keep anonymized release tests in the release gate.
 8. Keep native/iPad implementation as a parked future milestone.
 
+Issue-style notes for the remaining localhost deployment work are maintained in
+[`LOCALHOST_MVP_DEPLOYMENT_ISSUES.md`](./LOCALHOST_MVP_DEPLOYMENT_ISSUES.md).
+
 ## MVP acceptance gates
 
 Before a localhost MVP release is considered valid, the following checks should
