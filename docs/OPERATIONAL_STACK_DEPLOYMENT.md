@@ -60,23 +60,36 @@ credentials.
 
 ## Configuration contract
 
-Recommended future variables:
+Epic integration is implemented as an optional connector. The default local
+deployment remains Solid-only. When Epic is enabled, the pod stores the
+patient-owned connection state and encrypted grant material; app-level Epic
+registration values still come from deployment configuration.
 
 | Variable | Required when Epic enabled | Purpose |
 |---|---:|---|
 | `EPIC_ENABLED` | Yes | Enables Epic connector routes and UI controls. |
-| `EPIC_ENVIRONMENT` | Yes | `sandbox`, `nonprod`, or `prod`. |
-| `EPIC_FHIR_BASE_URL` | Yes | Customer or sandbox FHIR base URL. |
-| `EPIC_CLIENT_ID` | Yes | Epic app client ID. |
-| `EPIC_REDIRECT_URI` | Yes | Callback URL registered with Epic. |
-| `EPIC_SCOPES` | Yes | Minimum SMART scopes requested by the PIM. |
-| `EPIC_CLIENT_SECRET_FILE` | Conditional | Secret file for confidential clients. |
-| `EPIC_JWKS_FILE` | Conditional | Private-key/JWKS material for backend services. |
-| `EPIC_TOKEN_STORE_PATH` | Conditional | Encrypted local token store path. |
-| `EPIC_IMPORT_WINDOW_DAYS` | No | Default bounded import lookback window. |
+| `EPIC_MODE` | Yes | `mock`, `sandbox`, or `production`. |
+| `EPIC_FHIR_BASE_URL` | Sandbox/production | Customer or sandbox FHIR base URL. |
+| `EPIC_CLIENT_ID` | Sandbox/production | Epic app client ID. |
+| `EPIC_REDIRECT_URI` | Sandbox/production | Callback URL registered with Epic. |
+| `EPIC_SCOPES` | No | Overrides the default MVP SMART scope set. |
+| `EPIC_GRANT_ENCRYPTION_KEY` | Yes | Encrypts patient-owned Epic grant material before it is stored in the Solid pod. |
+| `EPIC_SYNC_ON_STARTUP` | No | When true, startup loads pod-owned Epic state and applies a sync if already connected. Default false. |
 
 Port-sensitive values should derive from existing `APP_PORT`, `CSS_PORT`, and
 deployment base URL variables.
+
+Implemented MVP API endpoints:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/integrations/epic/status` | Read sanitized Epic connection status from the Solid pod. |
+| `POST /api/integrations/epic/connect/start` | Start SMART authorization and persist OAuth state in the pod. |
+| `GET /api/integrations/epic/connect/callback` | Complete authorization and store encrypted grant material in the pod. |
+| `POST /api/integrations/epic/disconnect` | Clear the active grant from pod-owned connection state. |
+| `POST /api/integrations/epic/sync/preview` | Map Epic FHIR resources into OpenCommons domain candidates without writing. |
+| `POST /api/integrations/epic/sync/apply` | Apply owner-approved import candidates to the Solid pod. |
+| `GET /api/integrations/epic/audit` | Read pod-owned Epic integration audit events. |
 
 ## Deployment gates
 
@@ -89,7 +102,8 @@ Every Epic-enabled deployment should pass these gates:
 4. Epic disabled mode hides connector controls and passes existing deployment
    verification.
 5. Epic enabled mode verifies:
-   - SMART discovery document is reachable;
+   - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
+   - sandbox/production SMART discovery document is reachable;
    - authorization and token endpoints are configured;
    - FHIR capability metadata is reachable;
    - requested scopes match configured feature lanes;
@@ -120,4 +134,3 @@ For each deployment issue, capture:
 - FHIR resource or scope that failed;
 - whether the failure happened before authorization, during import preview, or
   during pod write.
-

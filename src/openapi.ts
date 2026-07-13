@@ -262,6 +262,7 @@ export const OPENAPI_DOCUMENT = {
     })),
     { name: 'standards', description: 'HL7/FHIR capability and PHI schema documentation.' },
     { name: 'privacy', description: 'Owner-approved anonymized release operations.' },
+    { name: 'epic', description: 'Patient-owned Epic SMART/FHIR connection, import preview, and pod sync operations.' },
   ],
   paths: {
     '/livez': {
@@ -304,6 +305,7 @@ export const OPENAPI_DOCUMENT = {
         })),
       },
     },
+    ...epicIntegrationPaths(),
     ...domainPaths(),
     ...anonymizedDomainPaths(),
   },
@@ -327,6 +329,77 @@ export const OPENAPI_DOCUMENT = {
         podBaseUrl: uri('Configured Solid pod base URL'),
         podAccess: { type: 'boolean' },
         domains: { type: 'array', items: { type: 'string', enum: DOMAIN_NAMES } },
+        epic: { $ref: '#/components/schemas/EpicConnectionStatus' },
+      }),
+      EpicConnectionStatus: objectSchema(['enabled', 'mode', 'status', 'requestedScopes', 'grantedScopes'], {
+        enabled: { type: 'boolean' },
+        mode: enumSchema(['mock', 'sandbox', 'production']),
+        status: enumSchema(['disabled', 'not-connected', 'authorization-started', 'connected', 'needs-reconnect', 'disconnected']),
+        fhirBaseUrl: uri('Epic FHIR base URL'),
+        patientId: string('Epic FHIR patient id returned by SMART launch context'),
+        requestedScopes: { type: 'array', items: { type: 'string' } },
+        grantedScopes: { type: 'array', items: { type: 'string' } },
+        connectedAt: dateTime(),
+        disconnectedAt: dateTime(),
+        lastStartupAt: dateTime(),
+        lastSyncAt: dateTime(),
+        lastImportJobId: string('Last Epic import job id'),
+        lastError: string('Last Epic connector failure summary'),
+      }),
+      EpicConnectStart: objectSchema(['mode', 'authorizationUrl', 'state', 'scopes', 'startedAt'], {
+        mode: enumSchema(['mock', 'sandbox', 'production']),
+        authorizationUrl: uri('SMART authorization URL'),
+        state: string('OAuth state saved in the owner pod'),
+        scopes: { type: 'array', items: { type: 'string' } },
+        startedAt: dateTime(),
+      }),
+      EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'patientId', 'changes'], {
+        importJobId: string('Import job id'),
+        source: enumSchema(['mock', 'epic']),
+        generatedAt: dateTime(),
+        patientId: string('Epic patient id'),
+        changes: {
+          type: 'array',
+          items: objectSchema(['domain', 'action', 'display', 'entity', 'provenance'], {
+            domain: { type: 'string', enum: DOMAIN_NAMES },
+            action: enumSchema(['create', 'update', 'unchanged', 'conflict']),
+            display: string('Human-readable record label'),
+            entity: { type: 'object' },
+            provenance: { $ref: '#/components/schemas/EpicImportProvenance' },
+          }),
+        },
+      }),
+      EpicImportProvenance: objectSchema(['sourceSystem', 'sourceFhirBaseUrl', 'sourcePatientId', 'sourceResourceType', 'sourceResourceId', 'mapperVersion'], {
+        sourceSystem: { type: 'string', const: 'epic' },
+        sourceFhirBaseUrl: uri('Epic FHIR base URL'),
+        sourcePatientId: string('Epic patient id'),
+        sourceResourceType: string('FHIR resource type'),
+        sourceResourceId: string('FHIR resource id'),
+        sourceVersion: string('FHIR meta.versionId'),
+        sourceLastUpdated: dateTime(),
+        importedAt: dateTime(),
+        authorizationGrantId: string('Pod-owned authorization grant reference'),
+        mapperVersion: string('Mapper version'),
+      }),
+      EpicApplyResult: objectSchema(['importJobId', 'appliedAt', 'created', 'resources'], {
+        importJobId: string('Import job id'),
+        appliedAt: dateTime(),
+        created: { type: 'object', additionalProperties: { type: 'integer' } },
+        resources: {
+          type: 'array',
+          items: objectSchema(['domain', 'display', 'provenance'], {
+            domain: { type: 'string', enum: DOMAIN_NAMES },
+            url: resourceUrl(),
+            display: string('Human-readable record label'),
+            provenance: { $ref: '#/components/schemas/EpicImportProvenance' },
+          }),
+        },
+      }),
+      EpicAuditEvent: objectSchema(['at', 'action', 'status'], {
+        at: dateTime(),
+        action: string('Epic integration action'),
+        status: enumSchema(['ok', 'failed', 'info']),
+        detail: string('Audit detail'),
       }),
       AnonymizedRelease: objectSchema(['domain', 'fhirResourceType', 'anonymized', 'data'], {
         domain: { type: 'string', enum: DOMAIN_NAMES },
@@ -348,6 +421,94 @@ export const OPENAPI_DOCUMENT = {
     },
   },
 };
+
+function epicIntegrationPaths(): Record<string, unknown> {
+  return {
+    '/api/integrations/epic/status': {
+      get: {
+        tags: ['epic'],
+        operationId: 'getEpicIntegrationStatus',
+        summary: 'Read patient-owned Epic connection status from the Solid pod',
+        responses: okResponse('Epic connection status.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/EpicConnectionStatus' },
+        })),
+      },
+    },
+    '/api/integrations/epic/connect/start': {
+      post: {
+        tags: ['epic'],
+        operationId: 'startEpicSmartAuthorization',
+        summary: 'Start Epic SMART authorization and store request state in the owner pod',
+        responses: okResponse('Epic SMART authorization start response.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/EpicConnectStart' },
+        })),
+      },
+    },
+    '/api/integrations/epic/connect/callback': {
+      get: {
+        tags: ['epic'],
+        operationId: 'completeEpicSmartAuthorization',
+        summary: 'Complete Epic SMART authorization and store encrypted grant state in the owner pod',
+        parameters: [
+          { name: 'code', in: 'query', required: true, schema: { type: 'string' } },
+          { name: 'state', in: 'query', required: true, schema: { type: 'string' } },
+        ],
+        responses: okResponse('Sanitized Epic connection status.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/EpicConnectionStatus' },
+        })),
+      },
+    },
+    '/api/integrations/epic/disconnect': {
+      post: {
+        tags: ['epic'],
+        operationId: 'disconnectEpic',
+        summary: 'Disconnect Epic by clearing active grant material from the pod-owned connection state',
+        responses: okResponse('Disconnected Epic connection status.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/EpicConnectionStatus' },
+        })),
+      },
+    },
+    '/api/integrations/epic/sync/preview': {
+      post: {
+        tags: ['epic'],
+        operationId: 'previewEpicImport',
+        summary: 'Preview Epic FHIR records mapped into OpenCommons PIM domains before pod writes',
+        requestBody: jsonInlineRequest(objectSchema([], {
+          windowStart: date(),
+          windowEnd: date(),
+          domains: { type: 'array', items: { type: 'string', enum: DOMAIN_NAMES } },
+        }), { windowStart: '2026-05-01', windowEnd: '2026-05-31' }),
+        responses: okResponse('Epic import preview.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/EpicImportPreview' },
+        })),
+      },
+    },
+    '/api/integrations/epic/sync/apply': {
+      post: {
+        tags: ['epic'],
+        operationId: 'applyEpicImportToPod',
+        summary: 'Apply owner-approved Epic import candidates to the Solid pod',
+        requestBody: jsonInlineRequest(objectSchema([], {
+          importJobId: string('Import job id from preview'),
+          domains: { type: 'array', items: { type: 'string', enum: DOMAIN_NAMES } },
+        }), { domains: ['profiles', 'conditions', 'medications'] }),
+        responses: okResponse('Epic import apply result.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/EpicApplyResult' },
+        })),
+      },
+    },
+    '/api/integrations/epic/audit': {
+      get: {
+        tags: ['epic'],
+        operationId: 'listEpicIntegrationAudit',
+        summary: 'List pod-owned Epic connection and sync audit events',
+        responses: okResponse('Epic audit events.', objectSchema(['data'], {
+          data: { type: 'array', items: { $ref: '#/components/schemas/EpicAuditEvent' } },
+        })),
+      },
+    },
+  };
+}
 
 function domainPaths(): Record<string, unknown> {
   return Object.fromEntries(DOMAIN_NAMES.map((domain) => {
@@ -494,6 +655,18 @@ function jsonRequest(schemaRef: string, example: Record<string, unknown>): Recor
     content: {
       'application/json': {
         schema: { $ref: schemaRef },
+        example,
+      },
+    },
+  };
+}
+
+function jsonInlineRequest(schema: JsonSchema, example: Record<string, unknown>): Record<string, unknown> {
+  return {
+    required: false,
+    content: {
+      'application/json': {
+        schema,
         example,
       },
     },

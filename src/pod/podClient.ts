@@ -76,11 +76,34 @@ export class PodClient {
   }
 
   private rootContainerUrl(): string {
+    return this.rootUrl();
+  }
+
+  /** Absolute URL of the configured OpenCommons Health PIM root container. */
+  rootUrl(): string {
     const base = this.config.podBaseUrl.endsWith('/')
       ? this.config.podBaseUrl
       : `${this.config.podBaseUrl}/`;
     const relative = this.config.podPath.replace(/^\/+|\/+$/g, '');
     return relative ? `${base}${relative}/` : base;
+  }
+
+  /** Build an absolute container URL below the PIM root from a pod-relative path. */
+  containerUrlForPath(relativePath: string): string {
+    const clean = relativePath.replace(/^\/+|\/+$/g, '');
+    return clean ? `${this.rootUrl()}${clean}/` : this.rootUrl();
+  }
+
+  /** Ensure an arbitrary nested container path exists below the PIM root. */
+  async ensureContainerPath(relativePath: string): Promise<string> {
+    await this.ensureContainerAt(this.rootUrl());
+    const parts = relativePath.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+    let current = this.rootUrl();
+    for (const part of parts) {
+      current = `${current}${part}/`;
+      await this.ensureContainerAt(current);
+    }
+    return current;
   }
 
   /** Perform a read-only authenticated probe against the configured pod root. */

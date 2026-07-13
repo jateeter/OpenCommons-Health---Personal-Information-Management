@@ -180,6 +180,8 @@ let activeDomain = 'conditions';
 let records = [];
 let editing = null;
 let applicationReady = false;
+let epicStatus = { enabled: false, status: 'disabled' };
+let epicPreview = null;
 const $ = (id) => document.getElementById(id);
 
 function initializeNavigation() {
@@ -210,6 +212,7 @@ async function checkStatus() {
     $('setup-warning').classList.toggle('hidden', ready);
     $('setup-message').textContent = ready ? '' : (status.error || 'Configure the Solid server, pod URL, client ID, and client secret for this deployment.');
     $('add-button').disabled = !ready;
+    renderEpicStatus(status.epic || { enabled: false, status: 'disabled' }, ready);
     return ready;
   } catch {
     applicationReady = false;
@@ -217,8 +220,21 @@ async function checkStatus() {
     $('connection').innerHTML = '<span></span>Application offline';
     $('pod-state').textContent = 'Unavailable';
     $('add-button').disabled = true;
+    renderEpicStatus({ enabled: false, status: 'disabled' }, false);
     return false;
   }
+}
+
+function renderEpicStatus(status, ready = applicationReady) {
+  epicStatus = status;
+  const enabled = Boolean(status.enabled);
+  const connected = status.status === 'connected';
+  $('epic-summary').textContent = enabled
+    ? `Mode: ${status.mode}. Status: ${status.status}${status.lastSyncAt ? `. Last sync: ${formatDate(status.lastSyncAt)}` : ''}.`
+    : 'Epic integration is disabled for this local deployment. Set EPIC_ENABLED=true and use EPIC_MODE=mock for local MVP review.';
+  $('epic-connect').disabled = !ready || !enabled || connected;
+  $('epic-preview').disabled = !ready || !enabled || !connected;
+  $('epic-apply').disabled = !ready || !enabled || !connected || !epicPreview;
 }
 
 async function selectDomain(key) {
@@ -316,6 +332,7 @@ function createField(field, record) {
   } else {
     input = document.createElement('input');
     input.type = field.type || 'text';
+    if (field.type === 'number') input.step = 'any';
   }
   input.id = `field-${field.name}`;
   input.name = field.name;
@@ -427,6 +444,89 @@ async function deleteRecord(record) {
   await loadRecords();
 }
 
+async function connectEpic() {
+  try {
+    const startResponse = await fetch('/api/integrations/epic/connect/start', { method: 'POST' });
+    const startPayload = await startResponse.json();
+    if (!startResponse.ok) throw new Error(formatApiError(startPayload));
+    const authorizationUrl = startPayload.data.authorizationUrl;
+    if (epicStatus.mode === 'mock' || authorizationUrl.startsWith('/')) {
+      const callbackResponse = await fetch(authorizationUrl);
+      const callbackPayload = await callbackResponse.json();
+      if (!callbackResponse.ok) throw new Error(formatApiError(callbackPayload));
+      renderEpicStatus(callbackPayload.data);
+      epicPreview = null;
+      renderEpicPreview();
+      return;
+    }
+    window.location.href = authorizationUrl;
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function previewEpicImport() {
+  try {
+    const response = await fetch('/api/integrations/epic/sync/preview', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ workflow: 'annual-medicare-wellness' }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(formatApiError(payload));
+    epicPreview = payload.data;
+    renderEpicPreview();
+    renderEpicStatus(epicStatus);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function applyEpicImport() {
+  if (!epicPreview) return;
+  if (!confirm(`Apply ${epicPreview.changes.length} Epic import candidates to your Solid pod?`)) return;
+  try {
+    const response = await fetch('/api/integrations/epic/sync/apply', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ importJobId: epicPreview.importJobId }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(formatApiError(payload));
+    epicPreview = null;
+    renderEpicPreview(payload.data);
+    await checkStatus();
+    await loadRecords();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function renderEpicPreview(applyResult = null) {
+  const list = $('epic-preview-list');
+  list.replaceChildren();
+  if (applyResult) {
+    list.classList.remove('hidden');
+    const message = document.createElement('p');
+    message.textContent = `Applied ${applyResult.resources.length} records to the Solid pod from import ${applyResult.importJobId}.`;
+    list.append(message);
+    return;
+  }
+  if (!epicPreview) {
+    list.classList.add('hidden');
+    return;
+  }
+  list.classList.remove('hidden');
+  const summary = document.createElement('p');
+  summary.textContent = `${epicPreview.changes.length} mapped FHIR resources are ready for owner review before pod write.`;
+  list.append(summary);
+  for (const change of epicPreview.changes) {
+    const item = document.createElement('article');
+    item.innerHTML = `<strong>${domains[change.domain]?.plural || change.domain}</strong><span>${change.display}</span><small>${change.provenance.sourceResourceType}/${change.provenance.sourceResourceId}</small>`;
+    list.append(item);
+  }
+}
+
 function getPath(object, dotted) {
   return dotted.split('.').reduce((value, key) => value?.[key], object);
 }
@@ -454,5 +554,8 @@ function formatApiError(payload) {
 $('add-button').addEventListener('click', () => openForm());
 $('record-form').addEventListener('submit', saveRecord);
 $('search').addEventListener('input', renderRecords);
+$('epic-connect').addEventListener('click', connectEpic);
+$('epic-preview').addEventListener('click', previewEpicImport);
+$('epic-apply').addEventListener('click', applyEpicImport);
 initializeNavigation();
 checkStatus().then(() => selectDomain(activeDomain));

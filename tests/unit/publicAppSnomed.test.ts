@@ -40,4 +40,8 @@ describe('browser terminology manual-entry support', () => {
     expect(styleSource).toContain('.tooltip');
     expect(styleSource).toContain('cursor: help');
   });
+
+  it('allows decimal clinical measurements in numeric fields', () => {
+    expect(appSource).toContain("if (field.type === 'number') input.step = 'any';");
+  });
 });

@@ -67,6 +67,7 @@ export * from './utils';
 export * from './errors';
 export * from './privacy';
 export * from './standards/fhir';
+export * from './integrations/epic';
 
 /** Options passed to {@link HealthPIM.create}. */
 export interface HealthPIMOptions {

@@ -251,3 +251,25 @@ Recommended milestones:
 4. Documents and workflow read-only MVP.
 5. Operational hardening and customer pilot.
 
+## MVP implementation phase baseline
+
+The first implementation slice establishes a repeatable local/docker Epic MVP
+contract without requiring live Epic sandbox credentials:
+
+- Epic is disabled by default through `EPIC_ENABLED=false`.
+- `EPIC_MODE=mock` provides deterministic synthetic Annual Medicare Wellness
+  FHIR resources for local development and Playwright automation.
+- The owner Solid pod stores Epic connection state, OAuth state, granted
+  scopes, sync cursors, audit entries, and encrypted grant material.
+- Runtime configuration supplies app-registration values such as FHIR base URL,
+  client id, redirect URI, and the local encryption key.
+- The PIM exposes `/api/integrations/epic/*` endpoints for status,
+  connect/disconnect, preview, apply, and audit.
+- Import preview maps FHIR resources into the existing nine domain APIs before
+  any pod writes occur.
+- Apply-to-pod remains owner-mediated and uses the same domain repositories and
+  ShEx/RDF validation path as manual records.
+
+This slice intentionally keeps outbound Epic writes, production customer
+activation, real token exchange, and document/message writeback out of the MVP
+until the local happy path is fully repeatable.
