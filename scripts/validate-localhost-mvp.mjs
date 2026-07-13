@@ -8,6 +8,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const packageJson = JSON.parse(read('package.json'));
 const envExample = read('.env.example');
 const localhostScope = read('docs/LOCALHOST_MVP_SCOPE.md');
+const deploymentIssues = read('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md');
 const operational = read('docs/OPERATIONAL_STACK_DEPLOYMENT.md');
 const epicRoadmap = read('docs/EPIC_INTEGRATION_ROADMAP.md');
 const executiveOverview = read('docs/EXECUTIVE_OVERVIEW.md');
@@ -52,6 +53,12 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'APP_PORT');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'CSS_PORT');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run validate:localhost-mvp');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/integrations/epic/diagnostics');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'LOCALHOST_MVP_DEPLOYMENT_ISSUES.md');
+
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-01');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-03');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
 
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'The active MVP scope is localhost-only.');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'Native iPad/iPhone packaging');

@@ -182,6 +182,7 @@ let editing = null;
 let applicationReady = false;
 let epicStatus = { enabled: false, status: 'disabled' };
 let epicPreview = null;
+let epicSelectedDomains = new Set();
 const $ = (id) => document.getElementById(id);
 
 function initializeNavigation() {
@@ -234,7 +235,7 @@ function renderEpicStatus(status, ready = applicationReady) {
     : 'Epic integration is disabled for this local deployment. Set EPIC_ENABLED=true and use EPIC_MODE=mock for local MVP review.';
   $('epic-connect').disabled = !ready || !enabled || connected;
   $('epic-preview').disabled = !ready || !enabled || !connected;
-  $('epic-apply').disabled = !ready || !enabled || !connected || !epicPreview;
+  $('epic-apply').disabled = !ready || !enabled || !connected || !epicPreview || epicSelectedDomains.size === 0;
 }
 
 async function selectDomain(key) {
@@ -456,6 +457,7 @@ async function connectEpic() {
       if (!callbackResponse.ok) throw new Error(formatApiError(callbackPayload));
       renderEpicStatus(callbackPayload.data);
       epicPreview = null;
+      epicSelectedDomains = new Set();
       renderEpicPreview();
       return;
     }
@@ -475,6 +477,7 @@ async function previewEpicImport() {
     const payload = await response.json();
     if (!response.ok) throw new Error(formatApiError(payload));
     epicPreview = payload.data;
+    epicSelectedDomains = new Set(epicPreview.changes.map((change) => change.domain));
     renderEpicPreview();
     renderEpicStatus(epicStatus);
   } catch (error) {
@@ -484,16 +487,23 @@ async function previewEpicImport() {
 
 async function applyEpicImport() {
   if (!epicPreview) return;
-  if (!confirm(`Apply ${epicPreview.changes.length} Epic import candidates to your Solid pod?`)) return;
+  const selectedDomains = [...epicSelectedDomains];
+  const selectedChanges = epicPreview.changes.filter((change) => epicSelectedDomains.has(change.domain));
+  if (selectedDomains.length === 0) {
+    alert('Select at least one import section before applying Epic records to your pod.');
+    return;
+  }
+  if (!confirm(`Apply ${selectedChanges.length} owner-reviewed Epic import candidates across ${selectedDomains.length} section(s) to your Solid pod?`)) return;
   try {
     const response = await fetch('/api/integrations/epic/sync/apply', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ importJobId: epicPreview.importJobId }),
+      body: JSON.stringify({ importJobId: epicPreview.importJobId, domains: selectedDomains }),
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(formatApiError(payload));
     epicPreview = null;
+    epicSelectedDomains = new Set();
     renderEpicPreview(payload.data);
     await checkStatus();
     await loadRecords();
@@ -518,13 +528,73 @@ function renderEpicPreview(applyResult = null) {
   }
   list.classList.remove('hidden');
   const summary = document.createElement('p');
-  summary.textContent = `${epicPreview.changes.length} mapped FHIR resources are ready for owner review before pod write.`;
+  const grouped = groupEpicChangesByDomain(epicPreview.changes);
+  summary.textContent = `${epicPreview.changes.length} mapped FHIR resources are ready for owner review before pod write. Review each section and choose what to apply.`;
   list.append(summary);
-  for (const change of epicPreview.changes) {
-    const item = document.createElement('article');
-    item.innerHTML = `<strong>${domains[change.domain]?.plural || change.domain}</strong><span>${change.display}</span><small>${change.provenance.sourceResourceType}/${change.provenance.sourceResourceId}</small>`;
-    list.append(item);
+
+  const checklist = document.createElement('div');
+  checklist.className = 'epic-review-checklist';
+  for (const [domain, changes] of grouped) {
+    const id = `epic-section-${domain}`;
+    const row = document.createElement('label');
+    row.className = 'epic-review-option';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = id;
+    checkbox.checked = epicSelectedDomains.has(domain);
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) epicSelectedDomains.add(domain);
+      else epicSelectedDomains.delete(domain);
+      renderEpicStatus(epicStatus);
+      renderEpicSelectionSummary();
+    });
+    const text = document.createElement('span');
+    text.textContent = `${domains[domain]?.plural || domain}: ${changes.length} candidate${changes.length === 1 ? '' : 's'}`;
+    row.append(checkbox, text);
+    checklist.append(row);
   }
+  list.append(checklist);
+
+  const selection = document.createElement('p');
+  selection.id = 'epic-selection-summary';
+  selection.className = 'epic-selection-summary';
+  list.append(selection);
+  renderEpicSelectionSummary();
+
+  for (const [domain, changes] of grouped) {
+    const section = document.createElement('section');
+    section.className = 'epic-domain-section';
+    const heading = document.createElement('h3');
+    heading.textContent = domains[domain]?.plural || domain;
+    section.append(heading);
+    for (const change of changes) {
+      const item = document.createElement('article');
+      const domainLabel = document.createElement('strong');
+      domainLabel.textContent = change.action;
+      const display = document.createElement('span');
+      display.textContent = change.display;
+      const source = document.createElement('small');
+      source.textContent = `${change.provenance.sourceResourceType}/${change.provenance.sourceResourceId}`;
+      item.append(domainLabel, display, source);
+      section.append(item);
+    }
+    list.append(section);
+  }
+}
+
+function groupEpicChangesByDomain(changes) {
+  const grouped = new Map();
+  for (const change of changes) {
+    grouped.set(change.domain, [...(grouped.get(change.domain) || []), change]);
+  }
+  return [...grouped.entries()].sort(([a], [b]) => (domains[a]?.plural || a).localeCompare(domains[b]?.plural || b));
+}
+
+function renderEpicSelectionSummary() {
+  const summary = $('epic-selection-summary');
+  if (!summary || !epicPreview) return;
+  const selectedChanges = epicPreview.changes.filter((change) => epicSelectedDomains.has(change.domain));
+  summary.textContent = `${selectedChanges.length} selected candidate${selectedChanges.length === 1 ? '' : 's'} will be applied from ${epicSelectedDomains.size} owner-reviewed section${epicSelectedDomains.size === 1 ? '' : 's'}.`;
 }
 
 function getPath(object, dotted) {

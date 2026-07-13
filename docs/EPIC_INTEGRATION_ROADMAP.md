@@ -299,7 +299,8 @@ The active development sequence for the localhost MVP is:
    checks and reserve `?live=true` for explicit sandbox/production SMART
    discovery diagnostics outside credential-free CI.
 5. Improve Annual Medicare Wellness import preview and apply UX against local
-   mock data first.
+   mock data first by grouping candidates by PIM domain and applying only
+   owner-selected sections.
 6. Add document/workflow read-only repositories and schemas as localhost APIs
    before any mobile implementation.
 7. Continue to require owner approval and anonymization controls for any
@@ -308,3 +309,7 @@ The active development sequence for the localhost MVP is:
 Native iPad/mobile issues should remain parked as future work unless the
 localhost MVP milestone is complete and a new implementation phase is
 explicitly opened.
+
+See [`LOCALHOST_MVP_DEPLOYMENT_ISSUES.md`](./LOCALHOST_MVP_DEPLOYMENT_ISSUES.md)
+for issue-style notes that track localhost deployment hardening and future
+hosted/public deployment prerequisites.
