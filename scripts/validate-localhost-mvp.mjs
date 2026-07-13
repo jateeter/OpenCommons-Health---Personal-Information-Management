@@ -51,10 +51,12 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Host-local');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'APP_PORT');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'CSS_PORT');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run validate:localhost-mvp');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/integrations/epic/diagnostics');
 
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'The active MVP scope is localhost-only.');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'Native iPad/iPhone packaging');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run validate:localhost-mvp');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/integrations/epic/diagnostics');
 
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'The active MVP scope is restricted to localhost notebook deployment.');
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'Current non-iPad implementation sequence');

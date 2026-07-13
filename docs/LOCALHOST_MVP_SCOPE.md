@@ -39,6 +39,7 @@ The localhost MVP includes:
 - Epic connector controls and APIs at the current implementation level:
   - disabled by default;
   - deterministic mock mode for repeatable development;
+  - localhost diagnostics at `/api/integrations/epic/diagnostics`;
   - SMART discovery, PKCE authorization URL generation, callback token
     exchange, refresh handling, and patient-scoped FHIR reads when real Epic
     registration values are supplied;

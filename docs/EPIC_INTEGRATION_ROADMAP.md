@@ -295,8 +295,9 @@ The active development sequence for the localhost MVP is:
 2. Keep mock Epic mode deterministic for CI, local release review, and
    Playwright automation.
 3. Validate the localhost MVP scope with `npm run validate:localhost-mvp`.
-4. Extend optional Epic sandbox diagnostics without making sandbox credentials a
-   CI requirement.
+4. Use `/api/integrations/epic/diagnostics` for localhost Epic configuration
+   checks and reserve `?live=true` for explicit sandbox/production SMART
+   discovery diagnostics outside credential-free CI.
 5. Improve Annual Medicare Wellness import preview and apply UX against local
    mock data first.
 6. Add document/workflow read-only repositories and schemas as localhost APIs
