@@ -83,6 +83,55 @@ check_domain_crud() {
   echo "  OK – ${domain} create, read, and delete succeeded"
 }
 
+check_anonymized_release_controls() {
+  echo "Checking owner-approved anonymized release controls..."
+  created=$(curl -fsS -X POST "${PIM_URL}/api/resources/conditions" \
+    -H "content-type: application/json" \
+    --data '{"code":{"system":"http://snomed.info/id/","code":"162864005","display":"Deployment smoke anonymized release"},"status":"active","onsetDate":"2026-01-15","notes":"Direct PHI note for smoke test","recordedBy":"Named Smoke Provider"}')
+  resource_url=$(printf '%s' "${created}" | sed -n 's/.*"url":"\([^"]*\)".*/\1/p')
+  if [ -z "${resource_url}" ]; then
+    echo "ERROR: anonymized release setup did not create a resource URL: ${created}"
+    exit 1
+  fi
+
+  missing_approval_status=$(curl -sS -o /dev/null -w "%{http_code}" --get \
+    "${PIM_URL}/api/anonymized/resources/conditions" \
+    --data-urlencode "url=${resource_url}")
+  if [ "${missing_approval_status}" != "403" ]; then
+    echo "ERROR: anonymized release without owner approval returned HTTP ${missing_approval_status}; expected 403."
+    exit 1
+  fi
+
+  release=$(curl -fsS --get "${PIM_URL}/api/anonymized/resources/conditions" \
+    -H "x-opencommons-owner-approved: true" \
+    -H "x-opencommons-release-purpose: deployment-smoke" \
+    --data-urlencode "url=${resource_url}")
+  echo "${release}" | grep -q '"anonymized":true' || {
+    echo "ERROR: anonymized release did not report anonymized=true: ${release}"
+    exit 1
+  }
+  echo "${release}" | grep -q '"ownerApproved":true' || {
+    echo "ERROR: anonymized release did not report ownerApproved=true: ${release}"
+    exit 1
+  }
+  echo "${release}" | grep -q '"purpose":"deployment-smoke"' || {
+    echo "ERROR: anonymized release did not preserve the release purpose: ${release}"
+    exit 1
+  }
+  echo "${release}" | grep -q '"onsetYear":2026' || {
+    echo "ERROR: anonymized release did not transform onsetDate to onsetYear: ${release}"
+    exit 1
+  }
+  if echo "${release}" | grep -Eq '"notes"|"recordedBy"|Direct PHI note|Named Smoke Provider'; then
+    echo "ERROR: anonymized release exposed direct identifiers or free text: ${release}"
+    exit 1
+  fi
+
+  curl -fsS -X DELETE --get "${PIM_URL}/api/resources/conditions" \
+    --data-urlencode "url=${resource_url}"
+  echo "  OK – anonymized release requires owner approval and removes direct identifiers"
+}
+
 check_epic_mock_flow() {
   echo "Checking Epic MVP mock connector flow..."
   status=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/status")
@@ -136,6 +185,30 @@ check_epic_mock_flow() {
   echo "  OK – Epic mock connect, preview, apply, and audit succeeded"
 }
 
+check_epic_planning_surfaces() {
+  echo "Checking read-only Epic planning surfaces..."
+  for surface in documents workflow; do
+    url="${PIM_URL}/api/planned/epic/${surface}"
+    body=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${url}") || {
+      echo "ERROR: could not reach ${url}"
+      exit 1
+    }
+    echo "${body}" | grep -q '"localhostMvp":true' || {
+      echo "ERROR: ${surface} planning surface did not report localhostMvp=true: ${body}"
+      exit 1
+    }
+    echo "${body}" | grep -q '"writeEnabled":false' || {
+      echo "ERROR: ${surface} planning surface did not report writeEnabled=false: ${body}"
+      exit 1
+    }
+    echo "${body}" | grep -q '"piiRelease":false' || {
+      echo "ERROR: ${surface} planning surface did not report piiRelease=false: ${body}"
+      exit 1
+    }
+  done
+  echo "  OK – Epic document/workflow planning surfaces are read-only and privacy-safe"
+}
+
 # ── 1. Wait for CSS ───────────────────────────────────────────────────────────
 wait_for "Community Solid Server" "${CSS_URL}/"
 
@@ -161,6 +234,12 @@ echo "${openapi}" | grep -q '"openapi":"3.1.0"' || {
 for domain in profiles conditions medications allergies immunizations vital-signs providers lab-results insurance-policies; do
   echo "${openapi}" | grep -q "\"/api/resources/${domain}\"" || {
     echo "ERROR: OpenAPI contract is missing /api/resources/${domain}."
+    exit 1
+  }
+done
+for planned_path in /api/planned/epic /api/planned/epic/documents /api/planned/epic/workflow; do
+  echo "${openapi}" | grep -q "\"${planned_path}\"" || {
+    echo "ERROR: OpenAPI contract is missing ${planned_path}."
     exit 1
   }
 done
@@ -211,6 +290,9 @@ check_domain_crud \
   "insurance-policies" \
   '{"type":"medical","insurerName":"OpenCommons Smoke Plan","memberId":"SMOKE-42","effectiveDate":"2026-01-01"}' \
   '"memberId":"SMOKE-42"'
+
+check_anonymized_release_controls
+check_epic_planning_surfaces
 
 if [ "${EPIC_ENABLED:-false}" = "true" ]; then
   check_epic_mock_flow

@@ -91,10 +91,16 @@ npm test -- --runInBand
 npm run build
 npm run validate:openapi
 npm run validate:localhost-mvp
+npm run local:release-gate
 APP_PORT=<free-port> CSS_PORT=<free-port> ./scripts/local-container-up.sh
 APP_PORT=<free-port> CSS_PORT=<free-port> npm run local:host-smoke
 APP_URL=http://localhost:<app-port> npm run test:e2e:playwright
 ```
+
+`npm run local:release-gate` runs the non-Docker checks above as one repeatable
+local gate. The container-local and host-local smoke commands remain separate
+because they start live Docker/Solid infrastructure and require available
+localhost ports.
 
 The deployment verification script must confirm more than process uptime. It
 must prove the UI, OpenAPI documentation, FHIR metadata, privacy schema,

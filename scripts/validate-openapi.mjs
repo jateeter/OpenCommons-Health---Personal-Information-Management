@@ -40,7 +40,13 @@ for (const utilityPath of ['/livez', '/healthz', '/api/status', '/fhir/metadata'
   }
 }
 
-for (const schema of ['AnonymizedRelease', 'FhirCapabilityStatement']) {
+for (const plannedPath of ['/api/planned/epic', '/api/planned/epic/documents', '/api/planned/epic/workflow']) {
+  const operation = OPENAPI_DOCUMENT.paths?.[plannedPath]?.get;
+  if (!operation) throw new Error(`Missing GET ${plannedPath}`);
+  if (!operation.operationId) throw new Error(`Missing operationId for GET ${plannedPath}`);
+}
+
+for (const schema of ['AnonymizedRelease', 'FhirCapabilityStatement', 'PlannedEpicSurface', 'PlannedEpicResourceMapping']) {
   if (!OPENAPI_DOCUMENT.components?.schemas?.[schema]) {
     throw new Error(`Missing component schema ${schema}`);
   }
