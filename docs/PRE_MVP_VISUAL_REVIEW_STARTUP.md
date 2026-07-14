@@ -34,6 +34,9 @@ Required values:
 | `SOLID_OIDC_ISSUER` | `http://localhost:13000` | Host-local Solid issuer reference. |
 | `SOLID_POD_PATH` | `/health-pim/` | Container path inside the owner pod. |
 | `SOLID_REDIRECT_URL` | `http://localhost:18080/callback` | PIM callback URL. |
+| `EPIC_ENABLED` | `true` for Epic mock review | Enables the local Epic connector panel and mock workflow. |
+| `EPIC_MODE` | `mock` | Uses deterministic local Medicare Wellness data with no live Epic credentials. |
+| `EPIC_GRANT_ENCRYPTION_KEY` | local review key in `.env` | Encrypts mock grant material before pod storage. |
 
 Do not commit `.env`, generated `.solid/` files, or local Docker volume data.
 
@@ -42,17 +45,32 @@ Do not commit `.env`, generated `.solid/` files, or local Docker volume data.
 From the repository root:
 
 ```bash
-APP_PORT=18080 CSS_PORT=13000 WAIT_TIMEOUT=180 ./scripts/local-container-up.sh
+APP_PORT=18080 \
+CSS_PORT=13000 \
+npm run local:preflight
+```
+
+Then start the stack:
+
+```bash
+APP_PORT=18080 \
+CSS_PORT=13000 \
+WAIT_TIMEOUT=180 \
+EPIC_ENABLED=true \
+EPIC_MODE=mock \
+EPIC_GRANT_ENCRYPTION_KEY=local-review-epic-key \
+./scripts/local-container-up.sh
 ```
 
 The script will:
 
-1. build the local PIM and CSS images;
-2. create isolated Docker volumes for this port pair;
-3. start Solid Community Server;
-4. provision the local account, WebID, pod, and client credentials;
-5. start the PIM app;
-6. verify the UI, liveness, OpenAPI docs, authenticated pod readiness, and CRUD
+1. validate the configured localhost ports and Docker availability;
+2. build the local PIM and CSS images;
+3. create isolated Docker volumes for this port pair;
+4. start Solid Community Server;
+5. provision the local account, WebID, pod, and client credentials;
+6. start the PIM app;
+7. verify the UI, liveness, OpenAPI docs, authenticated pod readiness, and CRUD
    coverage for all nine health domains.
 
 ## Stop without deleting pod data
@@ -85,3 +103,10 @@ APP_PORT=18080 CSS_PORT=13000 docker compose down --volumes
   is available.
 - Open `/api/privacy/schema` and confirm the identifiable PHI and anonymized
   release schemas are available.
+- Open `/api/integrations/epic/diagnostics` and confirm:
+  - `localhostMvp` is `true`;
+  - `readiness` is `ready`;
+  - no live Epic credentials are requested.
+- In the Epic panel, connect mock Epic, preview the Medicare Wellness import,
+  confirm candidates are grouped by section, deselect at least one section, and
+  apply only the owner-selected sections to the pod.

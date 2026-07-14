@@ -14,6 +14,10 @@ echo "  PIM port: ${APP_PORT}"
 echo "  CSS port: ${CSS_PORT}"
 echo "  Compose project: ${COMPOSE_PROJECT_NAME}"
 
+if [ "${SKIP_LOCAL_PREFLIGHT:-0}" != "1" ]; then
+  node scripts/local-preflight.mjs
+fi
+
 docker compose up --build -d
 
 if [ "${VERIFY_DEPLOYMENT:-1}" != "0" ]; then

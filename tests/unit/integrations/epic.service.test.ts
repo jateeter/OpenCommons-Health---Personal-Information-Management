@@ -125,6 +125,89 @@ describe('Epic MVP integration service', () => {
     expect(repository.record?.audit.some((event) => event.action === 'sync-apply')).toBe(true);
   });
 
+  it('reconciles Epic candidates against existing pod records before apply', async () => {
+    const repository = new FakeEpicRepository();
+    const existingCondition = {
+      url: 'http://pod/conditions/hypertension',
+      code: { system: 'http://snomed.info/sct', code: '38341003', display: 'Hypertensive disorder' },
+      status: 'inactive',
+      severity: 'mild',
+      onsetDate: '2026-05-01',
+      recordedBy: 'Dr. Ada Care',
+    };
+    const conditionRepository: DomainRepository = {
+      findAll: jest.fn(async () => [existingCondition]),
+      findByUrl: jest.fn(async () => existingCondition),
+      create: jest.fn(async (entity: never) => entity),
+      update: jest.fn(async (entity: never) => entity),
+      delete: jest.fn(async () => undefined),
+    };
+    const service = new EpicIntegrationService(config, repository as never, {
+      conditions: conditionRepository,
+    });
+    const start = await service.connectStart();
+    await service.connectCallback(new URLSearchParams({ code: 'mock-code', state: String(start.state) }));
+
+    const preview = await service.preview();
+    const condition = preview.changes.find((change) => change.domain === 'conditions');
+
+    expect(condition).toMatchObject({
+      action: 'update',
+      targetUrl: 'http://pod/conditions/hypertension',
+      reconciliation: {
+        status: 'changed',
+      },
+    });
+
+    const result = await service.apply({ domains: ['conditions'] });
+
+    expect(result.created.conditions).toBe(1);
+    expect(conditionRepository.create).not.toHaveBeenCalled();
+    expect(conditionRepository.update).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'http://pod/conditions/hypertension',
+      status: 'active',
+    }));
+  });
+
+  it('marks ambiguous local matches as conflicts and skips them during apply', async () => {
+    const repository = new FakeEpicRepository();
+    const matchingCondition = {
+      code: { system: 'http://snomed.info/sct', code: '38341003', display: 'Hypertensive disorder' },
+      status: 'inactive',
+    };
+    const conditionRepository: DomainRepository = {
+      findAll: jest.fn(async () => [
+        { ...matchingCondition, url: 'http://pod/conditions/one' },
+        { ...matchingCondition, url: 'http://pod/conditions/two' },
+      ]),
+      findByUrl: jest.fn(async () => null),
+      create: jest.fn(async (entity: never) => entity),
+      update: jest.fn(async (entity: never) => entity),
+      delete: jest.fn(async () => undefined),
+    };
+    const service = new EpicIntegrationService(config, repository as never, {
+      conditions: conditionRepository,
+    });
+    const start = await service.connectStart();
+    await service.connectCallback(new URLSearchParams({ code: 'mock-code', state: String(start.state) }));
+
+    const preview = await service.preview();
+    const condition = preview.changes.find((change) => change.domain === 'conditions');
+
+    expect(condition).toMatchObject({
+      action: 'conflict',
+      reconciliation: {
+        status: 'ambiguous',
+      },
+    });
+
+    const result = await service.apply({ domains: ['conditions'] });
+
+    expect(result.created.conditions).toBe(0);
+    expect(conditionRepository.create).not.toHaveBeenCalled();
+    expect(conditionRepository.update).not.toHaveBeenCalled();
+  });
+
   it('uses live SMART token exchange in sandbox mode and stores only encrypted grant material publicly', async () => {
     const sandboxConfig = {
       enabled: true,

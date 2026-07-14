@@ -529,7 +529,7 @@ function renderEpicPreview(applyResult = null) {
   list.classList.remove('hidden');
   const summary = document.createElement('p');
   const grouped = groupEpicChangesByDomain(epicPreview.changes);
-  summary.textContent = `${epicPreview.changes.length} mapped FHIR resources are ready for owner review before pod write. Review each section and choose what to apply.`;
+  summary.textContent = `${epicPreview.changes.length} mapped FHIR resources are ready for owner review before pod write. ${formatEpicActionCounts(epicPreview.changes)} Review each section and choose what to apply.`;
   list.append(summary);
 
   const checklist = document.createElement('div');
@@ -571,8 +571,9 @@ function renderEpicPreview(applyResult = null) {
       const item = document.createElement('article');
       const domainLabel = document.createElement('strong');
       domainLabel.textContent = change.action;
+      domainLabel.className = `epic-action epic-action-${change.action}`;
       const display = document.createElement('span');
-      display.textContent = change.display;
+      display.textContent = change.reconciliation?.detail ? `${change.display} — ${change.reconciliation.detail}` : change.display;
       const source = document.createElement('small');
       source.textContent = `${change.provenance.sourceResourceType}/${change.provenance.sourceResourceId}`;
       item.append(domainLabel, display, source);
@@ -595,6 +596,17 @@ function renderEpicSelectionSummary() {
   if (!summary || !epicPreview) return;
   const selectedChanges = epicPreview.changes.filter((change) => epicSelectedDomains.has(change.domain));
   summary.textContent = `${selectedChanges.length} selected candidate${selectedChanges.length === 1 ? '' : 's'} will be applied from ${epicSelectedDomains.size} owner-reviewed section${epicSelectedDomains.size === 1 ? '' : 's'}.`;
+}
+
+function formatEpicActionCounts(changes) {
+  const counts = changes.reduce((acc, change) => {
+    acc[change.action] = (acc[change.action] || 0) + 1;
+    return acc;
+  }, {});
+  return ['create', 'update', 'unchanged', 'conflict']
+    .filter((action) => counts[action])
+    .map((action) => `${counts[action]} ${action}`)
+    .join(' · ');
 }
 
 function getPath(object, dotted) {

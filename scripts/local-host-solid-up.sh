@@ -24,6 +24,10 @@ echo "  CSS port: ${CSS_PORT}"
 echo "  Compose project: ${COMPOSE_PROJECT_NAME}"
 echo "  Credentials dir: ${HOST_CREDENTIALS_DIR}"
 
+if [ "${SKIP_LOCAL_PREFLIGHT:-0}" != "1" ]; then
+  node scripts/local-preflight.mjs
+fi
+
 docker compose -f docker-compose.host-local.yml up --build -d css bootstrap
 
 mkdir -p "$(dirname "${ENV_FILE}")" "${HOST_CREDENTIALS_DIR}"

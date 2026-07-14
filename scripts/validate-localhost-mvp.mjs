@@ -12,6 +12,7 @@ const deploymentIssues = read('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md');
 const operational = read('docs/OPERATIONAL_STACK_DEPLOYMENT.md');
 const epicRoadmap = read('docs/EPIC_INTEGRATION_ROADMAP.md');
 const executiveOverview = read('docs/EXECUTIVE_OVERVIEW.md');
+const visualReview = read('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md');
 
 const failures = [];
 
@@ -34,6 +35,7 @@ function requireScript(name) {
 }
 
 for (const script of [
+  'local:preflight',
   'local:container',
   'local:host-solid',
   'local:host-start',
@@ -58,17 +60,36 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'LOCALHOST_MVP_DEPLOY
 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-01');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'local:host-smoke');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-02');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Implemented in `docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md`');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-03');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Playwright Medicare');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-05');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/planned/epic/documents');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/planned/epic/workflow');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-06');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'npm run local:preflight');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'SKIP_LOCAL_PREFLIGHT=1');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
+
+requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, 'EPIC_ENABLED');
+requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, 'npm run local:preflight');
+requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, '/api/integrations/epic/diagnostics');
+requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, 'localhostMvp');
+requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, 'deselect at least one section');
 
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'The active MVP scope is localhost-only.');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'Native iPad/iPhone packaging');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run validate:localhost-mvp');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:preflight');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/integrations/epic/diagnostics');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/planned/epic/documents');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'piiRelease: false');
 
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'The active MVP scope is restricted to localhost notebook deployment.');
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'Current non-iPad implementation sequence');
+requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, '/api/planned/epic/workflow');
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'Native iPad/mobile issues should remain parked');
 
 requireText('docs/EXECUTIVE_OVERVIEW.md', executiveOverview, 'The current MVP is restricted to localhost deployment');

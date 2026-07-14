@@ -41,6 +41,18 @@ The smoke workflow starts local CSS, starts the host PIM process in the
 background, runs `verify-deployment.sh`, and then stops only the host PIM
 process. CSS pod data and generated credentials are preserved.
 
+Before either local deployment mode starts Docker Compose, run:
+
+```bash
+npm run local:preflight
+```
+
+The preflight validates `APP_PORT` and `CSS_PORT`, checks that they are
+distinct and available on localhost, and verifies that Docker is reachable for
+the local Solid infrastructure. The `local:container` and `local:host-solid`
+scripts run this check automatically. Use `SKIP_LOCAL_PREFLIGHT=1` only when
+intentionally reusing an already-running local stack.
+
 ## MVP boundary
 
 The active MVP scope is localhost-only. Container-local and host-local notebook
@@ -126,7 +138,10 @@ Every Epic-enabled deployment should pass these gates:
    are reachable.
 4. Epic disabled mode hides connector controls and passes existing deployment
    verification.
-5. Epic enabled mode verifies:
+5. Read-only Epic planning surfaces are reachable at
+   `/api/planned/epic/documents` and `/api/planned/epic/workflow`; both must
+   report `writeEnabled: false` and `piiRelease: false`.
+6. Epic enabled mode verifies:
    - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
    - diagnostics report localhost MVP readiness without exposing secrets;
    - sandbox/production SMART discovery document is reachable;
@@ -134,7 +149,7 @@ Every Epic-enabled deployment should pass these gates:
    - FHIR capability metadata is reachable;
    - requested scopes match configured feature lanes;
    - no secrets appear in logs or OpenAPI examples.
-6. Playwright Medicare Wellness E2E passes against the selected local stack.
+7. Playwright Medicare Wellness E2E passes against the selected local stack.
 
 For the localhost MVP, the repository also provides
 `npm run validate:localhost-mvp` as a static contract check that confirms the

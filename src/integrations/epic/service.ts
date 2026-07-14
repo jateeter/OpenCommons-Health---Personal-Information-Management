@@ -15,6 +15,7 @@ import type {
   EpicDiagnosticCheck,
   EpicDiagnostics,
   EpicGrant,
+  EpicImportCandidate,
   EpicImportPreview,
   EpicMvpDomain,
 } from './types';
@@ -258,17 +259,18 @@ export class EpicIntegrationService {
     const resources = this.config.mode === 'mock'
       ? mockAnnualWellnessResources()
       : await this.smartClient.fetchPatientResources(active.grant, record.patientId as string);
+    const mapped = mapEpicResourcesToPim(resources, {
+      fhirBaseUrl: record.fhirBaseUrl ?? 'mock://epic-fhir',
+      patientId: record.patientId as string,
+      authorizationGrantId: record.connectedAt,
+      importedAt: generatedAt,
+    });
     return {
       importJobId,
       source: this.config.mode === 'mock' ? 'mock' : 'epic',
       generatedAt,
       patientId: record.patientId as string,
-      changes: mapEpicResourcesToPim(resources, {
-        fhirBaseUrl: record.fhirBaseUrl ?? 'mock://epic-fhir',
-        patientId: record.patientId as string,
-        authorizationGrantId: record.connectedAt,
-        importedAt: generatedAt,
-      }),
+      changes: await this.reconcile(mapped),
     };
   }
 
@@ -284,7 +286,10 @@ export class EpicIntegrationService {
       if (selectedDomains && !selectedDomains.has(change.domain)) continue;
       const repository = this.repositories[change.domain];
       if (!repository) continue;
-      const saved = await repository.create(change.entity as never) as { url?: string };
+      if (change.action === 'unchanged' || change.action === 'conflict') continue;
+      const saved = change.action === 'update' && change.targetUrl
+        ? await repository.update({ ...(change.entity as unknown as Record<string, unknown>), url: change.targetUrl } as never) as { url?: string }
+        : await repository.create(change.entity as never) as { url?: string };
       created[change.domain] += 1;
       resources.push({
         domain: change.domain,
@@ -306,6 +311,63 @@ export class EpicIntegrationService {
       created,
       resources,
     };
+  }
+
+  private async reconcile(changes: EpicImportCandidate[]): Promise<EpicImportCandidate[]> {
+    const byDomain = new Map<EpicMvpDomain, EpicImportCandidate[]>();
+    for (const change of changes) {
+      byDomain.set(change.domain, [...(byDomain.get(change.domain) ?? []), change]);
+    }
+
+    const reconciled: EpicImportCandidate[] = [];
+    for (const [domain, domainChanges] of byDomain) {
+      const repository = this.repositories[domain];
+      const existing = repository ? await repository.findAll() as Array<Record<string, unknown>> : [];
+      for (const change of domainChanges) {
+        const key = reconciliationKey(change.domain, change.entity as unknown as Record<string, unknown>);
+        const matches = key
+          ? existing.filter((record) => reconciliationKey(change.domain, record) === key)
+          : [];
+        if (matches.length === 0) {
+          reconciled.push({
+            ...change,
+            action: 'create',
+            reconciliation: { status: 'new', detail: 'No matching local pod record was found.' },
+          });
+          continue;
+        }
+        if (matches.length > 1) {
+          reconciled.push({
+            ...change,
+            action: 'conflict',
+            reconciliation: { status: 'ambiguous', detail: `${matches.length} local pod records match this Epic candidate; review manually before applying.` },
+          });
+          continue;
+        }
+        const [match] = matches;
+        const targetUrl = typeof match.url === 'string' ? match.url : undefined;
+        const incomingSignature = comparableSignature(change.entity as unknown as Record<string, unknown>);
+        const existingSignature = comparableSignature(match);
+        if (incomingSignature === existingSignature) {
+          reconciled.push({
+            ...change,
+            action: 'unchanged',
+            targetUrl,
+            reconciliation: { status: 'matched', detail: 'A matching local pod record already has the same normalized values.' },
+          });
+        } else {
+          reconciled.push({
+            ...change,
+            action: targetUrl ? 'update' : 'conflict',
+            targetUrl,
+            reconciliation: targetUrl
+              ? { status: 'changed', detail: 'A matching local pod record exists with different normalized values and can be updated.' }
+              : { status: 'ambiguous', detail: 'A matching local pod record exists but has no URL for safe update.' },
+          });
+        }
+      }
+    }
+    return reconciled;
   }
 
   async audit(): Promise<EpicAuditEvent[]> {
@@ -426,4 +488,73 @@ function selectedDomainSet(body: Record<string, unknown>): Set<EpicMvpDomain> | 
   const domains = body.domains;
   if (!Array.isArray(domains) || domains.length === 0) return undefined;
   return new Set(domains.filter((domain): domain is EpicMvpDomain => typeof domain === 'string') as EpicMvpDomain[]);
+}
+
+function reconciliationKey(domain: EpicMvpDomain, entity: Record<string, unknown>): string | undefined {
+  switch (domain) {
+    case 'profiles':
+      return [
+        nestedString(entity, 'name.family'),
+        Array.isArray(nestedValue(entity, 'name.given')) ? (nestedValue(entity, 'name.given') as string[]).join('|') : '',
+        stringField(entity, 'birthDate'),
+      ].filter(Boolean).join('::') || undefined;
+    case 'conditions':
+      return codingKey(nestedValue(entity, 'code'));
+    case 'medications':
+      return codingKey(nestedValue(entity, 'medicationCode'));
+    case 'allergies':
+      return codingKey(nestedValue(entity, 'substance'));
+    case 'immunizations':
+      return [codingKey(nestedValue(entity, 'vaccineCode')), stringField(entity, 'occurrenceDate')].filter(Boolean).join('::') || undefined;
+    case 'vital-signs':
+      return [stringField(entity, 'code'), stringField(entity, 'effectiveDateTime')].filter(Boolean).join('::') || undefined;
+    case 'providers':
+      return stringField(entity, 'npi') || stringField(entity, 'name');
+    case 'lab-results':
+      return [codingKey(nestedValue(entity, 'code')), stringField(entity, 'effectiveDateTime')].filter(Boolean).join('::') || undefined;
+    case 'insurance-policies':
+      return stringField(entity, 'memberId') || [stringField(entity, 'insurerName'), stringField(entity, 'effectiveDate')].filter(Boolean).join('::') || undefined;
+  }
+}
+
+function codingKey(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const coding = value as Record<string, unknown>;
+  const system = typeof coding.system === 'string' ? coding.system : '';
+  const code = typeof coding.code === 'string' ? coding.code : '';
+  return system || code ? `${system}::${code}` : undefined;
+}
+
+function comparableSignature(entity: Record<string, unknown>): string {
+  const copy = JSON.parse(JSON.stringify(entity)) as Record<string, unknown>;
+  for (const field of ['url', 'createdAt', 'updatedAt', 'notes']) delete copy[field];
+  return stableStringify(copy);
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function nestedString(entity: Record<string, unknown>, path: string): string | undefined {
+  const value = nestedValue(entity, path);
+  return typeof value === 'string' ? value : undefined;
+}
+
+function stringField(entity: Record<string, unknown>, field: string): string | undefined {
+  const value = entity[field];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function nestedValue(entity: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (!current || typeof current !== 'object') return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, entity);
 }

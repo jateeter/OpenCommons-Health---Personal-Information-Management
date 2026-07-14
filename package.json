@@ -8,6 +8,7 @@
     "build": "tsc && npm run copy:assets",
     "copy:assets": "mkdir -p dist/public dist/schemas && cp public/* dist/public/ && cp src/schemas/*.shex dist/schemas/",
     "start": "node dist/server.js",
+    "local:preflight": "node scripts/local-preflight.mjs",
     "local:container": "./scripts/local-container-up.sh",
     "local:host-solid": "./scripts/local-host-solid-up.sh",
     "local:host-start": "./scripts/local-host-start.sh",
