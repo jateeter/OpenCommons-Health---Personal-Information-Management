@@ -51,7 +51,11 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain("className = 'epic-review-checklist'");
     expect(appSource).toContain("body: JSON.stringify({ importJobId: epicPreview.importJobId, domains: selectedDomains })");
     expect(appSource).toContain('owner-reviewed section');
+    expect(appSource).toContain('formatEpicActionCounts');
+    expect(appSource).toContain('epic-action-${change.action}');
     expect(styleSource).toContain('.epic-review-checklist');
     expect(styleSource).toContain('.epic-selection-summary');
+    expect(styleSource).toContain('.epic-action-update');
+    expect(styleSource).toContain('.epic-action-conflict');
   });
 });

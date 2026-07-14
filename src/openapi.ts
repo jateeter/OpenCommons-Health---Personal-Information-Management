@@ -263,6 +263,7 @@ export const OPENAPI_DOCUMENT = {
     { name: 'standards', description: 'HL7/FHIR capability and PHI schema documentation.' },
     { name: 'privacy', description: 'Owner-approved anonymized release operations.' },
     { name: 'epic', description: 'Patient-owned Epic SMART/FHIR connection, import preview, and pod sync operations.' },
+    { name: 'planning', description: 'Localhost MVP planning surfaces for future read-only Epic document and workflow APIs.' },
   ],
   paths: {
     '/livez': {
@@ -305,6 +306,7 @@ export const OPENAPI_DOCUMENT = {
         })),
       },
     },
+    ...plannedEpicPaths(),
     ...epicIntegrationPaths(),
     ...domainPaths(),
     ...anonymizedDomainPaths(),
@@ -382,6 +384,11 @@ export const OPENAPI_DOCUMENT = {
             display: string('Human-readable record label'),
             entity: { type: 'object' },
             provenance: { $ref: '#/components/schemas/EpicImportProvenance' },
+            targetUrl: resourceUrl(),
+            reconciliation: objectSchema(['status', 'detail'], {
+              status: enumSchema(['new', 'matched', 'changed', 'ambiguous']),
+              detail: string('Local pod reconciliation summary'),
+            }),
           }),
         },
       }),
@@ -417,6 +424,24 @@ export const OPENAPI_DOCUMENT = {
         status: enumSchema(['ok', 'failed', 'info']),
         detail: string('Audit detail'),
       }),
+      PlannedEpicResourceMapping: objectSchema(['fhirResource', 'localSurface', 'ownerAction', 'storagePolicy', 'releasePolicy'], {
+        fhirResource: string('FHIR resource type planned for future local support'),
+        localSurface: string('Future local API or pod storage surface'),
+        ownerAction: string('Required patient/owner action before data is imported or used'),
+        storagePolicy: string('How owner-approved data will be stored in the Solid pod'),
+        releasePolicy: string('How this resource is excluded or transformed for anonymized release'),
+      }),
+      PlannedEpicSurface: objectSchema(['id', 'status', 'localhostMvp', 'writeEnabled', 'piiRelease', 'summary', 'resources', 'validation', 'issue'], {
+        id: string('Stable planning surface id'),
+        status: enumSchema(['planned']),
+        localhostMvp: { type: 'boolean', const: true },
+        writeEnabled: { type: 'boolean', const: false },
+        piiRelease: { type: 'boolean', const: false },
+        summary: string('Planning surface summary'),
+        resources: { type: 'array', items: { $ref: '#/components/schemas/PlannedEpicResourceMapping' } },
+        validation: { type: 'array', items: { type: 'string' } },
+        issue: string('Localhost MVP issue identifier'),
+      }),
       AnonymizedRelease: objectSchema(['domain', 'fhirResourceType', 'anonymized', 'data'], {
         domain: { type: 'string', enum: DOMAIN_NAMES },
         fhirResourceType: { type: 'string' },
@@ -437,6 +462,40 @@ export const OPENAPI_DOCUMENT = {
     },
   },
 };
+
+function plannedEpicPaths(): Record<string, unknown> {
+  const surfaceResponse = objectSchema(['data'], {
+    data: { $ref: '#/components/schemas/PlannedEpicSurface' },
+  });
+  return {
+    '/api/planned/epic': {
+      get: {
+        tags: ['planning', 'epic'],
+        operationId: 'listPlannedEpicLocalhostSurfaces',
+        summary: 'List localhost MVP planned read-only Epic document and workflow surfaces',
+        responses: okResponse('Planned Epic localhost MVP surfaces.', objectSchema(['data'], {
+          data: { type: 'array', items: { $ref: '#/components/schemas/PlannedEpicSurface' } },
+        })),
+      },
+    },
+    '/api/planned/epic/documents': {
+      get: {
+        tags: ['planning', 'epic'],
+        operationId: 'getPlannedEpicDocumentSurface',
+        summary: 'Describe the planned read-only Epic document metadata surface',
+        responses: okResponse('Planned Epic document surface.', surfaceResponse),
+      },
+    },
+    '/api/planned/epic/workflow': {
+      get: {
+        tags: ['planning', 'epic'],
+        operationId: 'getPlannedEpicWorkflowSurface',
+        summary: 'Describe the planned read-only Epic workflow and messaging surface',
+        responses: okResponse('Planned Epic workflow surface.', surfaceResponse),
+      },
+    },
+  };
+}
 
 function epicIntegrationPaths(): Record<string, unknown> {
   return {

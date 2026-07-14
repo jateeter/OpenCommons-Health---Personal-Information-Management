@@ -35,6 +35,8 @@ equally explicit release gate.
 **Problem:** The UI has Epic diagnostics, but the visual review guide should
 make them part of the review path.
 
+**Status:** Implemented in `docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md`.
+
 **Scope:** local Epic mock mode only.
 
 **Acceptance criteria:**
@@ -49,6 +51,9 @@ make them part of the review path.
 
 **Problem:** Medicare Wellness imports should not behave like an all-or-nothing
 write. The owner should review and choose which sections are applied.
+
+**Status:** Implemented in the local browser UI and Playwright Medicare
+Wellness flow.
 
 **Scope:** local mock data and existing nine PIM domains.
 
@@ -65,6 +70,8 @@ write. The owner should review and choose which sections are applied.
 **Problem:** The current mapper emits import actions but does not yet surface
 local-vs-Epic conflict details in the UI.
 
+**Status:** Implemented for local preview reconciliation.
+
 **Scope:** local mock data first; live Epic later.
 
 **Acceptance criteria:**
@@ -79,6 +86,9 @@ local-vs-Epic conflict details in the UI.
 **Problem:** Document and workflow resources are in the Epic roadmap but not yet
 represented as localhost API surfaces.
 
+**Status:** Implemented as read-only planning contracts at
+`/api/planned/epic/documents` and `/api/planned/epic/workflow`.
+
 **Scope:** read-only planning and schemas; no outbound Epic writes.
 
 **Acceptance criteria:**
@@ -88,6 +98,24 @@ represented as localhost API surfaces.
 - OpenAPI shows planned read-only surfaces when implemented.
 - Anonymized release rules exclude document identifiers, URLs, and free text by
   default.
+
+### Issue LHMVP-06: Add localhost deployment preflight checks
+
+**Problem:** Container and host-local workflows can fail late when Docker is not
+running or when a configured localhost port is already occupied.
+
+**Status:** Implemented by `npm run local:preflight`; `local:container` and
+`local:host-solid` run the preflight before Docker Compose starts.
+
+**Scope:** local notebook/container deployment only.
+
+**Acceptance criteria:**
+
+- `APP_PORT` and `CSS_PORT` are validated as distinct TCP ports.
+- Occupied localhost ports fail fast with a clear remediation message.
+- Docker daemon availability is checked before local Solid infrastructure starts.
+- `SKIP_LOCAL_PREFLIGHT=1` is available only for intentional reuse of an
+  already-running stack.
 
 ## Future hosted/public deployment notes
 

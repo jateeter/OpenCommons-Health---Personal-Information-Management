@@ -148,6 +148,18 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 .epic-preview-list article:first-of-type { border-top: 0; }
 .epic-preview-list span { color: var(--ink); }
 .epic-preview-list small { color: var(--muted); }
+.epic-action {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.epic-action-create { color: var(--teal-dark); background: var(--mint); }
+.epic-action-update { color: #735600; background: #fff0bf; }
+.epic-action-unchanged { color: #596b65; background: #edf0eb; }
+.epic-action-conflict { color: #923e2b; background: #fff0eb; }
 .record { display: grid; grid-template-columns: 42px 1fr auto; gap: 15px; align-items: center; padding: 17px 22px; border-bottom: 1px solid #e8ece7; }
 .record:last-child { border-bottom: 0; }
 .record-icon { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--mint); font-size: 18px; }

@@ -137,6 +137,49 @@ describe('OpenCommons Health HTTP application', () => {
       expect(operations.put.operationId).toBeDefined();
       expect(operations.delete.operationId).toBeDefined();
     }
+    expect(body.paths['/api/planned/epic/documents'].get.operationId).toBe('getPlannedEpicDocumentSurface');
+    expect(body.paths['/api/planned/epic/workflow'].get.operationId).toBe('getPlannedEpicWorkflowSurface');
+  });
+
+  it('serves localhost-only read-only Epic document and workflow planning surfaces', async () => {
+    const documents = await fetch(`${baseUrl}/api/planned/epic/documents`);
+    expect(documents.status).toBe(200);
+    await expect(documents.json()).resolves.toMatchObject({
+      data: {
+        id: 'epic-documents-readonly',
+        status: 'planned',
+        localhostMvp: true,
+        writeEnabled: false,
+        piiRelease: false,
+        resources: expect.arrayContaining([
+          expect.objectContaining({
+            fhirResource: 'DocumentReference',
+            releasePolicy: expect.stringContaining('Exclude source document URLs'),
+          }),
+          expect.objectContaining({
+            fhirResource: 'Binary',
+            releasePolicy: expect.stringContaining('Never release raw binary documents'),
+          }),
+        ]),
+      },
+    });
+
+    const workflow = await fetch(`${baseUrl}/api/planned/epic/workflow`);
+    expect(workflow.status).toBe(200);
+    await expect(workflow.json()).resolves.toMatchObject({
+      data: {
+        id: 'epic-workflow-readonly',
+        status: 'planned',
+        localhostMvp: true,
+        writeEnabled: false,
+        piiRelease: false,
+        resources: expect.arrayContaining([
+          expect.objectContaining({ fhirResource: 'Communication' }),
+          expect.objectContaining({ fhirResource: 'Task' }),
+          expect.objectContaining({ fhirResource: 'QuestionnaireResponse' }),
+        ]),
+      },
+    });
   });
 
   it('serves FHIR capability and PHI privacy schema metadata', async () => {

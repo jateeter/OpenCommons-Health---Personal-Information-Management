@@ -301,9 +301,12 @@ The active development sequence for the localhost MVP is:
 5. Improve Annual Medicare Wellness import preview and apply UX against local
    mock data first by grouping candidates by PIM domain and applying only
    owner-selected sections.
-6. Add document/workflow read-only repositories and schemas as localhost APIs
-   before any mobile implementation.
-7. Continue to require owner approval and anonymization controls for any
+6. Surface local reconciliation status for Epic preview candidates so create,
+   update, unchanged, and conflict states are visible before pod writes.
+7. Publish document/workflow read-only planning contracts at
+   `/api/planned/epic/documents` and `/api/planned/epic/workflow` before adding
+   repositories, schemas, or mobile implementation.
+8. Continue to require owner approval and anonymization controls for any
    non-owner release.
 
 Native iPad/mobile issues should remain parked as future work unless the

@@ -72,7 +72,14 @@ async function exerciseEpicImportPanel() {
 
   await page.locator('#epic-preview').click();
   await page.locator('#epic-preview-list').getByText('mapped FHIR resources', { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#epic-preview-list').getByText('Review each section and choose what to apply', { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#epic-preview-list').getByText('selected candidates will be applied', { exact: false }).waitFor({ timeout: 10000 });
   await page.locator('#epic-preview-list').getByText('Hypertensive disorder', { exact: false }).waitFor({ timeout: 10000 });
+  const medicationSection = page.locator('.epic-review-option').filter({ hasText: /Medications:/ }).locator('input');
+  if (await medicationSection.count()) {
+    await medicationSection.uncheck();
+    await page.locator('#epic-selection-summary').getByText(/selected candidates will be applied/, { exact: false }).waitFor({ timeout: 10000 });
+  }
   await page.locator('#epic-apply').click();
   await page.locator('#epic-preview-list').getByText('Applied', { exact: false }).waitFor({ timeout: 10000 });
 }

@@ -143,6 +143,11 @@ export interface EpicImportCandidate {
   display: string;
   entity: EpicDomainEntity;
   provenance: EpicImportProvenance;
+  targetUrl?: string;
+  reconciliation?: {
+    status: 'new' | 'matched' | 'changed' | 'ambiguous';
+    detail: string;
+  };
 }
 
 export interface EpicImportPreview {

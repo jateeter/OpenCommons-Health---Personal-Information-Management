@@ -11,6 +11,7 @@ import {
   PERSONAL_HEALTH_INFORMATION_SCHEMA,
 } from './standards/fhir';
 import type { EpicIntegrationService } from './integrations/epic';
+import { EPIC_DOCUMENTS_READONLY_PLAN, EPIC_READONLY_PLANS, EPIC_WORKFLOW_READONLY_PLAN } from './plannedSurfaces';
 
 export interface DomainRepository {
   findAll(): Promise<unknown[]>;
@@ -81,6 +82,15 @@ export function createRequestHandler(
           identifiable: PERSONAL_HEALTH_INFORMATION_SCHEMA,
           anonymizedRelease: ANONYMIZED_HEALTH_INFORMATION_SCHEMA,
         });
+      }
+      if (requestUrl.pathname === '/api/planned/epic') {
+        return sendJson(res, 200, { data: EPIC_READONLY_PLANS });
+      }
+      if (requestUrl.pathname === '/api/planned/epic/documents') {
+        return sendJson(res, 200, { data: EPIC_DOCUMENTS_READONLY_PLAN });
+      }
+      if (requestUrl.pathname === '/api/planned/epic/workflow') {
+        return sendJson(res, 200, { data: EPIC_WORKFLOW_READONLY_PLAN });
       }
       if (requestUrl.pathname.startsWith('/api/integrations/epic')) {
         return await handleEpicIntegrationRequest(req, res, requestUrl, provideContext);
