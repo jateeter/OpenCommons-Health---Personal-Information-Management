@@ -117,6 +117,65 @@ running or when a configured localhost port is already occupied.
 - `SKIP_LOCAL_PREFLIGHT=1` is available only for intentional reuse of an
   already-running stack.
 
+### Issue LHMVP-07: Verify read-only Epic planning surfaces in deployment smoke
+
+**Problem:** The operational deployment gate requires read-only Epic
+document/workflow planning surfaces, but the live smoke test did not yet prove
+those endpoints are reachable or privacy-safe.
+
+**Status:** Implemented in `scripts/verify-deployment.sh` and
+`scripts/validate-openapi.mjs`.
+
+**Scope:** localhost deployment smoke and static OpenAPI validation only.
+
+**Acceptance criteria:**
+
+- `/api/planned/epic`, `/api/planned/epic/documents`, and
+  `/api/planned/epic/workflow` are present in the OpenAPI contract.
+- Live smoke verifies the document and workflow planning endpoints are
+  reachable.
+- Live smoke fails if either planning endpoint reports `writeEnabled: true` or
+  `piiRelease: true`.
+
+### Issue LHMVP-08: Keep anonymized release controls in the live smoke gate
+
+**Problem:** Unit and Playwright tests cover anonymized release behavior, but
+the deployment smoke script should also prove the running local stack denies
+non-owner release and strips direct identifiers from approved anonymized output.
+
+**Status:** Implemented in `scripts/verify-deployment.sh`.
+
+**Scope:** localhost deployment smoke only.
+
+**Acceptance criteria:**
+
+- Live smoke creates a temporary condition with direct free-text PHI.
+- `/api/anonymized/resources/conditions` returns `403` without owner approval
+  and purpose headers.
+- Owner-approved release returns `anonymized: true`, `ownerApproved: true`, and
+  the declared purpose.
+- Approved release generalizes dates and excludes `notes`, `recordedBy`, and
+  direct free text.
+
+### Issue LHMVP-09: Provide a single non-Docker localhost release gate
+
+**Problem:** The MVP acceptance gate is documented as several commands, but the
+repeatable local workflow should have one command that runs the non-Docker gate
+before a PR/release cycle.
+
+**Status:** Implemented by `npm run local:release-gate`.
+
+**Scope:** non-Docker release checks only; live container-local and host-local
+smoke tests remain explicit deployment steps.
+
+**Acceptance criteria:**
+
+- The release gate checks shell/script syntax for local deployment scripts.
+- The release gate runs typecheck, lint, Jest, build, OpenAPI validation,
+  localhost MVP validation, and `git diff --check`.
+- Documentation distinguishes the non-Docker gate from live Docker/Solid smoke
+  tests.
+
 ## Future hosted/public deployment notes
 
 These are not part of the current localhost MVP, but they are required before a

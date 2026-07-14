@@ -138,10 +138,15 @@ Every Epic-enabled deployment should pass these gates:
    are reachable.
 4. Epic disabled mode hides connector controls and passes existing deployment
    verification.
-5. Read-only Epic planning surfaces are reachable at
+5. Anonymized release controls deny missing owner approval and return only
+   purpose-bound, de-identified payloads when approval is present. The
+   `verify-deployment.sh` smoke test enforces this against a temporary
+   condition record.
+6. Read-only Epic planning surfaces are reachable at
    `/api/planned/epic/documents` and `/api/planned/epic/workflow`; both must
-   report `writeEnabled: false` and `piiRelease: false`.
-6. Epic enabled mode verifies:
+   report `writeEnabled: false` and `piiRelease: false`. The
+   `verify-deployment.sh` smoke test enforces this contract.
+7. Epic enabled mode verifies:
    - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
    - diagnostics report localhost MVP readiness without exposing secrets;
    - sandbox/production SMART discovery document is reachable;
@@ -149,12 +154,17 @@ Every Epic-enabled deployment should pass these gates:
    - FHIR capability metadata is reachable;
    - requested scopes match configured feature lanes;
    - no secrets appear in logs or OpenAPI examples.
-7. Playwright Medicare Wellness E2E passes against the selected local stack.
+8. Playwright Medicare Wellness E2E passes against the selected local stack.
 
 For the localhost MVP, the repository also provides
 `npm run validate:localhost-mvp` as a static contract check that confirms the
 MVP remains scoped to localhost deployment and that the required local scripts,
 configuration defaults, and documentation anchors are present.
+
+Use `npm run local:release-gate` before opening a localhost MVP PR. It runs the
+non-Docker release checks in one command; live container-local and host-local
+smoke tests still run separately because they require Docker and free localhost
+ports.
 
 ## Security and privacy operations
 
