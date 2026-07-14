@@ -197,6 +197,23 @@ FHIR reads, or pod writes.
   local workflow.
 - The command fails if diagnostics output contains configured secret values.
 
+### Issue LHMVP-11: Align hosted CI with the localhost release gate
+
+**Problem:** The repository has a single non-Docker release gate for local MVP
+readiness, but hosted CI should execute that same command so local and PR
+evidence do not drift.
+
+**Status:** Implemented in `.github/workflows/ci.yml`.
+
+**Scope:** hosted Node 22 CI only; Docker compose smoke remains in the Docker
+Deploy workflow.
+
+**Acceptance criteria:**
+
+- Hosted CI runs `npm run local:release-gate`.
+- Hosted CI keeps the deployable artifact checks after the release gate.
+- Static localhost MVP validation fails if CI stops using the release gate.
+
 ## Future hosted/public deployment notes
 
 These are not part of the current localhost MVP, but they are required before a

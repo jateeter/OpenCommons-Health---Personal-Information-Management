@@ -15,6 +15,7 @@ const executiveOverview = read('docs/EXECUTIVE_OVERVIEW.md');
 const visualReview = read('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md');
 const deploymentVerifier = read('scripts/verify-deployment.sh');
 const epicDiagnosticsCheck = read('scripts/epic-diagnostics-check.mjs');
+const ciWorkflow = read('.github/workflows/ci.yml');
 
 const failures = [];
 
@@ -84,6 +85,8 @@ requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'npm run local:release-gate');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-10');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'npm run epic:diagnostics');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-11');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '.github/workflows/ci.yml');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
 
@@ -121,6 +124,9 @@ requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, '/api/in
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_DIAGNOSTICS_LIVE');
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_DIAGNOSTICS_EXPECT');
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_CLIENT_SECRET');
+
+requireText('.github/workflows/ci.yml', ciWorkflow, 'npm run local:release-gate');
+requireText('.github/workflows/ci.yml', ciWorkflow, 'Verify deployable application artifact');
 
 requireText('docs/EXECUTIVE_OVERVIEW.md', executiveOverview, 'The current MVP is restricted to localhost deployment');
 requireText('docs/EXECUTIVE_OVERVIEW.md', executiveOverview, 'native/iPad work parked');
