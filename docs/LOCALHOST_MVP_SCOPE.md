@@ -68,7 +68,9 @@ The next non-iPad work should stay inside the localhost contract:
 2. Preserve and harden the host-local happy path.
 3. Keep all ports configurable and collision-resistant.
 4. Extend deployment verification for optional Epic sandbox reachability without
-   requiring live credentials in CI.
+   requiring live credentials in CI. Use `npm run epic:diagnostics` against a
+   running local app, with `EPIC_DIAGNOSTICS_LIVE=true` only for explicit
+   sandbox/production SMART discovery.
 5. Strengthen import preview/reconciliation UX for Annual Medicare Wellness
    updates.
 6. Add document/workflow read-only domain planning as localhost APIs before any

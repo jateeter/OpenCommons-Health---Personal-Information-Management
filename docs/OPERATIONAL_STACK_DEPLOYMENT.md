@@ -166,6 +166,21 @@ non-Docker release checks in one command; live container-local and host-local
 smoke tests still run separately because they require Docker and free localhost
 ports.
 
+When a local app is already running, use `npm run epic:diagnostics` to verify
+the Epic diagnostics endpoint without live network discovery. For an explicit
+sandbox or production SMART discovery check, run:
+
+```bash
+APP_URL=http://localhost:<app-port> \
+EPIC_DIAGNOSTICS_LIVE=true \
+EPIC_DIAGNOSTICS_EXPECT=ready,attention \
+npm run epic:diagnostics
+```
+
+This command does not perform authorization-code exchange, token exchange, FHIR
+reads, or pod writes. It also fails if configured secret values are present in
+the diagnostics payload.
+
 ## Security and privacy operations
 
 - Keep Solid credentials and Epic credentials separate.
