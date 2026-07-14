@@ -16,6 +16,7 @@ sh -n scripts/local-host-solid-up.sh
 sh -n scripts/local-host-start.sh
 sh -n scripts/local-host-smoke.sh
 sh -n scripts/verify-deployment.sh
+node --check scripts/epic-diagnostics-check.mjs
 node --check scripts/local-preflight.mjs
 
 echo ""

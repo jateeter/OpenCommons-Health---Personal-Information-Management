@@ -176,6 +176,27 @@ smoke tests remain explicit deployment steps.
 - Documentation distinguishes the non-Docker gate from live Docker/Solid smoke
   tests.
 
+### Issue LHMVP-10: Add repeatable Epic diagnostics workflow
+
+**Problem:** The app exposes `/api/integrations/epic/diagnostics`, including
+optional `?live=true` SMART discovery, but localhost operators need a repeatable
+command that checks the endpoint without requiring live Epic credentials in CI.
+
+**Status:** Implemented by `npm run epic:diagnostics`.
+
+**Scope:** diagnostics only; no authorization-code exchange, token exchange,
+FHIR reads, or pod writes.
+
+**Acceptance criteria:**
+
+- Default diagnostics check calls `/api/integrations/epic/diagnostics` without
+  live network discovery.
+- `EPIC_DIAGNOSTICS_LIVE=true` adds `?live=true` for explicit sandbox or
+  production SMART discovery checks.
+- `EPIC_DIAGNOSTICS_EXPECT` can constrain acceptable readiness states for a
+  local workflow.
+- The command fails if diagnostics output contains configured secret values.
+
 ## Future hosted/public deployment notes
 
 These are not part of the current localhost MVP, but they are required before a

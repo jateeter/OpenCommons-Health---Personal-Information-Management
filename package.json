@@ -15,6 +15,7 @@
     "local:host-smoke": "./scripts/local-host-smoke.sh",
     "local:release-gate": "./scripts/local-mvp-release-gate.sh",
     "verify:deployment": "./scripts/verify-deployment.sh",
+    "epic:diagnostics": "node scripts/epic-diagnostics-check.mjs",
     "validate:openapi": "node scripts/validate-openapi.mjs",
     "validate:localhost-mvp": "node scripts/validate-localhost-mvp.mjs",
     "dev": "ts-node src/index.ts",

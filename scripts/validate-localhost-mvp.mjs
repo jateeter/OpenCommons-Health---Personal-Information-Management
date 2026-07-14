@@ -14,6 +14,7 @@ const epicRoadmap = read('docs/EPIC_INTEGRATION_ROADMAP.md');
 const executiveOverview = read('docs/EXECUTIVE_OVERVIEW.md');
 const visualReview = read('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md');
 const deploymentVerifier = read('scripts/verify-deployment.sh');
+const epicDiagnosticsCheck = read('scripts/epic-diagnostics-check.mjs');
 
 const failures = [];
 
@@ -43,6 +44,7 @@ for (const script of [
   'local:host-smoke',
   'local:release-gate',
   'verify:deployment',
+  'epic:diagnostics',
   'test:e2e:playwright',
   'validate:openapi',
   'validate:localhost-mvp',
@@ -58,6 +60,7 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'APP_PORT');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'CSS_PORT');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run validate:localhost-mvp');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run local:release-gate');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run epic:diagnostics');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/integrations/epic/diagnostics');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'LOCALHOST_MVP_DEPLOYMENT_ISSUES.md');
 
@@ -79,6 +82,8 @@ requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/anonymized/resources/conditions');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-09');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'npm run local:release-gate');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-10');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'npm run epic:diagnostics');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
 
@@ -92,6 +97,7 @@ requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'The active MVP
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'Native iPad/iPhone packaging');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run validate:localhost-mvp');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:release-gate');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run epic:diagnostics');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:preflight');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/integrations/epic/diagnostics');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/planned/epic/documents');
@@ -110,6 +116,11 @@ requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/anonymized
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'x-opencommons-owner-approved: true');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'x-opencommons-release-purpose: deployment-smoke');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'missing_approval_status');
+
+requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, '/api/integrations/epic/diagnostics');
+requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_DIAGNOSTICS_LIVE');
+requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_DIAGNOSTICS_EXPECT');
+requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_CLIENT_SECRET');
 
 requireText('docs/EXECUTIVE_OVERVIEW.md', executiveOverview, 'The current MVP is restricted to localhost deployment');
 requireText('docs/EXECUTIVE_OVERVIEW.md', executiveOverview, 'native/iPad work parked');
