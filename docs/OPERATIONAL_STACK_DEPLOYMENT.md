@@ -164,7 +164,8 @@ configuration defaults, and documentation anchors are present.
 Use `npm run local:release-gate` before opening a localhost MVP PR. It runs the
 non-Docker release checks in one command; live container-local and host-local
 smoke tests still run separately because they require Docker and free localhost
-ports.
+ports. Hosted Node 22 CI runs the same `npm run local:release-gate` command and
+then verifies the deployable `dist/` artifact.
 
 When a local app is already running, use `npm run epic:diagnostics` to verify
 the Epic diagnostics endpoint without live network discovery. For an explicit
