@@ -1,0 +1,39 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+
+# ─── WorkflowTask Shape ──────────────────────────────────────────────────────
+#
+# Represents owner-held FHIR Task-style workflow and message status metadata.
+# Outbound health-system writeback remains outside the localhost MVP.
+
+<WorkflowTaskShape> {
+  a                         [ health:WorkflowTask ] ;
+  health:codingSystem       xsd:anyURI              ;
+  health:codingCode         xsd:string              ;
+  health:codingDisplay      xsd:string?             ;
+  health:taskStatus [
+    health:TaskStatusDraft
+    health:TaskStatusRequested
+    health:TaskStatusReceived
+    health:TaskStatusAccepted
+    health:TaskStatusInProgress
+    health:TaskStatusCompleted
+    health:TaskStatusCancelled
+  ]                                                 ;
+  health:taskIntent [
+    health:TaskIntentProposal
+    health:TaskIntentPlan
+    health:TaskIntentOrder
+    health:TaskIntentOption
+  ]                                                 ;
+  schema:description        xsd:string              ;
+  health:authoredDate       xsd:dateTime?           ;
+  health:dueDate            xsd:date?               ;
+  health:requester          xsd:string?             ;
+  health:owner              xsd:string?             ;
+  health:relatedDocumentUrl xsd:anyURI?             ;
+  health:notes              xsd:string?             ;
+  schema:dateCreated        xsd:dateTime?           ;
+  schema:dateModified       xsd:dateTime?           ;
+}

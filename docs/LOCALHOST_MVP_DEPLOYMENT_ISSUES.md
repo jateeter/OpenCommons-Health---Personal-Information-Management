@@ -81,21 +81,27 @@ local-vs-Epic conflict details in the UI.
 - Change summaries identify source FHIR resource type/id and destination PIM
   domain.
 
-### Issue LHMVP-05: Add localhost document/workflow read-only planning stubs
+### Issue LHMVP-05: Add localhost document/workflow repositories
 
-**Problem:** Document and workflow resources are in the Epic roadmap but not yet
-represented as localhost API surfaces.
+**Problem:** Document and workflow resources are in the Epic roadmap and must
+be real owner-controlled pod-backed MVP domains. Read-only planning surfaces
+alone are not sufficient for MVP completion.
 
-**Status:** Implemented as read-only planning contracts at
-`/api/planned/epic/documents` and `/api/planned/epic/workflow`.
+**Status:** Implemented as pod-backed repositories at
+`/api/resources/documents` and `/api/resources/workflow-tasks`; the read-only
+Epic planning contracts remain available at `/api/planned/epic/documents` and
+`/api/planned/epic/workflow`.
 
-**Scope:** read-only planning and schemas; no outbound Epic writes.
+**Scope:** owner-held document metadata and workflow/task metadata. Raw binary
+document ingestion and outbound Epic writes remain out of scope.
 
 **Acceptance criteria:**
 
 - DocumentReference and workflow/task concepts are mapped to local API
-  contracts or explicitly parked.
-- OpenAPI shows planned read-only surfaces when implemented.
+  contracts backed by Solid pod repositories.
+- OpenAPI shows CRUD and anonymized-release actions for `documents` and
+  `workflow-tasks`.
+- Live deployment smoke creates, reads, and deletes both domains.
 - Anonymized release rules exclude document identifiers, URLs, and free text by
   default.
 
@@ -213,6 +219,28 @@ Deploy workflow.
 - Hosted CI runs `npm run local:release-gate`.
 - Hosted CI keeps the deployable artifact checks after the release gate.
 - Static localhost MVP validation fails if CI stops using the release gate.
+
+### Issue LHMVP-12: Retry authenticated readiness in deployment smoke
+
+**Problem:** Host-local startup can make the process liveness endpoint
+available before authenticated pod access is ready. A single-shot
+`/api/status` probe can therefore report a false negative even though the app
+becomes healthy within the configured startup window.
+
+**Status:** Implemented in `scripts/verify-deployment.sh`.
+
+**Scope:** deployment smoke validation only; the application runtime behavior
+is unchanged.
+
+**Acceptance criteria:**
+
+- JSON readiness probes retry until `WAIT_TIMEOUT` instead of failing after one
+  request.
+- Retry output identifies which response field is not yet reporting the
+  expected value.
+- Timeout failures include the last response body, when available, so operators
+  can distinguish authentication, authorization, parsing, and service startup
+  problems.
 
 ## Future hosted/public deployment notes
 

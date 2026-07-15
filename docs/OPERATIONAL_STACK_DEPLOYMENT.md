@@ -142,11 +142,14 @@ Every Epic-enabled deployment should pass these gates:
    purpose-bound, de-identified payloads when approval is present. The
    `verify-deployment.sh` smoke test enforces this against a temporary
    condition record.
-6. Read-only Epic planning surfaces are reachable at
+6. Document/workflow MVP repositories are reachable at
+   `/api/resources/documents` and `/api/resources/workflow-tasks`; live smoke
+   must create, read, and delete both domains.
+7. Read-only Epic planning surfaces are reachable at
    `/api/planned/epic/documents` and `/api/planned/epic/workflow`; both must
    report `writeEnabled: false` and `piiRelease: false`. The
    `verify-deployment.sh` smoke test enforces this contract.
-7. Epic enabled mode verifies:
+8. Epic enabled mode verifies:
    - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
    - diagnostics report localhost MVP readiness without exposing secrets;
    - sandbox/production SMART discovery document is reachable;
@@ -154,7 +157,7 @@ Every Epic-enabled deployment should pass these gates:
    - FHIR capability metadata is reachable;
    - requested scopes match configured feature lanes;
    - no secrets appear in logs or OpenAPI examples.
-8. Playwright Medicare Wellness E2E passes against the selected local stack.
+9. Playwright Medicare Wellness E2E passes against the selected local stack.
 
 For the localhost MVP, the repository also provides
 `npm run validate:localhost-mvp` as a static contract check that confirms the

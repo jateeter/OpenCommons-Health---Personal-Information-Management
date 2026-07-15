@@ -88,6 +88,37 @@ export function mockAnnualWellnessResources(): EpicFhirResource[] {
       performer: [{ display: 'OpenCommons Wellness Lab' }],
       category: [{ coding: [{ code: 'laboratory' }] }],
     },
+    {
+      resourceType: 'DocumentReference',
+      id: 'doc-wellness-summary',
+      meta: { versionId: '1', lastUpdated },
+      status: 'current',
+      type: { coding: [{ system: 'http://loinc.org', code: '34133-9', display: 'Summary of episode note' }] },
+      category: { coding: [{ system: 'http://loinc.org', code: 'LP173421-1', display: 'Report' }] },
+      description: 'Annual Medicare Wellness Visit Summary',
+      date: '2026-05-01T19:00:00Z',
+      custodian: { display: 'OpenCommons Wellness Clinic' },
+      content: [{
+        attachment: {
+          contentType: 'application/pdf',
+          url: 'https://epic.example.test/fhir/Binary/wellness-summary',
+          title: 'Annual Medicare Wellness Visit Summary',
+          creation: '2026-05-01T19:00:00Z',
+        },
+      }],
+    },
+    {
+      resourceType: 'Task',
+      id: 'task-preventive-plan-review',
+      meta: { versionId: '1', lastUpdated },
+      status: 'requested',
+      intent: 'plan',
+      code: { coding: [{ system: 'http://snomed.info/id/', code: '386053000', display: 'Evaluation procedure' }] },
+      description: 'Review Annual Medicare Wellness preventive plan',
+      authoredOn: '2026-05-01T19:05:00Z',
+      executionPeriod: { end: '2026-06-01T00:00:00Z' },
+      requester: { display: 'OpenCommons Wellness Clinic' },
+      owner: { display: 'Patient' },
+    },
   ];
 }
-

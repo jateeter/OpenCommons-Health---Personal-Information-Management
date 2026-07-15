@@ -95,7 +95,7 @@ cp .env.example .env
 # Edit CSS_ACCOUNT_PASSWORD in .env
 
 # 3. Start CSS, provision the account/WebID/pod/client credentials, start PIM,
-#    and verify UI, OpenAPI docs, readiness, and all nine domain APIs
+#    and verify UI, OpenAPI docs, readiness, and all 11 domain APIs
 ./scripts/local-container-up.sh
 
 # Optional: verify again with explicit, conflict-free ports

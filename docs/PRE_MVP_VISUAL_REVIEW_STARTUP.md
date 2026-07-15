@@ -71,7 +71,7 @@ The script will:
 5. provision the local account, WebID, pod, and client credentials;
 6. start the PIM app;
 7. verify the UI, liveness, OpenAPI docs, authenticated pod readiness, and CRUD
-   coverage for all nine health domains.
+   coverage for all 11 health domains.
 
 ## Stop without deleting pod data
 
@@ -94,9 +94,10 @@ APP_PORT=18080 CSS_PORT=13000 docker compose down --volumes
 ## Review checklist
 
 - Open the PIM UI and confirm the header shows `Pod connected`.
-- Navigate all nine domains:
+- Navigate all 11 domains:
   `Profiles`, `Conditions`, `Medications`, `Allergies`, `Immunizations`,
-  `Vital signs`, `Providers`, `Lab results`, and `Insurance`.
+  `Vital signs`, `Providers`, `Lab results`, `Insurance`, `Documents`, and
+  `Workflow tasks`.
 - Add, edit, and delete a non-sensitive sample record.
 - Open `/api/docs` and confirm the local API action runner loads.
 - Open `/fhir/metadata` and confirm the FHIR CapabilityStatement-style payload

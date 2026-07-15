@@ -272,6 +272,57 @@ export interface InsurancePolicy {
   updatedAt?: ISODateTime;
 }
 
+// ─── Clinical Documents ──────────────────────────────────────────────────────
+
+export type ClinicalDocumentStatus = 'current' | 'superseded' | 'entered-in-error';
+
+/** Owner-held clinical document metadata for FHIR DocumentReference records. */
+export interface ClinicalDocument {
+  url?: ResourceUrl;
+  documentType: Coding;
+  status: ClinicalDocumentStatus;
+  title: string;
+  category?: Coding;
+  authoredDate?: ISODateTime;
+  sourceSystem?: string;
+  sourceDocumentUrl?: ResourceUrl;
+  binaryUrl?: ResourceUrl;
+  custodian?: string;
+  notes?: string;
+  createdAt?: ISODateTime;
+  updatedAt?: ISODateTime;
+}
+
+// ─── Workflow Tasks ──────────────────────────────────────────────────────────
+
+export type WorkflowTaskStatus =
+  | 'draft'
+  | 'requested'
+  | 'received'
+  | 'accepted'
+  | 'in-progress'
+  | 'completed'
+  | 'cancelled';
+
+export type WorkflowTaskIntent = 'proposal' | 'plan' | 'order' | 'option';
+
+/** Owner-held workflow, task, and message status metadata for FHIR Task records. */
+export interface WorkflowTask {
+  url?: ResourceUrl;
+  taskType: Coding;
+  status: WorkflowTaskStatus;
+  intent: WorkflowTaskIntent;
+  description: string;
+  authoredDate?: ISODateTime;
+  dueDate?: ISODate;
+  requester?: string;
+  owner?: string;
+  relatedDocumentUrl?: ResourceUrl;
+  notes?: string;
+  createdAt?: ISODateTime;
+  updatedAt?: ISODateTime;
+}
+
 // ─── Pod configuration ────────────────────────────────────────────────────────
 
 /** Runtime configuration loaded from config/. */

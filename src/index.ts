@@ -56,6 +56,8 @@ import {
   ProviderRepository,
   VitalSignsRepository,
   InsuranceRepository,
+  DocumentRepository,
+  WorkflowTaskRepository,
 } from './repositories';
 
 export * from './types';
@@ -128,6 +130,8 @@ export class HealthPIM {
 
   /** Health insurance policies. */
   readonly insurancePolicies: InsuranceRepository;
+  readonly documents: DocumentRepository;
+  readonly workflowTasks: WorkflowTaskRepository;
 
   private constructor(
     auth: SolidAuthService,
@@ -144,6 +148,8 @@ export class HealthPIM {
     this.providers = new ProviderRepository(pod);
     this.labResults = new LabResultRepository(pod);
     this.insurancePolicies = new InsuranceRepository(pod);
+    this.documents = new DocumentRepository(pod);
+    this.workflowTasks = new WorkflowTaskRepository(pod);
   }
 
   /**

@@ -278,7 +278,7 @@ export class EpicIntegrationService {
     const preview = await this.preview(body);
     const selectedDomains = selectedDomainSet(body);
     const created = Object.fromEntries(
-      ['profiles', 'conditions', 'medications', 'allergies', 'immunizations', 'vital-signs', 'providers', 'lab-results', 'insurance-policies']
+      ['profiles', 'conditions', 'medications', 'allergies', 'immunizations', 'vital-signs', 'providers', 'lab-results', 'insurance-policies', 'documents', 'workflow-tasks']
         .map((domain) => [domain, 0]),
     ) as Record<EpicMvpDomain, number>;
     const resources: EpicApplyResult['resources'] = [];
@@ -514,6 +514,10 @@ function reconciliationKey(domain: EpicMvpDomain, entity: Record<string, unknown
       return [codingKey(nestedValue(entity, 'code')), stringField(entity, 'effectiveDateTime')].filter(Boolean).join('::') || undefined;
     case 'insurance-policies':
       return stringField(entity, 'memberId') || [stringField(entity, 'insurerName'), stringField(entity, 'effectiveDate')].filter(Boolean).join('::') || undefined;
+    case 'documents':
+      return [codingKey(nestedValue(entity, 'documentType')), stringField(entity, 'title'), stringField(entity, 'authoredDate')].filter(Boolean).join('::') || undefined;
+    case 'workflow-tasks':
+      return [codingKey(nestedValue(entity, 'taskType')), stringField(entity, 'description'), stringField(entity, 'authoredDate')].filter(Boolean).join('::') || undefined;
   }
 }
 

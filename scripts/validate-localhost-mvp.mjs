@@ -55,6 +55,9 @@ for (const script of [
 
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'The OpenCommons Health PIM MVP is restricted to localhost deployment');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Native iPad, iPhone, and other mobile-app deployment work is explicitly on hold');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '11 owner-controlled domain APIs');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/resources/documents');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/resources/workflow-tasks');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Container-local');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Host-local');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'APP_PORT');
@@ -74,6 +77,8 @@ requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Playwr
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-05');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/planned/epic/documents');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/planned/epic/workflow');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/resources/documents');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/resources/workflow-tasks');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-06');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'npm run local:preflight');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'SKIP_LOCAL_PREFLIGHT=1');
@@ -87,6 +92,8 @@ requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'npm run epic:diagnostics');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-11');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '.github/workflows/ci.yml');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-12');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Retry authenticated readiness');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
 
@@ -104,6 +111,8 @@ requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run epic:d
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:preflight');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/integrations/epic/diagnostics');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/planned/epic/documents');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/resources/documents');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/resources/workflow-tasks');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'piiRelease: false');
 
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'The active MVP scope is restricted to localhost notebook deployment.');
@@ -113,12 +122,16 @@ requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'Native iPad/mobile
 
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/planned/epic/documents');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/planned/epic/workflow');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, 'documents workflow-tasks');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, 'Annual Medicare Wellness Visit Summary');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"writeEnabled":false');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"piiRelease":false');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/anonymized/resources/conditions');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'x-opencommons-owner-approved: true');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'x-opencommons-release-purpose: deployment-smoke');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'missing_approval_status');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, 'did not report');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, 'Full response');
 
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, '/api/integrations/epic/diagnostics');
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_DIAGNOSTICS_LIVE');

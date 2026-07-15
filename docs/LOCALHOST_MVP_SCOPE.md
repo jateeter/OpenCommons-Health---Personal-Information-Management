@@ -28,7 +28,8 @@ scripts, verification, and review instructions.
 The localhost MVP includes:
 
 - browser UI for manual owner-facing record management;
-- all nine domain APIs under `/api/resources/:domain`;
+- 11 owner-controlled domain APIs under `/api/resources/:domain`, including
+  `/api/resources/documents` and `/api/resources/workflow-tasks`;
 - anonymized release APIs under `/api/anonymized/resources/:domain`;
 - Swagger/OpenAPI documentation under `/api/docs` and `/openapi.json`;
 - FHIR-aligned metadata under `/fhir/metadata`;
@@ -73,8 +74,8 @@ The next non-iPad work should stay inside the localhost contract:
    sandbox/production SMART discovery.
 5. Strengthen import preview/reconciliation UX for Annual Medicare Wellness
    updates.
-6. Add document/workflow read-only domain planning as localhost APIs before any
-   mobile implementation.
+6. Keep document/workflow repositories in the localhost MVP acceptance path;
+   planning-only Epic surfaces are insufficient for MVP completion.
 7. Keep anonymized release tests in the release gate.
 8. Keep native/iPad implementation as a parked future milestone.
 
@@ -106,7 +107,7 @@ localhost ports.
 
 The deployment verification script must confirm more than process uptime. It
 must prove the UI, OpenAPI documentation, FHIR metadata, privacy schema,
-authenticated pod access, all nine domain APIs, anonymized release controls,
+authenticated pod access, all 11 domain APIs, anonymized release controls,
 and optional Epic mock workflow are operating together.
 
 ## Future native-client reactivation criteria

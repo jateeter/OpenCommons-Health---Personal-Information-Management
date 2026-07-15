@@ -95,4 +95,58 @@ describe('FHIR/PHI standards and anonymization controls', () => {
     expect(provider.data).toEqual({ role: 'primary-care', specialty: 'family medicine' });
     expect(directIdentifierPaths([insurance, provider])).toEqual([]);
   });
+
+  it('removes direct identifiers from document and workflow release payloads', () => {
+    const document = anonymizeResource('documents', {
+      url: 'http://pod/documents/1',
+      documentType: { system: 'http://loinc.org', code: '34133-9', display: 'Summary of episode note' },
+      status: 'current',
+      title: 'Jane Doe Annual Wellness Visit Summary',
+      category: { system: 'http://loinc.org', code: 'LP173421-1', display: 'Report' },
+      authoredDate: '2026-01-15T12:00:00Z',
+      sourceSystem: 'epic',
+      sourceDocumentUrl: 'https://epic.example.test/fhir/DocumentReference/123',
+      binaryUrl: 'http://pod/private/binary/123',
+      custodian: 'Named Hospital',
+      notes: 'Contains Jane Doe visit details',
+    });
+    const workflow = anonymizeResource('workflow-tasks', {
+      url: 'http://pod/tasks/1',
+      taskType: { system: 'http://snomed.info/id/', code: '386053000', display: 'Evaluation procedure' },
+      status: 'requested',
+      intent: 'plan',
+      description: 'Jane Doe should review preventive plan',
+      authoredDate: '2026-01-15T12:00:00Z',
+      dueDate: '2026-02-01',
+      requester: 'Dr Named Provider',
+      owner: 'Jane Doe',
+      relatedDocumentUrl: 'http://pod/documents/1',
+      notes: 'Private task note',
+    });
+
+    expect(document).toEqual({
+      domain: 'documents',
+      fhirResourceType: 'DocumentReference',
+      anonymized: true,
+      data: {
+        documentType: { system: 'http://loinc.org', code: '34133-9', display: 'Summary of episode note' },
+        status: 'current',
+        category: { system: 'http://loinc.org', code: 'LP173421-1', display: 'Report' },
+        authoredYear: 2026,
+      },
+    });
+    expect(workflow).toEqual({
+      domain: 'workflow-tasks',
+      fhirResourceType: 'Task',
+      anonymized: true,
+      data: {
+        taskType: { system: 'http://snomed.info/id/', code: '386053000', display: 'Evaluation procedure' },
+        status: 'requested',
+        intent: 'plan',
+        authoredYear: 2026,
+        dueYear: 2026,
+      },
+    });
+    expect(directIdentifierPaths([document, workflow])).toEqual([]);
+  });
 });

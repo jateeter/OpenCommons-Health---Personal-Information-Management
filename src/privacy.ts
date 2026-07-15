@@ -42,6 +42,17 @@ const DIRECT_IDENTIFIER_KEYS = new Set([
   'effectiveDate',
   'expirationDate',
   'lotNumber',
+  'title',
+  'sourceSystem',
+  'sourceDocumentUrl',
+  'binaryUrl',
+  'custodian',
+  'requester',
+  'owner',
+  'relatedDocumentUrl',
+  'authoredDate',
+  'dueDate',
+  'description',
 ]);
 
 export interface AnonymizedResource {
@@ -150,6 +161,21 @@ function anonymizedDataFor(domain: string, source: Record<string, unknown>): Rec
         type: source.type,
         effectiveYear: yearFrom(source.effectiveDate),
         expirationYear: yearFrom(source.expirationDate),
+      });
+    case 'documents':
+      return compact({
+        documentType: source.documentType,
+        status: source.status,
+        category: source.category,
+        authoredYear: yearFrom(source.authoredDate),
+      });
+    case 'workflow-tasks':
+      return compact({
+        taskType: source.taskType,
+        status: source.status,
+        intent: source.intent,
+        authoredYear: yearFrom(source.authoredDate),
+        dueYear: yearFrom(source.dueDate),
       });
     default:
       return {};
