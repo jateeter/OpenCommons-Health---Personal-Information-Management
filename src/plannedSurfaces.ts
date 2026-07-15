@@ -25,11 +25,11 @@ export const EPIC_DOCUMENTS_READONLY_PLAN: PlannedEpicSurface = {
   writeEnabled: false,
   piiRelease: false,
   issue: 'LHMVP-05',
-  summary: 'Read-only Epic document metadata planning surface for future owner-reviewed document import.',
+  summary: 'Read-only Epic document metadata planning surface for owner-reviewed document import into the local documents repository.',
   resources: [
     {
       fhirResource: 'DocumentReference',
-      localSurface: 'future /api/resources/documents',
+      localSurface: '/api/resources/documents',
       ownerAction: 'Preview document title, category, date, and source before choosing any pod import.',
       storagePolicy: 'Store owner-approved document metadata in the Solid pod; defer binary payload storage to a separate owner action.',
       releasePolicy: 'Exclude source document URLs, direct identifiers, full text, and binary payloads from anonymized releases by default.',
@@ -43,9 +43,9 @@ export const EPIC_DOCUMENTS_READONLY_PLAN: PlannedEpicSurface = {
     },
   ],
   validation: [
-    'OpenAPI exposes the read-only planning surface.',
-    'Localhost MVP documentation identifies document import as planned, not active.',
-    'Automated tests assert no writeback or PII release is enabled for documents.',
+    'OpenAPI exposes both the read-only planning surface and the /api/resources/documents domain.',
+    'Localhost MVP documentation identifies local document metadata storage as active and Epic writeback as out of scope.',
+    'Automated tests assert no Epic writeback or PII release is enabled for documents.',
   ],
 };
 
@@ -67,7 +67,7 @@ export const EPIC_WORKFLOW_READONLY_PLAN: PlannedEpicSurface = {
     },
     {
       fhirResource: 'Task',
-      localSurface: 'future /api/resources/workflow-tasks',
+      localSurface: '/api/resources/workflow-tasks',
       ownerAction: 'Review patient to-dos, follow-ups, and document requests as read-only local context.',
       storagePolicy: 'Store owner-approved task metadata and local completion annotations without Epic writeback.',
       releasePolicy: 'Release only generalized task category/status after owner approval; exclude dates precise enough to re-identify care.',
@@ -88,7 +88,7 @@ export const EPIC_WORKFLOW_READONLY_PLAN: PlannedEpicSurface = {
     },
   ],
   validation: [
-    'OpenAPI exposes the read-only planning surface.',
+    'OpenAPI exposes both the read-only planning surface and the /api/resources/workflow-tasks domain.',
     'Localhost MVP documentation keeps workflow/messaging writeback out of scope.',
     'Automated tests assert no writeback or PII release is enabled for workflow resources.',
   ],

@@ -50,13 +50,20 @@ check_json() {
   url="$2"
   field="$3"
   expected="$4"
+  elapsed=0
+  body=""
   echo "Checking ${label} response at ${url}..."
-  body=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${url}") || { echo "ERROR: could not reach ${url}"; exit 1; }
-  if ! echo "${body}" | grep -Eq "\"${field}\":(\"${expected}\"|${expected})([,}])"; then
-    echo "ERROR: Expected ${field}=${expected}"
-    echo "  Full response: ${body}"
-    exit 1
-  fi
+  until body=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${url}" 2>/dev/null) &&
+    echo "${body}" | grep -Eq "\"${field}\":(\"${expected}\"|${expected})([,}])"; do
+    if [ "${elapsed}" -ge "${WAIT_TIMEOUT}" ]; then
+      echo "ERROR: Expected ${field}=${expected}"
+      echo "  Full response: ${body:-<unavailable>}"
+      exit 1
+    fi
+    echo "  ${label} did not report ${field}=${expected} (${elapsed}s elapsed). Retrying in ${WAIT_INTERVAL}s..."
+    sleep "${WAIT_INTERVAL}"
+    elapsed=$((elapsed + WAIT_INTERVAL))
+  done
   echo "  OK – ${field}=${expected}"
 }
 
@@ -170,6 +177,14 @@ check_epic_mock_flow() {
     echo "ERROR: Epic preview did not include conditions: ${preview}"
     exit 1
   }
+  echo "${preview}" | grep -q '"domain":"documents"' || {
+    echo "ERROR: Epic preview did not include documents: ${preview}"
+    exit 1
+  }
+  echo "${preview}" | grep -q '"domain":"workflow-tasks"' || {
+    echo "ERROR: Epic preview did not include workflow-tasks: ${preview}"
+    exit 1
+  }
   apply=$(curl -fsS -X POST --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/sync/apply" \
     -H "content-type: application/json" \
     --data '{"domains":["conditions"]}')
@@ -231,7 +246,7 @@ echo "${openapi}" | grep -q '"openapi":"3.1.0"' || {
   echo "ERROR: OpenAPI contract did not report version 3.1.0."
   exit 1
 }
-for domain in profiles conditions medications allergies immunizations vital-signs providers lab-results insurance-policies; do
+for domain in profiles conditions medications allergies immunizations vital-signs providers lab-results insurance-policies documents workflow-tasks; do
   echo "${openapi}" | grep -q "\"/api/resources/${domain}\"" || {
     echo "ERROR: OpenAPI contract is missing /api/resources/${domain}."
     exit 1
@@ -290,6 +305,14 @@ check_domain_crud \
   "insurance-policies" \
   '{"type":"medical","insurerName":"OpenCommons Smoke Plan","memberId":"SMOKE-42","effectiveDate":"2026-01-01"}' \
   '"memberId":"SMOKE-42"'
+check_domain_crud \
+  "documents" \
+  '{"documentType":{"system":"http://loinc.org","code":"34133-9","display":"Summary of episode note"},"status":"current","title":"Annual Medicare Wellness Visit Summary","authoredDate":"2026-01-15T12:00:00Z","sourceSystem":"deployment-smoke"}' \
+  '"code":"34133-9"'
+check_domain_crud \
+  "workflow-tasks" \
+  '{"taskType":{"system":"http://snomed.info/id/","code":"386053000","display":"Evaluation procedure"},"status":"requested","intent":"plan","description":"Review Annual Medicare Wellness preventive plan","authoredDate":"2026-01-15T12:00:00Z"}' \
+  '"code":"386053000"'
 
 check_anonymized_release_controls
 check_epic_planning_surfaces

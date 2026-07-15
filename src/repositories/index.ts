@@ -8,3 +8,5 @@ export { VitalSignsRepository } from './vitalSignsRepository';
 export { ProviderRepository } from './providerRepository';
 export { LabResultRepository } from './labResultRepository';
 export { InsuranceRepository } from './insuranceRepository';
+export { DocumentRepository } from './documentRepository';
+export { WorkflowTaskRepository } from './workflowTaskRepository';

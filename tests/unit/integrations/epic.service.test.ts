@@ -71,6 +71,8 @@ describe('Epic MVP integration service', () => {
       'providers',
       'lab-results',
       'insurance-policies',
+      'documents',
+      'workflow-tasks',
     ]));
     expect(preview.changes.every((change) => change.provenance.sourceSystem === 'epic')).toBe(true);
   });

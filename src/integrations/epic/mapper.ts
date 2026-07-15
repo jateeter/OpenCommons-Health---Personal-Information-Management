@@ -126,6 +126,46 @@ export function mapEpicResourcesToPim(
       }
       case 'Observation':
         return mapObservation(resource, provenance);
+      case 'DocumentReference': {
+        const code = firstCoding(resource, 'type');
+        return [{
+          domain: 'documents',
+          action: 'create',
+          display: firstString(resource, ['description']) || code.display || code.code,
+          provenance,
+          entity: {
+            documentType: code,
+            status: normalizeDocumentStatus(firstString(resource, ['status'])),
+            title: firstString(resource, ['description']) || code.display || 'Epic clinical document',
+            category: firstCoding(resource, 'category'),
+            authoredDate: firstString(resource, ['date']) || firstString(resource, ['content', 0, 'attachment', 'creation']),
+            sourceSystem: 'epic',
+            sourceDocumentUrl: firstString(resource, ['content', 0, 'attachment', 'url']),
+            custodian: firstString(resource, ['custodian', 'display']),
+            notes: provenanceNote(provenance),
+          },
+        }];
+      }
+      case 'Task': {
+        const code = firstCoding(resource, 'code');
+        return [{
+          domain: 'workflow-tasks',
+          action: 'create',
+          display: firstString(resource, ['description']) || code.display || code.code,
+          provenance,
+          entity: {
+            taskType: code,
+            status: normalizeTaskStatus(firstString(resource, ['status'])),
+            intent: normalizeTaskIntent(firstString(resource, ['intent'])),
+            description: firstString(resource, ['description']) || code.display || 'Epic workflow task',
+            authoredDate: firstString(resource, ['authoredOn']),
+            dueDate: datePart(firstString(resource, ['executionPeriod', 'end'])),
+            requester: firstString(resource, ['requester', 'display']),
+            owner: firstString(resource, ['owner', 'display']),
+            notes: provenanceNote(provenance),
+          },
+        }];
+      }
       default:
         return [];
     }
@@ -259,6 +299,30 @@ function normalizeSeverity(value: string | undefined): 'mild' | 'moderate' | 'se
   return undefined;
 }
 
+function normalizeDocumentStatus(value: string | undefined): 'current' | 'superseded' | 'entered-in-error' {
+  if (value === 'superseded' || value === 'entered-in-error') return value;
+  return 'current';
+}
+
+function normalizeTaskStatus(value: string | undefined): 'draft' | 'requested' | 'received' | 'accepted' | 'in-progress' | 'completed' | 'cancelled' {
+  if (
+    value === 'draft'
+    || value === 'requested'
+    || value === 'received'
+    || value === 'accepted'
+    || value === 'in-progress'
+    || value === 'completed'
+    || value === 'cancelled'
+  ) return value;
+  if (value === 'ready') return 'requested';
+  return 'requested';
+}
+
+function normalizeTaskIntent(value: string | undefined): 'proposal' | 'plan' | 'order' | 'option' {
+  if (value === 'proposal' || value === 'plan' || value === 'order' || value === 'option') return value;
+  return 'plan';
+}
+
 function normalizeMedicationStatus(value: string | undefined): 'active' | 'completed' | 'stopped' | 'on-hold' {
   if (value === 'completed' || value === 'stopped' || value === 'on-hold') return value;
   return 'active';
@@ -286,4 +350,3 @@ function normalizeInterpretation(value: string | undefined): 'normal' | 'high' |
   if (value === 'N') return 'normal';
   return undefined;
 }
-

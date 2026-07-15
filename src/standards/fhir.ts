@@ -97,6 +97,24 @@ export const FHIR_DOMAIN_MAPPINGS: Record<string, FhirDomainMapping> = {
     ownerHeldDirectIdentifiers: ['url', 'insurerName', 'planName', 'memberId', 'groupNumber', 'policyHolder', 'telecom', 'notes'],
     anonymizedReleaseFields: ['domain', 'fhirResourceType', 'type', 'effectiveYear', 'expirationYear'],
   },
+  documents: {
+    domain: 'documents',
+    fhirResourceType: 'DocumentReference',
+    fhirProfile: `${FHIR_BASE_URL}/documentreference.html`,
+    description: 'FHIR DocumentReference equivalent for owner-held clinical document metadata.',
+    terminologySystems: ['LOINC', 'SNOMED CT'],
+    ownerHeldDirectIdentifiers: ['url', 'title', 'sourceSystem', 'sourceDocumentUrl', 'binaryUrl', 'custodian', 'notes'],
+    anonymizedReleaseFields: ['domain', 'fhirResourceType', 'documentType', 'status', 'category', 'authoredYear'],
+  },
+  'workflow-tasks': {
+    domain: 'workflow-tasks',
+    fhirResourceType: 'Task',
+    fhirProfile: `${FHIR_BASE_URL}/task.html`,
+    description: 'FHIR Task equivalent for owner-held workflow, message, and care coordination status metadata.',
+    terminologySystems: ['SNOMED CT'],
+    ownerHeldDirectIdentifiers: ['url', 'description', 'requester', 'owner', 'relatedDocumentUrl', 'notes'],
+    anonymizedReleaseFields: ['domain', 'fhirResourceType', 'taskType', 'status', 'intent', 'authoredYear', 'dueYear'],
+  },
 };
 
 export const PERSONAL_HEALTH_INFORMATION_SCHEMA: JsonSchema = {

@@ -123,9 +123,9 @@ FHIR resources to handle:
 | Allergies review | `AllergyIntolerance` | `allergies` |
 | Immunization review | `Immunization` | `immunizations` |
 | Vitals, BMI, BP, cognitive/depression screening scores | `Observation` | `vital-signs`, `lab-results` when applicable |
-| Preventive plan | `CarePlan`, `Goal`, `ServiceRequest`, `Task` | future `care-plans` / workflow adapter |
-| After-visit summary and uploaded forms | `DocumentReference`, `Binary` | future document library |
-| Patient questionnaire | `QuestionnaireResponse` | future workflow/document adapter |
+| Preventive plan | `CarePlan`, `Goal`, `ServiceRequest`, `Task` | `workflow-tasks` for Task metadata; care-plan expansion later |
+| After-visit summary and uploaded forms | `DocumentReference`, `Binary` | `documents` for DocumentReference metadata; Binary payloads later |
+| Patient questionnaire | `QuestionnaireResponse` | workflow/document metadata now; structured questionnaire repository later |
 | Medicare coverage context | `Coverage` | `insurance-policies` |
 
 Feature issues:
@@ -271,7 +271,7 @@ contract without requiring live Epic sandbox credentials:
   client id, redirect URI, and the local encryption key.
 - The PIM exposes `/api/integrations/epic/*` endpoints for status,
   connect/disconnect, preview, apply, and audit.
-- Import preview maps FHIR resources into the existing nine domain APIs before
+- Import preview maps FHIR resources into the 11 MVP domain APIs before
   any pod writes occur.
 - Apply-to-pod remains owner-mediated and uses the same domain repositories and
   ShEx/RDF validation path as manual records.
@@ -303,9 +303,10 @@ The active development sequence for the localhost MVP is:
    owner-selected sections.
 6. Surface local reconciliation status for Epic preview candidates so create,
    update, unchanged, and conflict states are visible before pod writes.
-7. Publish document/workflow read-only planning contracts at
-   `/api/planned/epic/documents` and `/api/planned/epic/workflow` before adding
-   repositories, schemas, or mobile implementation.
+7. Keep document/workflow repositories in the localhost MVP completion path at
+   `/api/resources/documents` and `/api/resources/workflow-tasks`; the
+   `/api/planned/epic/documents` and `/api/planned/epic/workflow` surfaces
+   remain read-only Epic integration planning contracts.
 8. Continue to require owner approval and anonymization controls for any
    non-owner release.
 

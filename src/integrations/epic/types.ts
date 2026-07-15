@@ -1,5 +1,6 @@
 import type {
   AllergyIntolerance,
+  ClinicalDocument,
   HealthcareProvider,
   Immunization,
   InsurancePolicy,
@@ -8,6 +9,7 @@ import type {
   Medication,
   PersonProfile,
   VitalSign,
+  WorkflowTask,
 } from '../../types';
 
 export type EpicConnectionStatus =
@@ -124,7 +126,9 @@ export type EpicMvpDomain =
   | 'vital-signs'
   | 'providers'
   | 'lab-results'
-  | 'insurance-policies';
+  | 'insurance-policies'
+  | 'documents'
+  | 'workflow-tasks';
 
 export type EpicDomainEntity =
   | PersonProfile
@@ -135,7 +139,9 @@ export type EpicDomainEntity =
   | VitalSign
   | HealthcareProvider
   | LabResult
-  | InsurancePolicy;
+  | InsurancePolicy
+  | ClinicalDocument
+  | WorkflowTask;
 
 export interface EpicImportCandidate {
   domain: EpicMvpDomain;

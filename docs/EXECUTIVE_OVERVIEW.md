@@ -47,7 +47,7 @@ health data management:
 
 ## Core application capabilities
 
-The current application supports nine personal health information domains:
+The current application supports 11 personal health information domains:
 
 | Domain | Primary standards alignment |
 |---|---|
@@ -58,6 +58,8 @@ The current application supports nine personal health information domains:
 | Immunizations | FHIR `Immunization`, CVX |
 | Vital signs | FHIR `Observation`, vital-sign profile intent |
 | Providers | FHIR `PractitionerRole` / care team concepts |
+| Clinical documents | FHIR `DocumentReference` metadata |
+| Workflow tasks | FHIR `Task` workflow/status metadata |
 | Laboratory results | FHIR `Observation`, LOINC |
 | Insurance policies | FHIR `Coverage` |
 
@@ -133,7 +135,7 @@ validation. The current operational contract includes:
 - persistent local Solid storage;
 - OpenAPI/Swagger documentation;
 - FHIR metadata and privacy schema endpoints;
-- deployment verification for all nine domain APIs.
+- deployment verification for all 11 domain APIs.
 
 The localhost-only MVP boundary is documented in
 [`LOCALHOST_MVP_SCOPE.md`](./LOCALHOST_MVP_SCOPE.md). Mobile/native packaging,
@@ -187,7 +189,7 @@ The current validation approach includes:
 
 The intended release bar is not just that the process starts. A valid local
 deployment must prove that the UI, OpenAPI documentation, authenticated Pod
-access, schema validation, all nine domain APIs, FHIR metadata, privacy schema,
+access, schema validation, all 11 domain APIs, FHIR metadata, privacy schema,
 and anonymized release controls operate together.
 
 ## Current maturity
@@ -198,7 +200,7 @@ domain APIs and a browser UI. It is not yet a production Epic integration.
 Current strengths:
 
 - repeatable local deployment;
-- complete nine-domain CRUD surface;
+- complete 11-domain CRUD surface;
 - schema-backed Solid persistence;
 - OpenAPI/Swagger documentation;
 - FHIR alignment artifacts;

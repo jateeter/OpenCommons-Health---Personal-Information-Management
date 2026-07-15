@@ -54,6 +54,8 @@ export function contextFromPim(
       providers: pim.providers,
       'lab-results': pim.labResults,
       'insurance-policies': pim.insurancePolicies,
+      documents: pim.documents,
+      'workflow-tasks': pim.workflowTasks,
     } as Record<string, DomainRepository>,
   };
 }

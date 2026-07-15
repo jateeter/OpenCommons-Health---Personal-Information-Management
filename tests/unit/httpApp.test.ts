@@ -129,6 +129,8 @@ describe('OpenCommons Health HTTP application', () => {
       'providers',
       'lab-results',
       'insurance-policies',
+      'documents',
+      'workflow-tasks',
     ]) {
       const operations = body.paths[`/api/resources/${domain}`];
       expect(operations).toBeDefined();
