@@ -21,6 +21,8 @@ const domainTitles = {
   Immunizations: 'Immunizations',
   'Vital signs': 'Vital signs',
   'Lab results': 'Lab results',
+  Documents: 'Documents',
+  'Workflow tasks': 'Workflow tasks',
 };
 
 function textPattern(label) {
@@ -75,6 +77,8 @@ async function exerciseEpicImportPanel() {
   await page.locator('#epic-preview-list').getByText('Review each section and choose what to apply', { exact: false }).waitFor({ timeout: 10000 });
   await page.locator('#epic-preview-list').getByText('selected candidates will be applied', { exact: false }).waitFor({ timeout: 10000 });
   await page.locator('#epic-preview-list').getByText('Hypertensive disorder', { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#epic-preview-list').getByText('Annual Medicare Wellness Visit Summary', { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#epic-preview-list').getByText('Review Annual Medicare Wellness preventive plan', { exact: false }).waitFor({ timeout: 10000 });
   const medicationSection = page.locator('.epic-review-option').filter({ hasText: /Medications:/ }).locator('input');
   if (await medicationSection.count()) {
     await medicationSection.uncheck();
@@ -187,6 +191,33 @@ try {
     'Observed at': '2026-05-01T14:30',
     'Performer': 'OpenCommons Wellness Lab',
   }, 'Hemoglobin A1c/Hemoglobin.total in Blood');
+
+  await saveRecord('Documents', {
+    'LOINC document system': 'http://loinc.org',
+    'LOINC document code': '34133-9',
+    'LOINC document name': 'Summary of episode note',
+    'Status': ['current'],
+    'Document title': 'Annual Medicare Wellness Visit Summary',
+    'LOINC category system': 'http://loinc.org',
+    'LOINC category code': 'LP173421-1',
+    'LOINC category name': 'Report',
+    'Authored at': '2026-05-01T19:00',
+    'Source system': 'Epic mock',
+    'Custodian': 'OpenCommons Wellness Clinic',
+  }, 'Annual Medicare Wellness Visit Summary');
+
+  await saveRecord('Workflow tasks', {
+    'SNOMED CT workflow system': 'http://snomed.info/id/',
+    'SNOMED CT workflow code': '386053000',
+    'SNOMED CT workflow name': 'Evaluation procedure',
+    'Status': ['requested'],
+    'Intent': ['plan'],
+    'Task description': 'Review Annual Medicare Wellness preventive plan',
+    'Authored at': '2026-05-01T19:05',
+    'Due date': '2026-06-01',
+    'Requester': 'OpenCommons Wellness Clinic',
+    'Owner / responsible party': 'Patient',
+  }, 'Review Annual Medicare Wellness preventive plan');
 
   const releaseResponse = await page.request.get(`${appUrl}/api/anonymized/resources/conditions`, {
     headers: {

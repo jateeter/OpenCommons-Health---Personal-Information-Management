@@ -63,6 +63,33 @@ const loincLabPresets = [
   { code: '2571-8', display: 'Triglyceride mass/volume in Serum or Plasma' },
 ];
 
+const loincDocumentPresets = [
+  { code: '34133-9', display: 'Summary of episode note' },
+  { code: '18842-5', display: 'Discharge summary' },
+  { code: '11488-4', display: 'Consult note' },
+  { code: '11506-3', display: 'Progress note' },
+  { code: '51847-2', display: 'Evaluation + Plan note' },
+  { code: '81218-0', display: 'Care plan' },
+  { code: '11502-2', display: 'Laboratory report' },
+  { code: '18748-4', display: 'Diagnostic imaging study' },
+];
+
+const loincDocumentCategoryPresets = [
+  { code: 'LP173421-1', display: 'Report' },
+  { code: 'LP7839-6', display: 'Note' },
+  { code: 'LP29684-5', display: 'Plan' },
+];
+
+const snomedWorkflowPresets = [
+  { code: '386053000', display: 'Evaluation procedure' },
+  { code: '71388002', display: 'Procedure' },
+  { code: '225358003', display: 'Wound care education' },
+  { code: '710824005', display: 'Assessment of health and social care needs' },
+  { code: '183452005', display: 'Review of medication' },
+  { code: '409073007', display: 'Education' },
+  { code: '410223002', display: 'Follow-up encounter' },
+];
+
 const medicationTerminologyPresets = [
   { source: 'RxNorm', system: RXNORM_SYSTEM, code: '860975', display: 'Metformin hydrochloride 500 MG Oral Tablet' },
   { source: 'RxNorm', system: RXNORM_SYSTEM, code: '617314', display: 'Atorvastatin 20 MG Oral Tablet' },
@@ -173,6 +200,45 @@ const domains = {
     fields: [{ name: 'type', label: 'Coverage type', type: 'select', options: ['medical', 'dental', 'vision', 'pharmacy', 'other'], required: true }, { name: 'insurerName', label: 'Insurer', required: true }, { name: 'planName', label: 'Plan name' }, { name: 'memberId', label: 'Member ID', required: true }, { name: 'groupNumber', label: 'Group number' }, { name: 'effectiveDate', label: 'Effective date', type: 'date', required: true }, { name: 'expirationDate', label: 'Expiration date', type: 'date' }, { name: 'policyHolder', label: 'Policy holder' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.planName || x.insurerName || 'Insurance policy',
     detail: (x) => [x.type, x.memberId, x.effectiveDate].filter(Boolean).join(' · '),
+  },
+  documents: {
+    label: 'Document', plural: 'Documents', icon: '▤',
+    description: 'Owner-held clinical document metadata such as visit summaries, reports, and care plans.',
+    fields: [
+      terminologySearch('LOINC document type search', 'documentType', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincDocumentPresets)),
+      ...coding('LOINC document', 'documentType'),
+      { name: 'status', label: 'Status', type: 'select', options: ['current', 'superseded', 'entered-in-error'], required: true },
+      { name: 'title', label: 'Document title', required: true, help: 'Use the owner-visible title. Avoid adding unnecessary identifiers or full clinical text here.' },
+      terminologySearch('LOINC document category search', 'category', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincDocumentCategoryPresets), { required: false }),
+      ...coding('LOINC category', 'category', { required: false }),
+      { name: 'authoredDate', label: 'Authored at', type: 'datetime-local' },
+      { name: 'sourceSystem', label: 'Source system', placeholder: 'Epic, paper scan, clinic portal…' },
+      { name: 'sourceDocumentUrl', label: 'Source document URL' },
+      { name: 'binaryUrl', label: 'Pod binary URL' },
+      { name: 'custodian', label: 'Custodian' },
+      { name: 'notes', label: 'Owner notes', type: 'textarea', wide: true },
+    ],
+    title: (x) => x.title || x.documentType?.display || x.documentType?.code || 'Document',
+    detail: (x) => [x.status, x.documentType?.display || x.documentType?.code, formatDate(x.authoredDate)].filter(Boolean).join(' · '),
+  },
+  'workflow-tasks': {
+    label: 'Workflow task', plural: 'Workflow tasks', icon: '☑',
+    description: 'Care tasks, follow-ups, and review steps the pod owner can track without sending outbound messages.',
+    fields: [
+      terminologySearch('SNOMED CT workflow task search', 'taskType', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedWorkflowPresets)),
+      ...coding('SNOMED CT workflow', 'taskType'),
+      { name: 'status', label: 'Status', type: 'select', options: ['draft', 'requested', 'received', 'accepted', 'in-progress', 'completed', 'cancelled'], required: true },
+      { name: 'intent', label: 'Intent', type: 'select', options: ['proposal', 'plan', 'order', 'option'], required: true },
+      { name: 'description', label: 'Task description', type: 'textarea', wide: true, required: true, help: 'Keep this owner-facing and concise. Outbound Epic task updates remain out of MVP scope.' },
+      { name: 'authoredDate', label: 'Authored at', type: 'datetime-local' },
+      { name: 'dueDate', label: 'Due date', type: 'date' },
+      { name: 'requester', label: 'Requester' },
+      { name: 'owner', label: 'Owner / responsible party' },
+      { name: 'relatedDocumentUrl', label: 'Related document URL' },
+      { name: 'notes', label: 'Owner notes', type: 'textarea', wide: true },
+    ],
+    title: (x) => x.description || x.taskType?.display || x.taskType?.code || 'Workflow task',
+    detail: (x) => [x.status, x.intent, x.dueDate ? `Due ${x.dueDate}` : '', x.taskType?.display || x.taskType?.code].filter(Boolean).join(' · '),
   },
 };
 

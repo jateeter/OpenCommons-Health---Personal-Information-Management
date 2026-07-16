@@ -13,9 +13,11 @@ const operational = read('docs/OPERATIONAL_STACK_DEPLOYMENT.md');
 const epicRoadmap = read('docs/EPIC_INTEGRATION_ROADMAP.md');
 const executiveOverview = read('docs/EXECUTIVE_OVERVIEW.md');
 const visualReview = read('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md');
+const uiRoadmap = read('docs/MVP_11_DOMAIN_UI_ROADMAP.md');
 const deploymentVerifier = read('scripts/verify-deployment.sh');
 const epicDiagnosticsCheck = read('scripts/epic-diagnostics-check.mjs');
 const ciWorkflow = read('.github/workflows/ci.yml');
+const publicApp = read('public/app.js');
 
 const failures = [];
 
@@ -103,6 +105,12 @@ requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, '/api/integra
 requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, 'localhostMvp');
 requireText('docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md', visualReview, 'deselect at least one section');
 
+requireText('docs/MVP_11_DOMAIN_UI_ROADMAP.md', uiRoadmap, 'First-class navigation for all 11 domains');
+requireText('docs/MVP_11_DOMAIN_UI_ROADMAP.md', uiRoadmap, 'Documents');
+requireText('docs/MVP_11_DOMAIN_UI_ROADMAP.md', uiRoadmap, 'Workflow tasks');
+requireText('docs/MVP_11_DOMAIN_UI_ROADMAP.md', uiRoadmap, 'LOINC document-type search');
+requireText('docs/MVP_11_DOMAIN_UI_ROADMAP.md', uiRoadmap, 'SNOMED CT workflow task search');
+
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'The active MVP scope is localhost-only.');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'Native iPad/iPhone packaging');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run validate:localhost-mvp');
@@ -132,6 +140,13 @@ requireText('scripts/verify-deployment.sh', deploymentVerifier, 'x-opencommons-r
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'missing_approval_status');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'did not report');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'Full response');
+
+requireText('public/app.js', publicApp, "documents: {");
+requireText('public/app.js', publicApp, "'workflow-tasks': {");
+requireText('public/app.js', publicApp, 'LOINC document type search');
+requireText('public/app.js', publicApp, 'SNOMED CT workflow task search');
+requireText('public/app.js', publicApp, 'Owner-held clinical document metadata');
+requireText('public/app.js', publicApp, 'Care tasks, follow-ups, and review steps');
 
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, '/api/integrations/epic/diagnostics');
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_DIAGNOSTICS_LIVE');
