@@ -12,6 +12,9 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain('RxNorm / RxTerms / MED-RT medication search');
     expect(appSource).toContain('LOINC vital sign search');
     expect(appSource).toContain('LOINC lab result search');
+    expect(appSource).toContain('LOINC document type search');
+    expect(appSource).toContain('LOINC document category search');
+    expect(appSource).toContain('SNOMED CT workflow task search');
     expect(appSource).toContain("input.type = 'search'");
     expect(appSource).toContain("input.setAttribute('list', listId)");
     expect(appSource).toContain('Start typing a name or code');
@@ -26,6 +29,11 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain("'300913006', display: 'Shellfish allergy'");
     expect(appSource).toContain("'4548-4', display: 'Hemoglobin A1c/Hemoglobin.total in Blood'");
     expect(appSource).toContain("'8302-2', display: 'Body height'");
+    expect(appSource).toContain("'34133-9', display: 'Summary of episode note'");
+    expect(appSource).toContain("'18842-5', display: 'Discharge summary'");
+    expect(appSource).toContain("'81218-0', display: 'Care plan'");
+    expect(appSource).toContain("'386053000', display: 'Evaluation procedure'");
+    expect(appSource).toContain("'410223002', display: 'Follow-up encounter'");
     expect(appSource).toContain("'860975', display: 'Metformin hydrochloride 500 MG Oral Tablet'");
     expect(appSource).toContain("'617314', display: 'Atorvastatin 20 MG Oral Tablet'");
     expect(appSource).toContain("source: 'RxTerms'");
@@ -43,6 +51,20 @@ describe('browser terminology manual-entry support', () => {
 
   it('allows decimal clinical measurements in numeric fields', () => {
     expect(appSource).toContain("if (field.type === 'number') input.step = 'any';");
+  });
+
+  it('gives documents and workflow tasks first-class domain navigation', () => {
+    expect(appSource).toContain("documents: {");
+    expect(appSource).toContain("label: 'Document', plural: 'Documents'");
+    expect(appSource).toContain("'workflow-tasks': {");
+    expect(appSource).toContain("label: 'Workflow task', plural: 'Workflow tasks'");
+    expect(appSource).toContain('Owner-held clinical document metadata');
+    expect(appSource).toContain('Care tasks, follow-ups, and review steps');
+    expect(appSource).toContain('sourceDocumentUrl');
+    expect(appSource).toContain('relatedDocumentUrl');
+    expect(appSource).toContain("coding('LOINC document', 'documentType')");
+    expect(appSource).toContain("coding('LOINC category', 'category'");
+    expect(appSource).toContain("coding('SNOMED CT workflow', 'taskType')");
   });
 
   it('supports owner-mediated Epic import section review before pod writes', () => {
