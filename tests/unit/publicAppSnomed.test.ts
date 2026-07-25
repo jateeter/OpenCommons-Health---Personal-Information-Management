@@ -80,4 +80,20 @@ describe('browser terminology manual-entry support', () => {
     expect(styleSource).toContain('.epic-action-update');
     expect(styleSource).toContain('.epic-action-conflict');
   });
+
+  it('gives pod management first-class owner-facing observability', () => {
+    const htmlSource = readFileSync(join(process.cwd(), 'public', 'index.html'), 'utf8');
+    expect(htmlSource).toContain('Pod management UX');
+    expect(htmlSource).toContain('Owner-controlled Solid Pod');
+    expect(htmlSource).toContain('pod-server-url');
+    expect(htmlSource).toContain('pod-base-url');
+    expect(htmlSource).toContain('/fhir/metadata');
+    expect(htmlSource).toContain('/api/privacy/schema');
+    expect(appSource).toContain('function renderPodManagement');
+    expect(appSource).toContain('Authenticated owner access is active');
+    expect(appSource).toContain('Identifiable PHI stays in the authenticated owner Pod');
+    expect(appSource).toContain("domains[name]?.plural || name");
+    expect(styleSource).toContain('.pod-panel');
+    expect(styleSource).toContain('.pod-domain-list');
+  });
 });

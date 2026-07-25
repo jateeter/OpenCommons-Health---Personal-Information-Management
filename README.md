@@ -11,6 +11,10 @@ OpenCommons Health PIM lets individuals own and control their health data by sto
 For the authoritative executive-level application summary, see
 [`docs/EXECUTIVE_OVERVIEW.md`](docs/EXECUTIVE_OVERVIEW.md).
 
+For an individual/patient-focused walkthrough with screenshots and information
+management workflows, see
+[`docs/PATIENT_GUIDE_OPENCOMMONS_HEALTH_PIM.md`](docs/PATIENT_GUIDE_OPENCOMMONS_HEALTH_PIM.md).
+
 ### Architecture
 
 ```
@@ -50,6 +54,8 @@ The following health information categories are supported, each with a validated
 | Healthcare Providers | `src/schemas/provider.shex` | `ProviderRepository` |
 | Laboratory Results | `src/schemas/labResult.shex` | `LabResultRepository` |
 | Insurance Policies | `src/schemas/insurance.shex` | `InsuranceRepository` |
+| Clinical Documents | `src/schemas/document.shex` | `DocumentRepository` |
+| Workflow Tasks | `src/schemas/workflowTask.shex` | `WorkflowTaskRepository` |
 
 Coding systems used: **SNOMED CT** (conditions, allergies), **RxNorm**,
 **RxTerms**, and **MED-RT** (medications), **CVX** (vaccines), **LOINC** (lab
@@ -191,7 +197,7 @@ supported and take precedence over the credentials file.
 
 Supported domain names are `profiles`, `conditions`, `medications`, `allergies`,
 `immunizations`, `vital-signs`, `providers`, `lab-results`, and
-`insurance-policies`.
+`insurance-policies`, `documents`, and `workflow-tasks`.
 
 | Operation | Request |
 |---|---|
@@ -207,7 +213,14 @@ read-only authenticated pod access probe.
 
 The deployment verifier exercises these operations for all supported domains:
 `profiles`, `conditions`, `medications`, `allergies`, `immunizations`,
-`vital-signs`, `providers`, `lab-results`, and `insurance-policies`.
+`vital-signs`, `providers`, `lab-results`, `insurance-policies`, `documents`,
+and `workflow-tasks`.
+
+The browser application includes a Pod Management panel that surfaces
+authenticated Pod access, Solid server URL, Pod root URL, all 11 visible
+domain APIs, local data residency, and the anonymized-only owner-approved
+release boundary. See
+[`docs/POD_MANAGEMENT_UX_FINAL_UPDATE.md`](docs/POD_MANAGEMENT_UX_FINAL_UPDATE.md).
 
 Optional Playwright E2E automation for the Annual Medicare Wellness Evaluation
 use case can be run against either local deployment mode:
