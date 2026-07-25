@@ -39,6 +39,53 @@
           <article><span>Local</span><small>Data residency</small></article>
         </section>
 
+        <section id="pod-management-panel" class="pod-panel" aria-label="Solid Pod management">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Pod management UX</p>
+              <h2>Owner-controlled Solid Pod</h2>
+              <p id="pod-management-summary">Checking authenticated Pod access and owner-held storage…</p>
+            </div>
+            <div class="pod-actions">
+              <a class="secondary" href="/api/docs">API docs</a>
+              <a class="secondary" href="/fhir/metadata">FHIR metadata</a>
+              <a class="secondary" href="/api/privacy/schema">Privacy schema</a>
+            </div>
+          </div>
+          <div class="pod-grid">
+            <article>
+              <strong id="pod-access-state">Checking</strong>
+              <small>Authenticated owner access</small>
+            </article>
+            <article>
+              <strong id="pod-domain-count">—</strong>
+              <small>Visible domain APIs</small>
+            </article>
+            <article>
+              <strong>Anonymized only</strong>
+              <small>External release policy</small>
+            </article>
+          </div>
+          <dl class="pod-details">
+            <div>
+              <dt>Solid server</dt>
+              <dd id="pod-server-url">—</dd>
+            </div>
+            <div>
+              <dt>Pod root</dt>
+              <dd id="pod-base-url">—</dd>
+            </div>
+            <div>
+              <dt>Owner-release rule</dt>
+              <dd id="pod-release-state">Owner approval and release purpose are required before anonymized data leaves the Pod API.</dd>
+            </div>
+          </dl>
+          <div>
+            <h3>Managed Pod domains</h3>
+            <div id="pod-domain-list" class="pod-domain-list" aria-live="polite"></div>
+          </div>
+        </section>
+
         <section id="epic-panel" class="epic-panel" aria-label="Epic integration">
           <div class="panel-heading">
             <div>

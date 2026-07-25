@@ -279,6 +279,7 @@ async function checkStatus() {
     $('setup-warning').classList.toggle('hidden', ready);
     $('setup-message').textContent = ready ? '' : (status.error || 'Configure the Solid server, pod URL, client ID, and client secret for this deployment.');
     $('add-button').disabled = !ready;
+    renderPodManagement(status, ready);
     renderEpicStatus(status.epic || { enabled: false, status: 'disabled' }, ready);
     return ready;
   } catch {
@@ -287,8 +288,31 @@ async function checkStatus() {
     $('connection').innerHTML = '<span></span>Application offline';
     $('pod-state').textContent = 'Unavailable';
     $('add-button').disabled = true;
+    renderPodManagement({ error: 'Application offline' }, false);
     renderEpicStatus({ enabled: false, status: 'disabled' }, false);
     return false;
+  }
+}
+
+function renderPodManagement(status, ready = applicationReady) {
+  const domainNames = Array.isArray(status.domains) && status.domains.length > 0
+    ? status.domains
+    : Object.keys(domains);
+  $('pod-management-summary').textContent = ready
+    ? 'Authenticated owner access is active; records are read from and written to the configured Solid Pod.'
+    : (status.error || 'Pod access is not ready. Start local CSS, provision credentials, and verify the configured Pod root.');
+  $('pod-access-state').textContent = ready ? 'Connected' : 'Needs attention';
+  $('pod-domain-count').textContent = `${domainNames.length} domain${domainNames.length === 1 ? '' : 's'}`;
+  $('pod-server-url').textContent = status.podServerUrl || 'Not configured';
+  $('pod-base-url').textContent = status.podBaseUrl || 'Not configured';
+  $('pod-release-state').textContent = 'Identifiable PHI stays in the authenticated owner Pod. External release uses anonymized endpoints only after owner approval and a declared purpose.';
+
+  const list = $('pod-domain-list');
+  list.replaceChildren();
+  for (const name of domainNames) {
+    const tag = document.createElement('span');
+    tag.textContent = domains[name]?.plural || name;
+    list.append(tag);
   }
 }
 
