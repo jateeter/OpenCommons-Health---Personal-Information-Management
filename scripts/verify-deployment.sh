@@ -258,6 +258,18 @@ check_pod_activity_observability() {
     echo "ERROR: Pod activity did not include the planned HealthKit observations container: ${activity}"
     exit 1
   }
+  echo "${activity}" | grep -q '"auditPersistence"' || {
+    echo "ERROR: Pod activity did not report auditPersistence: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"resourcePath":"health-pim/audit/activity.ttl"' || {
+    echo "ERROR: Pod activity did not report the Pod-backed audit resource path: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"status":"active"' || {
+    echo "ERROR: Pod activity audit persistence is not active: ${activity}"
+    exit 1
+  }
   echo "${activity}" | grep -q '"record-created"' || {
     echo "ERROR: Pod activity did not include record-created events from deployment smoke: ${activity}"
     exit 1
@@ -275,6 +287,52 @@ check_pod_activity_observability() {
     exit 1
   fi
   echo "  OK – Pod activity proves authenticated access, domain visibility, and safe metadata"
+}
+
+check_healthkit_mirror_status() {
+  echo "Checking HealthKitBridge mirror observability..."
+  elapsed=0
+  healthkit=""
+  healthkit_probe_timeout="${HEALTHKIT_PROBE_TIMEOUT:-20}"
+  until healthkit=$(curl -fsS --max-time "${healthkit_probe_timeout}" "${PIM_URL}/api/pod/healthkit/status" 2>/dev/null); do
+    if [ "${elapsed}" -ge "${WAIT_TIMEOUT}" ]; then
+      echo "ERROR: could not reach ${PIM_URL}/api/pod/healthkit/status within ${WAIT_TIMEOUT}s."
+      exit 1
+    fi
+    echo "  HealthKit mirror status not ready (${elapsed}s elapsed). Retrying in ${WAIT_INTERVAL}s..."
+    sleep "${WAIT_INTERVAL}"
+    elapsed=$((elapsed + WAIT_INTERVAL))
+  done
+  echo "${healthkit}" | grep -q '"source":"HealthKitBridge"' || {
+    echo "ERROR: HealthKit status did not identify HealthKitBridge source: ${healthkit}"
+    exit 1
+  }
+  echo "${healthkit}" | grep -q '"localhostMvp":true' || {
+    echo "ERROR: HealthKit status did not report localhostMvp=true: ${healthkit}"
+    exit 1
+  }
+  echo "${healthkit}" | grep -q '"containerPath":"health-pim/healthkit/observations/"' || {
+    echo "ERROR: HealthKit status did not report the observations container path: ${healthkit}"
+    exit 1
+  }
+  echo "${healthkit}" | grep -q '"observationCount":' || {
+    echo "ERROR: HealthKit status did not report observationCount: ${healthkit}"
+    exit 1
+  }
+  echo "${healthkit}" | grep -q '"privacyBoundary"' || {
+    echo "ERROR: HealthKit status did not report the privacy boundary: ${healthkit}"
+    exit 1
+  }
+  if echo "${healthkit}" | grep -Eiq 'http://|https://|accessToken|refreshToken|clientSecret|password|Jane Doe|Named Smoke Provider'; then
+    echo "ERROR: HealthKit status exposed a URL, secret, or direct identifier: ${healthkit}"
+    exit 1
+  fi
+  activity_after_healthkit=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/pod/activity?limit=20")
+  echo "${activity_after_healthkit}" | grep -q '"healthkit-status-verified"' || {
+    echo "ERROR: Pod activity did not record HealthKit status verification: ${activity_after_healthkit}"
+    exit 1
+  }
+  echo "  OK – HealthKitBridge mirror status is owner-visible and metadata-only"
 }
 
 # ── 1. Wait for CSS ───────────────────────────────────────────────────────────
@@ -313,6 +371,10 @@ for planned_path in /api/planned/epic /api/planned/epic/documents /api/planned/e
 done
 echo "${openapi}" | grep -q '"/api/pod/activity"' || {
   echo "ERROR: OpenAPI contract is missing /api/pod/activity."
+  exit 1
+}
+echo "${openapi}" | grep -q '"/api/pod/healthkit/status"' || {
+  echo "ERROR: OpenAPI contract is missing /api/pod/healthkit/status."
   exit 1
 }
 echo "  OK – OpenAPI contract covers all domain API paths"
@@ -374,6 +436,7 @@ check_domain_crud \
 check_anonymized_release_controls
 check_epic_planning_surfaces
 check_pod_activity_observability
+check_healthkit_mirror_status
 
 if [ "${EPIC_ENABLED:-false}" = "true" ]; then
   check_epic_mock_flow

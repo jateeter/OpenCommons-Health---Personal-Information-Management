@@ -45,6 +45,11 @@ if (!podActivity) throw new Error('Missing GET /api/pod/activity');
 if (podActivity.operationId !== 'getOwnerPodActivity') {
   throw new Error('GET /api/pod/activity must use operationId getOwnerPodActivity');
 }
+const healthkitStatus = OPENAPI_DOCUMENT.paths?.['/api/pod/healthkit/status']?.get;
+if (!healthkitStatus) throw new Error('Missing GET /api/pod/healthkit/status');
+if (healthkitStatus.operationId !== 'getHealthKitMirrorStatus') {
+  throw new Error('GET /api/pod/healthkit/status must use operationId getHealthKitMirrorStatus');
+}
 
 for (const plannedPath of ['/api/planned/epic', '/api/planned/epic/documents', '/api/planned/epic/workflow']) {
   const operation = OPENAPI_DOCUMENT.paths?.[plannedPath]?.get;
@@ -52,7 +57,7 @@ for (const plannedPath of ['/api/planned/epic', '/api/planned/epic/documents', '
   if (!operation.operationId) throw new Error(`Missing operationId for GET ${plannedPath}`);
 }
 
-for (const schema of ['AnonymizedRelease', 'FhirCapabilityStatement', 'PlannedEpicSurface', 'PlannedEpicResourceMapping', 'PodActivityResponse', 'ReconciliationSummary']) {
+for (const schema of ['AnonymizedRelease', 'FhirCapabilityStatement', 'PlannedEpicSurface', 'PlannedEpicResourceMapping', 'PodActivityResponse', 'PodActivityAuditPersistence', 'HealthKitMirrorStatus', 'ReconciliationSummary']) {
   if (!OPENAPI_DOCUMENT.components?.schemas?.[schema]) {
     throw new Error(`Missing component schema ${schema}`);
   }

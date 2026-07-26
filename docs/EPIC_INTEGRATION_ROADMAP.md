@@ -312,6 +312,11 @@ The active development sequence for the localhost MVP is:
    remain read-only Epic integration planning contracts.
 8. Continue to require owner approval and anonymization controls for any
    non-owner release.
+9. Persist safe Pod activity metadata in `health-pim/audit/activity.ttl` and
+   expose the persistence status through `/api/pod/activity`.
+10. Keep HealthKitBridge observability PIM-side and metadata-only through
+    `/api/pod/healthkit/status` until native/iPhone HealthKit implementation is
+    explicitly resumed.
 
 Native iPad/mobile issues should remain parked as future work unless the
 localhost MVP milestone is complete and a new implementation phase is

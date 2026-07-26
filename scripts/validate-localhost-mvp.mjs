@@ -61,6 +61,8 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '11 owner-controlled 
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/resources/documents');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/resources/workflow-tasks');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/pod/activity');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/pod/healthkit/status');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'health-pim/audit/activity.ttl');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Container-local');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Host-local');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'APP_PORT');
@@ -105,6 +107,11 @@ requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'reconciliationSummary');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-15');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Owner reconciliation review');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-16');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'auditPersistence');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'health-pim/audit/activity.ttl');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-17');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/pod/healthkit/status');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
 
@@ -129,6 +136,8 @@ requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/integrations/epic/diagnostics');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'reconciliationSummary');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'owner reconciliation review panel');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/pod/healthkit/status');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'auditPersistence');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/planned/epic/documents');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/pod/activity');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/resources/documents');
@@ -148,6 +157,9 @@ requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/pod/activi
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'check_pod_activity_observability');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"domainCount":11');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"id":"audit"');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, '"auditPersistence"');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/pod/healthkit/status');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, 'check_healthkit_mirror_status');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"reconciliationSummary"');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"safeToApply"');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'documents workflow-tasks');
@@ -165,6 +177,9 @@ requireText('public/app.js', publicApp, "documents: {");
 requireText('public/app.js', publicApp, "'workflow-tasks': {");
 requireText('public/app.js', publicApp, "fetch('/api/pod/activity?limit=8')");
 requireText('public/app.js', publicApp, 'function renderPodActivity');
+requireText('public/app.js', publicApp, "fetch('/api/pod/healthkit/status')");
+requireText('public/app.js', publicApp, 'function renderHealthKitStatus');
+requireText('public/app.js', publicApp, 'Audit persistence');
 requireText('public/app.js', publicApp, 'function renderReconciliationReview');
 requireText('public/app.js', publicApp, 'Owner reconciliation review');
 requireText('public/app.js', publicApp, 'LOINC document type search');

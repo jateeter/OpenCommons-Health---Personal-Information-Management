@@ -14,6 +14,7 @@ flowchart TB
   Docs["OpenAPI / Swagger docs"]
   FHIR["FHIR metadata and privacy schemas"]
   Activity["Pod activity observability"]
+  HealthKit["HealthKit mirror status"]
 
   Browser --> PIM
   PIM --> Solid
@@ -21,6 +22,9 @@ flowchart TB
   PIM --> Docs
   PIM --> FHIR
   PIM --> Activity
+  PIM --> HealthKit
+  Activity --> Pod
+  HealthKit --> Pod
 ```
 
 The current deployment has two supported happy paths:
@@ -130,6 +134,7 @@ Implemented MVP API endpoints:
 | `POST /api/integrations/epic/sync/apply` | Apply owner-approved import candidates to the Solid pod. |
 | `GET /api/integrations/epic/audit` | Read pod-owned Epic integration audit events. |
 | `GET /api/pod/activity` | Read owner-visible Pod activity, domain counts, and storage-surface status without PHI or secrets. |
+| `GET /api/pod/healthkit/status` | Verify the owner Pod HealthKit observations mirror container and report metadata-only status. |
 
 Epic preview responses include `reconciliationSummary` so the browser and API
 clients can present create, update, unchanged, and conflict counts before the
@@ -159,9 +164,9 @@ Every Epic-enabled deployment should pass these gates:
    `verify-deployment.sh` smoke test enforces this contract.
 8. `/api/pod/activity` proves authenticated Pod access, reports all 11 managed
    domains, includes HealthKit/document/workflow/consent/audit container
-   observability, and does not expose PHI or secret-like material. The
-   `verify-deployment.sh` smoke test enforces this contract after live CRUD and
-   anonymized-release probes.
+   observability, reports Pod-backed `auditPersistence`, and does not expose
+   PHI or secret-like material. The `verify-deployment.sh` smoke test enforces
+   this contract after live CRUD and anonymized-release probes.
 9. Epic enabled mode verifies:
    - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
    - preview responses include `reconciliationSummary`;
@@ -172,7 +177,10 @@ Every Epic-enabled deployment should pass these gates:
    - FHIR capability metadata is reachable;
    - requested scopes match configured feature lanes;
    - no secrets appear in logs or OpenAPI examples.
-10. Playwright Medicare Wellness E2E passes against the selected local stack.
+10. `/api/pod/healthkit/status` verifies the
+    `health-pim/healthkit/observations/` container and returns only owner-facing
+    sync metadata/counts.
+11. Playwright Medicare Wellness E2E passes against the selected local stack.
 
 For the localhost MVP, the repository also provides
 `npm run validate:localhost-mvp` as a static contract check that confirms the
@@ -207,8 +215,10 @@ the diagnostics payload.
 - Log authorization events, import previews, save-to-pod decisions, disconnects,
   and anonymized releases.
 - Surface owner-visible safe metadata for local Pod actions through
-  `/api/pod/activity`; durable Pod-backed audit persistence is a future
-  hardening step.
+  `/api/pod/activity`, backed by `health-pim/audit/activity.ttl` in the owner
+  Pod.
+- Surface HealthKitBridge mirror readiness through `/api/pod/healthkit/status`
+  without exposing HealthKit sample payloads or resource URLs.
 - Do not log access tokens, refresh tokens, raw documents, message bodies, or
   direct identifiers.
 - Use synthetic data in Epic sandbox testing.

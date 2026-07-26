@@ -2,6 +2,8 @@ import { DOMAIN_NAMES } from './openapi';
 
 export type PodActivityKind =
   | 'pod-access-verified'
+  | 'pod-audit-persistence-failed'
+  | 'healthkit-status-verified'
   | 'record-created'
   | 'record-updated'
   | 'record-deleted'
@@ -47,11 +49,21 @@ export interface PodActivitySummary {
   lastPodAccessAt?: string;
   lastOwnerApprovedReleaseAt?: string;
   containers: PodContainerStatus[];
+  auditPersistence: PodActivityAuditPersistence;
 }
 
 export interface PodActivityResponse {
   summary: PodActivitySummary;
   events: PodActivityEvent[];
+}
+
+export interface PodActivityAuditPersistence {
+  enabled: boolean;
+  status: 'active' | 'attention' | 'unavailable';
+  containerPath: string;
+  resourcePath: string;
+  eventCount?: number;
+  error?: string;
 }
 
 export interface PodActivityLog {
@@ -89,14 +101,16 @@ export class InMemoryPodActivityLog implements PodActivityLog {
 
 export function createPodActivityResponse(options: {
   activityLog?: PodActivityLog;
+  events?: PodActivityEvent[];
   authenticated: boolean;
   podAccess: boolean;
   podServerUrl: string;
   podBaseUrl: string;
   domainCounts: Record<string, number | null>;
+  auditPersistence?: PodActivityAuditPersistence;
   limit?: number;
 }): PodActivityResponse {
-  const events = options.activityLog?.list(options.limit ?? 25) ?? [];
+  const events = options.events ?? options.activityLog?.list(options.limit ?? 25) ?? [];
   const countsByKind: Partial<Record<PodActivityKind, number>> = {};
   for (const event of events) {
     countsByKind[event.kind] = (countsByKind[event.kind] ?? 0) + 1;
@@ -115,9 +129,26 @@ export function createPodActivityResponse(options: {
       lastPodAccessAt: events.find((event) => event.kind === 'pod-access-verified')?.at,
       lastOwnerApprovedReleaseAt: events.find((event) => event.kind === 'anonymized-release-approved')?.at,
       containers: podContainers(),
+      auditPersistence: options.auditPersistence ?? defaultAuditPersistence(),
     },
     events,
   };
+}
+
+export function mergePodActivityEvents(
+  primary: PodActivityEvent[],
+  secondary: PodActivityEvent[],
+  limit = 25,
+): PodActivityEvent[] {
+  const seen = new Set<string>();
+  return [...primary, ...secondary]
+    .filter((event) => {
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    })
+    .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
+    .slice(0, Math.max(0, Math.min(limit, 200)));
 }
 
 export function activitySummaryForDomainAction(
@@ -143,8 +174,8 @@ function podContainers(): PodContainerStatus[] {
       id: 'healthkit-observations',
       label: 'HealthKit observations',
       relativePath: 'health-pim/healthkit/observations/',
-      purpose: 'Future owner-approved HealthKit mirror resources.',
-      status: 'planned',
+      purpose: 'Owner-approved HealthKitBridge observation mirror resources.',
+      status: 'active',
     },
     {
       id: 'documents',
@@ -171,10 +202,19 @@ function podContainers(): PodContainerStatus[] {
       id: 'audit',
       label: 'Pod activity audit',
       relativePath: 'health-pim/audit/',
-      purpose: 'Current safe metadata activity trail; Solid persistence is the next hardening step.',
+      purpose: 'Persisted owner-visible safe metadata activity trail.',
       status: 'active',
     },
   ];
+}
+
+function defaultAuditPersistence(): PodActivityAuditPersistence {
+  return {
+    enabled: false,
+    status: 'unavailable',
+    containerPath: 'health-pim/audit/',
+    resourcePath: 'health-pim/audit/activity.ttl',
+  };
 }
 
 function safeText(value: string, maxLength = 160): string {

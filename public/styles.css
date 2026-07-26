@@ -148,7 +148,7 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 }
 .pod-observability {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   padding: 0 22px 20px;
 }
@@ -162,11 +162,11 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 .pod-observability h3 {
   margin: 0 0 10px;
 }
-.pod-container-list, .pod-activity-list {
+.pod-container-list, .pod-activity-list, .healthkit-status {
   display: grid;
   gap: 8px;
 }
-.pod-container-list article, .pod-activity-list article {
+.pod-container-list article, .pod-activity-list article, .healthkit-status article {
   display: grid;
   gap: 2px;
   border: 1px solid #edf0eb;
@@ -174,18 +174,19 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
   padding: 9px 10px;
   background: rgba(246, 244, 236, .42);
 }
-.pod-container-list strong, .pod-activity-list strong {
+.pod-container-list strong, .pod-activity-list strong, .healthkit-status strong {
   color: var(--ink);
   font-size: 13px;
 }
-.pod-container-list span, .pod-activity-list span {
+.pod-container-list span, .pod-activity-list span, .healthkit-status span {
   color: var(--teal-dark);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-.pod-container-list small, .pod-activity-list small {
+.pod-container-list small, .pod-activity-list small, .healthkit-status small {
   color: var(--muted);
 }
+.healthkit-status p { margin: 0; color: var(--muted); font-size: 12px; }
 .pod-activity-ok { border-left: 4px solid #2b9a73 !important; }
 .pod-activity-info { border-left: 4px solid #7195b7 !important; }
 .pod-activity-attention { border-left: 4px solid #d9a441 !important; }

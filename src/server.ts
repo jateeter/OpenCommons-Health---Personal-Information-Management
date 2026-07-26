@@ -4,6 +4,7 @@ import { contextFromPim, createRequestHandler, type ApplicationContext } from '.
 import { loadEpicRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from './runtimeConfig';
 import { EpicConnectionPodRepository, EpicIntegrationService } from './integrations/epic';
 import { InMemoryPodActivityLog } from './podActivity';
+import { PodActivityRepository } from './podActivityRepository';
 
 let contextPromise: Promise<ApplicationContext> | undefined;
 const activityLog = new InMemoryPodActivityLog();
@@ -21,14 +22,15 @@ function provideContext(): Promise<ApplicationContext> {
         clientSecret: solid.clientSecret,
       });
       const epicConfig = loadEpicRuntimeConfig();
-      const baseContext = contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, undefined, activityLog);
+      const activityRepository = new PodActivityRepository(pim.pod);
+      const baseContext = contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, undefined, activityLog, activityRepository);
       const epic = new EpicIntegrationService(
         epicConfig,
         epicConfig.enabled ? new EpicConnectionPodRepository(pim.pod) : undefined,
         baseContext.repositories,
       );
       await epic.initializeFromPod();
-      return contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, epic, activityLog);
+      return contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, epic, activityLog, activityRepository);
     })();
     contextPromise.catch(() => {
       contextPromise = undefined;

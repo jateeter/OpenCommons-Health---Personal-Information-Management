@@ -2,12 +2,13 @@ import http, { type Server } from 'node:http';
 import { createRequestHandler, type ApplicationContext, type DomainRepository } from '../../src/httpApp';
 import { ValidationError } from '../../src/errors';
 import { containsDirectIdentifier, OWNER_APPROVAL_HEADER, RELEASE_PURPOSE_HEADER } from '../../src/privacy';
-import { InMemoryPodActivityLog } from '../../src/podActivity';
+import { InMemoryPodActivityLog, type PodActivityEvent } from '../../src/podActivity';
 
 describe('OpenCommons Health HTTP application', () => {
   let server: Server;
   let baseUrl: string;
   let records: Array<Record<string, unknown>>;
+  let persistedActivity: PodActivityEvent[];
   let context: ApplicationContext;
 
   beforeEach(async () => {
@@ -20,6 +21,7 @@ describe('OpenCommons Health HTTP application', () => {
       recordedBy: 'Dr Named Provider',
       createdAt: '2026-01-15T12:00:00Z',
     }];
+    persistedActivity = [];
     const repository: DomainRepository = {
       findAll: jest.fn(async () => records),
       findByUrl: jest.fn(async (url: string) => records.find((item) => item.url === url) ?? null),
@@ -39,6 +41,19 @@ describe('OpenCommons Health HTTP application', () => {
       podBaseUrl: 'http://pod/',
       checkPodAccess: jest.fn(async () => undefined),
       activityLog: new InMemoryPodActivityLog(),
+      activityRepository: {
+        append: jest.fn(async (event: PodActivityEvent) => {
+          persistedActivity = [event, ...persistedActivity.filter((candidate) => candidate.id !== event.id)];
+        }),
+        list: jest.fn(async (limit = 25) => persistedActivity.slice(0, limit)),
+        status: jest.fn(async () => ({
+          enabled: true,
+          status: 'active',
+          containerPath: 'health-pim/audit/',
+          resourcePath: 'health-pim/audit/activity.ttl',
+          eventCount: persistedActivity.length,
+        })),
+      } as never,
       repositories: { conditions: repository },
     };
     server = http.createServer((req, res) => {
@@ -144,6 +159,7 @@ describe('OpenCommons Health HTTP application', () => {
     expect(body.paths['/api/planned/epic/documents'].get.operationId).toBe('getPlannedEpicDocumentSurface');
     expect(body.paths['/api/planned/epic/workflow'].get.operationId).toBe('getPlannedEpicWorkflowSurface');
     expect(body.paths['/api/pod/activity'].get.operationId).toBe('getOwnerPodActivity');
+    expect(body.paths['/api/pod/healthkit/status'].get.operationId).toBe('getHealthKitMirrorStatus');
   });
 
   it('serves owner-visible pod activity without raw PHI or secret-like values', async () => {
@@ -166,6 +182,7 @@ describe('OpenCommons Health HTTP application', () => {
           domainCount: number;
           domainCounts: Record<string, number | null>;
           containers: Array<{ id: string; status: string }>;
+          auditPersistence: { status: string; resourcePath: string; eventCount: number };
         };
         events: Array<{ kind: string; summary: string; resourcePath?: string }>;
       };
@@ -174,12 +191,39 @@ describe('OpenCommons Health HTTP application', () => {
     expect(payload.data.summary.domainCount).toBe(11);
     expect(payload.data.summary.domainCounts.conditions).toBe(1);
     expect(payload.data.summary.containers).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 'healthkit-observations', status: 'planned' }),
+      expect.objectContaining({ id: 'healthkit-observations', status: 'active' }),
       expect.objectContaining({ id: 'audit', status: 'active' }),
     ]));
+    expect(payload.data.summary.auditPersistence).toMatchObject({
+      status: 'active',
+      resourcePath: 'health-pim/audit/activity.ttl',
+    });
     expect(payload.data.events.map((event) => event.kind)).toContain('record-created');
     expect(JSON.stringify(payload)).not.toMatch(/Jane Doe|Dr Named Provider|token secret password/i);
     expect(JSON.stringify(payload)).toContain('[redacted]');
+  });
+
+  it('serves owner-visible HealthKit mirror status without resource URLs or PHI', async () => {
+    const ensureContainerPath = jest.fn(async () => 'http://pod/health-pim/healthkit/observations/');
+    const listResources = jest.fn(async () => [
+      'http://pod/health-pim/healthkit/observations/heart-rate-1.ttl',
+      'http://pod/health-pim/healthkit/observations/blood-pressure-1.ttl',
+    ]);
+    context.pod = { ensureContainerPath, listResources } as never;
+
+    const response = await fetch(`${baseUrl}/api/pod/healthkit/status`);
+
+    expect(response.status).toBe(200);
+    const payload = await response.json() as { data: { status: string; observationCount: number; containerPath: string; privacyBoundary: string } };
+    expect(payload.data).toMatchObject({
+      status: 'ready',
+      observationCount: 2,
+      containerPath: 'health-pim/healthkit/observations/',
+    });
+    expect(payload.data.privacyBoundary).toContain('metadata only');
+    expect(JSON.stringify(payload)).not.toContain('heart-rate-1.ttl');
+    expect(JSON.stringify(payload)).not.toContain('blood-pressure-1.ttl');
+    expect(context.activityLog?.list().some((event) => event.kind === 'healthkit-status-verified')).toBe(true);
   });
 
   it('serves localhost-only read-only Epic document and workflow planning surfaces', async () => {
@@ -271,6 +315,7 @@ describe('OpenCommons Health HTTP application', () => {
       data: { status: 'active', url: 'http://pod/conditions/2' },
     });
     expect(context.activityLog?.list().some((event) => event.kind === 'record-created' && event.domain === 'conditions')).toBe(true);
+    expect(persistedActivity.some((event) => event.kind === 'record-created' && event.domain === 'conditions')).toBe(true);
   });
 
   it('deletes a record using its absolute pod URL', async () => {
