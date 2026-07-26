@@ -316,6 +316,7 @@ export const OPENAPI_DOCUMENT = {
     { name: 'privacy', description: 'Owner-approved anonymized release operations.' },
     { name: 'epic', description: 'Patient-owned Epic SMART/FHIR connection, import preview, and pod sync operations.' },
     { name: 'planning', description: 'Localhost MVP planning surfaces for future read-only Epic document and workflow APIs.' },
+    { name: 'pod', description: 'Owner-visible Solid Pod activity, audit, and observability surfaces.' },
   ],
   paths: {
     '/livez': {
@@ -355,6 +356,25 @@ export const OPENAPI_DOCUMENT = {
         responses: okResponse('PHI schema and anonymized-release schema.', objectSchema(['identifiable', 'anonymizedRelease'], {
           identifiable: { type: 'object' },
           anonymizedRelease: { type: 'object' },
+        })),
+      },
+    },
+    '/api/pod/activity': {
+      get: {
+        tags: ['pod'],
+        operationId: 'getOwnerPodActivity',
+        summary: 'Read owner-visible Pod activity and safe observability summary',
+        parameters: [
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            description: 'Maximum number of recent safe activity events to return.',
+            schema: { type: 'integer', minimum: 0, maximum: 200, default: 25 },
+          },
+        ],
+        responses: okResponse('Owner-visible safe Pod activity summary.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/PodActivityResponse' },
         })),
       },
     },
@@ -493,6 +513,53 @@ export const OPENAPI_DOCUMENT = {
         resources: { type: 'array', items: { $ref: '#/components/schemas/PlannedEpicResourceMapping' } },
         validation: { type: 'array', items: { type: 'string' } },
         issue: string('Localhost MVP issue identifier'),
+      }),
+      PodActivityEvent: objectSchema(['id', 'at', 'kind', 'status', 'summary'], {
+        id: string('Stable event id for this process-local activity trail'),
+        at: dateTime(),
+        kind: enumSchema([
+          'pod-access-verified',
+          'record-created',
+          'record-updated',
+          'record-deleted',
+          'anonymized-release-denied',
+          'anonymized-release-approved',
+          'epic-preview',
+          'epic-apply',
+          'epic-connect',
+          'epic-disconnect',
+        ]),
+        status: enumSchema(['ok', 'attention', 'failed', 'info']),
+        summary: string('Token-safe owner-visible event summary'),
+        domain: { type: 'string', enum: DOMAIN_NAMES },
+        resourcePath: string('Pod-local resource path only; full credential-bearing URLs are not returned.'),
+        purpose: string('Owner-approved release purpose, redacted and length-limited.'),
+        source: enumSchema(['owner-ui', 'api', 'epic', 'deployment-smoke']),
+      }),
+      PodContainerStatus: objectSchema(['id', 'label', 'relativePath', 'purpose', 'status'], {
+        id: string('Stable container status id'),
+        label: string('Owner-visible container label'),
+        relativePath: string('Pod-relative container path'),
+        purpose: string('Container purpose without PHI or secrets'),
+        status: enumSchema(['active', 'planned', 'attention']),
+      }),
+      PodActivitySummary: objectSchema(['generatedAt', 'authenticated', 'podAccess', 'podServerUrl', 'podBaseUrl', 'domainCount', 'managedDomains', 'domainCounts', 'countsByKind', 'containers'], {
+        generatedAt: dateTime(),
+        authenticated: { type: 'boolean' },
+        podAccess: { type: 'boolean' },
+        podServerUrl: uri('Configured Solid server URL'),
+        podBaseUrl: uri('Configured Solid pod base URL'),
+        domainCount: { type: 'integer', enum: [DOMAIN_NAMES.length] },
+        managedDomains: { type: 'array', items: { type: 'string', enum: DOMAIN_NAMES } },
+        domainCounts: { type: 'object', additionalProperties: { oneOf: [{ type: 'integer' }, { type: 'null' }] } },
+        countsByKind: { type: 'object', additionalProperties: { type: 'integer' } },
+        lastPodAccessAt: dateTime(),
+        lastOwnerApprovedReleaseAt: dateTime(),
+        containers: { type: 'array', items: { $ref: '#/components/schemas/PodContainerStatus' } },
+      }),
+      PodActivityResponse: objectSchema(['summary', 'events'], {
+        summary: { $ref: '#/components/schemas/PodActivitySummary' },
+        events: { type: 'array', items: { $ref: '#/components/schemas/PodActivityEvent' } },
       }),
       AnonymizedRelease: objectSchema(['domain', 'fhirResourceType', 'anonymized', 'data'], {
         domain: { type: 'string', enum: DOMAIN_NAMES },

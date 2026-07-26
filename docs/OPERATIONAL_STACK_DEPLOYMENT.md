@@ -13,12 +13,14 @@ flowchart TB
   Pod["Owner Solid Pod volume"]
   Docs["OpenAPI / Swagger docs"]
   FHIR["FHIR metadata and privacy schemas"]
+  Activity["Pod activity observability"]
 
   Browser --> PIM
   PIM --> Solid
   Solid --> Pod
   PIM --> Docs
   PIM --> FHIR
+  PIM --> Activity
 ```
 
 The current deployment has two supported happy paths:
@@ -127,6 +129,7 @@ Implemented MVP API endpoints:
 | `POST /api/integrations/epic/sync/preview` | Map Epic FHIR resources into OpenCommons domain candidates without writing. |
 | `POST /api/integrations/epic/sync/apply` | Apply owner-approved import candidates to the Solid pod. |
 | `GET /api/integrations/epic/audit` | Read pod-owned Epic integration audit events. |
+| `GET /api/pod/activity` | Read owner-visible Pod activity, domain counts, and storage-surface status without PHI or secrets. |
 
 ## Deployment gates
 
@@ -149,7 +152,12 @@ Every Epic-enabled deployment should pass these gates:
    `/api/planned/epic/documents` and `/api/planned/epic/workflow`; both must
    report `writeEnabled: false` and `piiRelease: false`. The
    `verify-deployment.sh` smoke test enforces this contract.
-8. Epic enabled mode verifies:
+8. `/api/pod/activity` proves authenticated Pod access, reports all 11 managed
+   domains, includes HealthKit/document/workflow/consent/audit container
+   observability, and does not expose PHI or secret-like material. The
+   `verify-deployment.sh` smoke test enforces this contract after live CRUD and
+   anonymized-release probes.
+9. Epic enabled mode verifies:
    - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
    - diagnostics report localhost MVP readiness without exposing secrets;
    - sandbox/production SMART discovery document is reachable;
@@ -157,7 +165,7 @@ Every Epic-enabled deployment should pass these gates:
    - FHIR capability metadata is reachable;
    - requested scopes match configured feature lanes;
    - no secrets appear in logs or OpenAPI examples.
-9. Playwright Medicare Wellness E2E passes against the selected local stack.
+10. Playwright Medicare Wellness E2E passes against the selected local stack.
 
 For the localhost MVP, the repository also provides
 `npm run validate:localhost-mvp` as a static contract check that confirms the
@@ -191,6 +199,9 @@ the diagnostics payload.
 - Store Epic token material encrypted or in a platform secret store.
 - Log authorization events, import previews, save-to-pod decisions, disconnects,
   and anonymized releases.
+- Surface owner-visible safe metadata for local Pod actions through
+  `/api/pod/activity`; durable Pod-backed audit persistence is a future
+  hardening step.
 - Do not log access tokens, refresh tokens, raw documents, message bodies, or
   direct identifiers.
 - Use synthetic data in Epic sandbox testing.

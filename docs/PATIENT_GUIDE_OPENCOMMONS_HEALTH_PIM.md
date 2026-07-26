@@ -38,11 +38,19 @@ status. It shows:
 - authenticated owner access state;
 - the number of visible health domains;
 - the local Solid server and Pod root;
+- the Pod storage surfaces used or planned for HealthKit observations,
+  documents, workflow tasks, owner consent records, and audit metadata;
+- recent local owner actions such as record changes and approved/denied
+  anonymized release attempts;
 - the release rule for external sharing.
 
 The important privacy rule is visible in the panel: identifiable personal health
 information stays in the authenticated owner Pod. External release is
 anonymized-only and requires owner approval plus a declared purpose.
+
+The recent activity view is a safe operational summary. It is designed to show
+that the local app is reaching the correct Pod and that owner actions are being
+recorded, without showing tokens, secrets, raw clinical notes, or full Pod URLs.
 
 The managed domains currently visible in the patient UI are:
 
@@ -181,6 +189,8 @@ Useful local links:
 - `/api/docs` shows local API documentation and action examples.
 - `/fhir/metadata` exposes FHIR CapabilityStatement-style metadata.
 - `/api/privacy/schema` describes identifiable and anonymized release schemas.
+- `/api/pod/activity` shows owner-visible Pod activity and storage-surface
+  status without exposing PHI or credentials.
 
 The owner-facing API can read and write identifiable records only through the
 authenticated local Pod configuration. External release must use anonymized

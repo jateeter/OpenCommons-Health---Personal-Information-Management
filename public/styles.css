@@ -146,6 +146,50 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
   font-size: 12px;
   font-weight: 750;
 }
+.pod-observability {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 14px;
+  padding: 0 22px 20px;
+}
+.pod-observability > div {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
+}
+.pod-observability h3 {
+  margin: 0 0 10px;
+}
+.pod-container-list, .pod-activity-list {
+  display: grid;
+  gap: 8px;
+}
+.pod-container-list article, .pod-activity-list article {
+  display: grid;
+  gap: 2px;
+  border: 1px solid #edf0eb;
+  border-radius: 11px;
+  padding: 9px 10px;
+  background: rgba(246, 244, 236, .42);
+}
+.pod-container-list strong, .pod-activity-list strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.pod-container-list span, .pod-activity-list span {
+  color: var(--teal-dark);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.pod-container-list small, .pod-activity-list small {
+  color: var(--muted);
+}
+.pod-activity-ok { border-left: 4px solid #2b9a73 !important; }
+.pod-activity-info { border-left: 4px solid #7195b7 !important; }
+.pod-activity-attention { border-left: 4px solid #d9a441 !important; }
+.pod-activity-failed { border-left: 4px solid var(--coral) !important; }
 .epic-panel {
   margin: 0 0 22px;
   background: rgba(255,253,247,.86);
@@ -271,6 +315,7 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .pod-actions { justify-content: flex-start; }
   .pod-grid { grid-template-columns: 1fr; }
   .pod-details div { grid-template-columns: 1fr; gap: 3px; }
+  .pod-observability { grid-template-columns: 1fr; }
   .epic-actions { justify-content: flex-start; }
   .epic-preview-list article { grid-template-columns: 1fr; gap: 2px; }
   .panel-heading { align-items: flex-start; gap: 12px; flex-direction: column; }

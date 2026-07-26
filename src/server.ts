@@ -3,8 +3,10 @@ import { HealthPIM } from './index';
 import { contextFromPim, createRequestHandler, type ApplicationContext } from './httpApp';
 import { loadEpicRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from './runtimeConfig';
 import { EpicConnectionPodRepository, EpicIntegrationService } from './integrations/epic';
+import { InMemoryPodActivityLog } from './podActivity';
 
 let contextPromise: Promise<ApplicationContext> | undefined;
+const activityLog = new InMemoryPodActivityLog();
 function provideContext(): Promise<ApplicationContext> {
   if (!contextPromise) {
     contextPromise = (async () => {
@@ -19,14 +21,14 @@ function provideContext(): Promise<ApplicationContext> {
         clientSecret: solid.clientSecret,
       });
       const epicConfig = loadEpicRuntimeConfig();
-      const baseContext = contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl);
+      const baseContext = contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, undefined, activityLog);
       const epic = new EpicIntegrationService(
         epicConfig,
         epicConfig.enabled ? new EpicConnectionPodRepository(pim.pod) : undefined,
         baseContext.repositories,
       );
       await epic.initializeFromPod();
-      return contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, epic);
+      return contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, epic, activityLog);
     })();
     contextPromise.catch(() => {
       contextPromise = undefined;

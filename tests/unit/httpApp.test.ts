@@ -2,6 +2,7 @@ import http, { type Server } from 'node:http';
 import { createRequestHandler, type ApplicationContext, type DomainRepository } from '../../src/httpApp';
 import { ValidationError } from '../../src/errors';
 import { containsDirectIdentifier, OWNER_APPROVAL_HEADER, RELEASE_PURPOSE_HEADER } from '../../src/privacy';
+import { InMemoryPodActivityLog } from '../../src/podActivity';
 
 describe('OpenCommons Health HTTP application', () => {
   let server: Server;
@@ -37,6 +38,7 @@ describe('OpenCommons Health HTTP application', () => {
       podServerUrl: 'http://solid',
       podBaseUrl: 'http://pod/',
       checkPodAccess: jest.fn(async () => undefined),
+      activityLog: new InMemoryPodActivityLog(),
       repositories: { conditions: repository },
     };
     server = http.createServer((req, res) => {
@@ -141,6 +143,43 @@ describe('OpenCommons Health HTTP application', () => {
     }
     expect(body.paths['/api/planned/epic/documents'].get.operationId).toBe('getPlannedEpicDocumentSurface');
     expect(body.paths['/api/planned/epic/workflow'].get.operationId).toBe('getPlannedEpicWorkflowSurface');
+    expect(body.paths['/api/pod/activity'].get.operationId).toBe('getOwnerPodActivity');
+  });
+
+  it('serves owner-visible pod activity without raw PHI or secret-like values', async () => {
+    context.activityLog?.record({
+      kind: 'record-created',
+      status: 'ok',
+      domain: 'conditions',
+      resourcePath: '/alice/health-pim/medicalconditions/1',
+      summary: 'conditions record created in the owner Pod with token secret password details',
+      source: 'api',
+    });
+
+    const response = await fetch(`${baseUrl}/api/pod/activity?limit=5`);
+
+    expect(response.status).toBe(200);
+    const payload = await response.json() as {
+      data: {
+        summary: {
+          podAccess: boolean;
+          domainCount: number;
+          domainCounts: Record<string, number | null>;
+          containers: Array<{ id: string; status: string }>;
+        };
+        events: Array<{ kind: string; summary: string; resourcePath?: string }>;
+      };
+    };
+    expect(payload.data.summary.podAccess).toBe(true);
+    expect(payload.data.summary.domainCount).toBe(11);
+    expect(payload.data.summary.domainCounts.conditions).toBe(1);
+    expect(payload.data.summary.containers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'healthkit-observations', status: 'planned' }),
+      expect.objectContaining({ id: 'audit', status: 'active' }),
+    ]));
+    expect(payload.data.events.map((event) => event.kind)).toContain('record-created');
+    expect(JSON.stringify(payload)).not.toMatch(/Jane Doe|Dr Named Provider|token secret password/i);
+    expect(JSON.stringify(payload)).toContain('[redacted]');
   });
 
   it('serves localhost-only read-only Epic document and workflow planning surfaces', async () => {
@@ -231,6 +270,7 @@ describe('OpenCommons Health HTTP application', () => {
     await expect(createResponse.json()).resolves.toEqual({
       data: { status: 'active', url: 'http://pod/conditions/2' },
     });
+    expect(context.activityLog?.list().some((event) => event.kind === 'record-created' && event.domain === 'conditions')).toBe(true);
   });
 
   it('deletes a record using its absolute pod URL', async () => {
@@ -240,6 +280,7 @@ describe('OpenCommons Health HTTP application', () => {
     );
     expect(response.status).toBe(204);
     expect(records).toHaveLength(0);
+    expect(context.activityLog?.list().some((event) => event.kind === 'record-deleted' && event.domain === 'conditions')).toBe(true);
   });
 
   it('rejects domain access when the Solid session is not authenticated', async () => {
@@ -265,6 +306,7 @@ describe('OpenCommons Health HTTP application', () => {
   it('requires explicit owner approval for anonymized release', async () => {
     const response = await fetch(`${baseUrl}/api/anonymized/resources/conditions`);
     expect(response.status).toBe(403);
+    expect(context.activityLog?.list().some((event) => event.kind === 'anonymized-release-denied')).toBe(true);
     await expect(response.json()).resolves.toMatchObject({
       error: expect.stringContaining(OWNER_APPROVAL_HEADER),
     });
@@ -295,6 +337,7 @@ describe('OpenCommons Health HTTP application', () => {
       },
     }]);
     expect(containsDirectIdentifier(body.data)).toBe(false);
+    expect(context.activityLog?.list().some((event) => event.kind === 'anonymized-release-approved')).toBe(true);
   });
 
   it('reports not-ready without probing the pod when the session is unauthenticated', async () => {

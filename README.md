@@ -176,6 +176,7 @@ OpenAPI/Swagger-compatible documentation is available in every deployment:
 | `GET /api/docs` | Local, offline API documentation and action runner |
 | `GET /fhir/metadata` | FHIR CapabilityStatement-style metadata |
 | `GET /api/privacy/schema` | PHI and anonymized release schema artifacts |
+| `GET /api/pod/activity` | Owner-visible Pod activity, domain counts, and storage-surface status without PHI or secrets |
 
 Identifiable PHI is only available through the authenticated owner-facing PIM
 resource API. External release flows must use `GET
@@ -218,8 +219,9 @@ and `workflow-tasks`.
 
 The browser application includes a Pod Management panel that surfaces
 authenticated Pod access, Solid server URL, Pod root URL, all 11 visible
-domain APIs, local data residency, and the anonymized-only owner-approved
-release boundary. See
+domain APIs, planned/active Pod storage surfaces, recent safe metadata activity,
+local data residency, and the anonymized-only owner-approved release boundary.
+See
 [`docs/POD_MANAGEMENT_UX_FINAL_UPDATE.md`](docs/POD_MANAGEMENT_UX_FINAL_UPDATE.md).
 
 Optional Playwright E2E automation for the Annual Medicare Wellness Evaluation

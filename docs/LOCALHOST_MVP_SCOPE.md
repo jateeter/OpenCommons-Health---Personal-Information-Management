@@ -34,6 +34,8 @@ The localhost MVP includes:
 - Swagger/OpenAPI documentation under `/api/docs` and `/openapi.json`;
 - FHIR-aligned metadata under `/fhir/metadata`;
 - privacy schema under `/api/privacy/schema`;
+- owner-visible Pod activity and container observability under
+  `/api/pod/activity`;
 - local Solid Community Server bootstrap and authenticated pod access checks;
 - RDF/ShEx validation before pod writes;
 - terminology-assisted manual entry for supported clinical domains;
@@ -107,8 +109,9 @@ localhost ports.
 
 The deployment verification script must confirm more than process uptime. It
 must prove the UI, OpenAPI documentation, FHIR metadata, privacy schema,
-authenticated pod access, all 11 domain APIs, anonymized release controls,
-and optional Epic mock workflow are operating together.
+authenticated pod access, all 11 domain APIs, Pod activity observability,
+anonymized release controls, and optional Epic mock workflow are operating
+together.
 
 ## Future native-client reactivation criteria
 

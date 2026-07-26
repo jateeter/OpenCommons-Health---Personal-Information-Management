@@ -280,6 +280,7 @@ async function checkStatus() {
     $('setup-message').textContent = ready ? '' : (status.error || 'Configure the Solid server, pod URL, client ID, and client secret for this deployment.');
     $('add-button').disabled = !ready;
     renderPodManagement(status, ready);
+    await refreshPodActivity(ready);
     renderEpicStatus(status.epic || { enabled: false, status: 'disabled' }, ready);
     return ready;
   } catch {
@@ -289,8 +290,24 @@ async function checkStatus() {
     $('pod-state').textContent = 'Unavailable';
     $('add-button').disabled = true;
     renderPodManagement({ error: 'Application offline' }, false);
+    renderPodActivity(null);
     renderEpicStatus({ enabled: false, status: 'disabled' }, false);
     return false;
+  }
+}
+
+async function refreshPodActivity(ready = applicationReady) {
+  if (!ready) {
+    renderPodActivity(null);
+    return;
+  }
+  try {
+    const response = await fetch('/api/pod/activity?limit=8');
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Pod activity is not available');
+    renderPodActivity(payload.data);
+  } catch (error) {
+    renderPodActivity({ error: error.message });
   }
 }
 
@@ -313,6 +330,47 @@ function renderPodManagement(status, ready = applicationReady) {
     const tag = document.createElement('span');
     tag.textContent = domains[name]?.plural || name;
     list.append(tag);
+  }
+}
+
+function renderPodActivity(activity) {
+  const containerList = $('pod-container-list');
+  const activityList = $('pod-activity-list');
+  containerList.replaceChildren();
+  activityList.replaceChildren();
+
+  if (!activity || activity.error) {
+    const empty = document.createElement('p');
+    empty.textContent = activity?.error || 'Pod activity appears here after the owner performs local Pod actions.';
+    activityList.append(empty);
+    return;
+  }
+
+  for (const container of activity.summary.containers || []) {
+    const row = document.createElement('article');
+    row.innerHTML = `<strong>${container.label}</strong><span>${container.relativePath}</span><small>${container.status} · ${container.purpose}</small>`;
+    containerList.append(row);
+  }
+
+  const counts = activity.summary.domainCounts || {};
+  for (const tag of $('pod-domain-list').querySelectorAll('span')) {
+    const domain = Object.entries(domains).find(([, config]) => config.plural === tag.textContent)?.[0];
+    if (domain && Number.isInteger(counts[domain])) tag.textContent = `${tag.textContent}: ${counts[domain]}`;
+  }
+
+  if (!activity.events?.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No owner activity has been recorded in this local process yet.';
+    activityList.append(empty);
+    return;
+  }
+
+  for (const event of activity.events) {
+    const row = document.createElement('article');
+    const when = formatDate(event.at);
+    row.innerHTML = `<strong>${event.summary}</strong><span>${event.kind}${event.domain ? ` · ${event.domain}` : ''}</span><small>${when}${event.resourcePath ? ` · ${event.resourcePath}` : ''}</small>`;
+    row.className = `pod-activity-${event.status}`;
+    activityList.append(row);
   }
 }
 
