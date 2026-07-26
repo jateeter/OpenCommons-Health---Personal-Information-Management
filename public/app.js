@@ -281,6 +281,7 @@ async function checkStatus() {
     $('add-button').disabled = !ready;
     renderPodManagement(status, ready);
     await refreshPodActivity(ready);
+    await refreshHealthKitStatus(ready);
     renderEpicStatus(status.epic || { enabled: false, status: 'disabled' }, ready);
     return ready;
   } catch {
@@ -291,6 +292,7 @@ async function checkStatus() {
     $('add-button').disabled = true;
     renderPodManagement({ error: 'Application offline' }, false);
     renderPodActivity(null);
+    renderHealthKitStatus(null);
     renderEpicStatus({ enabled: false, status: 'disabled' }, false);
     return false;
   }
@@ -308,6 +310,21 @@ async function refreshPodActivity(ready = applicationReady) {
     renderPodActivity(payload.data);
   } catch (error) {
     renderPodActivity({ error: error.message });
+  }
+}
+
+async function refreshHealthKitStatus(ready = applicationReady) {
+  if (!ready) {
+    renderHealthKitStatus(null);
+    return;
+  }
+  try {
+    const response = await fetch('/api/pod/healthkit/status');
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'HealthKit mirror status is not available');
+    renderHealthKitStatus(payload.data);
+  } catch (error) {
+    renderHealthKitStatus({ error: error.message });
   }
 }
 
@@ -336,6 +353,7 @@ function renderPodManagement(status, ready = applicationReady) {
 function renderPodActivity(activity) {
   const containerList = $('pod-container-list');
   const activityList = $('pod-activity-list');
+  const healthKitStatus = $('healthkit-status');
   containerList.replaceChildren();
   activityList.replaceChildren();
 
@@ -343,6 +361,7 @@ function renderPodActivity(activity) {
     const empty = document.createElement('p');
     empty.textContent = activity?.error || 'Pod activity appears here after the owner performs local Pod actions.';
     activityList.append(empty);
+    if (healthKitStatus) renderHealthKitStatus(null);
     return;
   }
 
@@ -350,6 +369,13 @@ function renderPodActivity(activity) {
     const row = document.createElement('article');
     row.innerHTML = `<strong>${container.label}</strong><span>${container.relativePath}</span><small>${container.status} · ${container.purpose}</small>`;
     containerList.append(row);
+  }
+  if (activity.summary.auditPersistence) {
+    const audit = document.createElement('article');
+    const status = activity.summary.auditPersistence;
+    audit.innerHTML = `<strong>Audit persistence</strong><span>${status.resourcePath}</span><small>${status.status}${Number.isInteger(status.eventCount) ? ` · ${status.eventCount} event${status.eventCount === 1 ? '' : 's'}` : ''}</small>`;
+    audit.className = `pod-activity-${status.status === 'attention' ? 'attention' : status.status === 'active' ? 'ok' : 'info'}`;
+    containerList.append(audit);
   }
 
   const counts = activity.summary.domainCounts || {};
@@ -372,6 +398,26 @@ function renderPodActivity(activity) {
     row.className = `pod-activity-${event.status}`;
     activityList.append(row);
   }
+}
+
+function renderHealthKitStatus(status) {
+  const target = $('healthkit-status');
+  if (!target) return;
+  target.replaceChildren();
+  if (!status || status.error) {
+    const empty = document.createElement('p');
+    empty.textContent = status?.error || 'HealthKit mirror status appears after authenticated Pod access is ready.';
+    target.append(empty);
+    return;
+  }
+  const summary = document.createElement('article');
+  summary.className = `pod-activity-${status.status === 'attention' ? 'attention' : 'ok'}`;
+  summary.innerHTML = `<strong>${status.source} · ${status.status}</strong><span>${status.containerPath}</span><small>${Number.isInteger(status.observationCount) ? `${status.observationCount} mirrored observation${status.observationCount === 1 ? '' : 's'}` : 'Observation count unavailable'}</small>`;
+  const boundary = document.createElement('p');
+  boundary.textContent = status.privacyBoundary;
+  const action = document.createElement('small');
+  action.textContent = status.nextOwnerAction;
+  target.append(summary, boundary, action);
 }
 
 function renderEpicStatus(status, ready = applicationReady) {

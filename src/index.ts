@@ -71,7 +71,9 @@ export * from './privacy';
 export * from './standards/fhir';
 export * from './integrations/epic';
 export * from './podActivity';
+export * from './podActivityRepository';
 export * from './reconciliation';
+export * from './healthkitStatus';
 
 /** Options passed to {@link HealthPIM.create}. */
 export interface HealthPIMOptions {

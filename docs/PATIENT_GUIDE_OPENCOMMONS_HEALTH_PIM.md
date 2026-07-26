@@ -42,6 +42,8 @@ status. It shows:
   documents, workflow tasks, owner consent records, and audit metadata;
 - recent local owner actions such as record changes and approved/denied
   anonymized release attempts;
+- whether the safe activity audit trail is being persisted in the owner Pod;
+- HealthKitBridge mirror status for the Pod-side observations container;
 - the release rule for external sharing.
 
 The important privacy rule is visible in the panel: identifiable personal health
@@ -51,6 +53,8 @@ anonymized-only and requires owner approval plus a declared purpose.
 The recent activity view is a safe operational summary. It is designed to show
 that the local app is reaching the correct Pod and that owner actions are being
 recorded, without showing tokens, secrets, raw clinical notes, or full Pod URLs.
+The HealthKit mirror status is also metadata-only: it reports readiness and
+observation counts, not individual HealthKit sample values.
 
 The managed domains currently visible in the patient UI are:
 
@@ -191,6 +195,8 @@ Useful local links:
 - `/api/privacy/schema` describes identifiable and anonymized release schemas.
 - `/api/pod/activity` shows owner-visible Pod activity and storage-surface
   status without exposing PHI or credentials.
+- `/api/pod/healthkit/status` shows HealthKitBridge mirror container readiness
+  and counts without exposing resource URLs or sample payloads.
 
 The owner-facing API can read and write identifiable records only through the
 authenticated local Pod configuration. External release must use anonymized

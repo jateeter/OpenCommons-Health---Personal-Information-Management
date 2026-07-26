@@ -316,6 +316,61 @@ apply until the owner resolves them manually.
   reconciliation detail.
 - Static UI tests assert the review panel and conflict styling are present.
 
+### Issue LHMVP-16: Persist safe Pod activity audit metadata in the owner Pod
+
+**Problem:** P3 made safe Pod activity visible but kept the activity trail only
+in process memory. Restarting the local app lost the owner-visible metadata
+trail and did not prove that audit observability itself used the Solid Pod.
+
+**Status:** Implemented by `PodActivityRepository` and the
+`auditPersistence` block in `/api/pod/activity`.
+
+**Scope:** localhost MVP safe metadata only. The persisted audit resource stores
+sanitized event summaries, kinds, timestamps, domains, and pod-local paths. It
+does not store PHI payloads, full Pod URLs, access tokens, refresh tokens,
+client secrets, or raw clinical notes.
+
+**Acceptance criteria:**
+
+- Safe activity events are appended to `health-pim/audit/activity.ttl` through
+  authenticated Solid Pod writes.
+- `/api/pod/activity` merges current process events with the Pod-backed audit
+  trail and reports `auditPersistence.status: active` when the audit resource
+  is readable.
+- Audit persistence failures are reflected as owner-visible attention metadata
+  without failing the original owner CRUD or release action.
+- Unit tests verify bounded Pod-backed persistence.
+- Live deployment smoke fails if audit persistence status or the
+  `health-pim/audit/activity.ttl` resource path is missing.
+
+### Issue LHMVP-17: Add HealthKitBridge mirror status observability
+
+**Problem:** The PIM roadmap identified HealthKitBridge-originated resources as
+an upstream input path, but the localhost PIM did not yet expose an authenticated
+owner-facing status surface for the Pod-side mirror container.
+
+**Status:** Implemented by `/api/pod/healthkit/status` and the browser Pod
+Management HealthKit mirror status panel.
+
+**Scope:** PIM-side localhost observability only. Native iPhone HealthKit
+permissions, iOS ingestion, and HealthKitBridge runtime changes remain outside
+this repo and outside the current MVP.
+
+**Acceptance criteria:**
+
+- `/api/pod/healthkit/status` requires authenticated owner Pod access.
+- The endpoint ensures the `health-pim/healthkit/observations/` mirror
+  container exists and reports observation counts only.
+- The response identifies `HealthKitBridge`, `localhostMvp: true`, supported
+  `Observation` resources, accepted local observation code names, and a privacy
+  boundary.
+- The response does not expose resource URLs, tokens, secrets, or direct
+  identifiers.
+- The browser Pod Management panel renders HealthKit mirror status beside Pod
+  containers and recent activity.
+- Live deployment smoke verifies the endpoint and confirms the status check is
+  recorded in Pod activity.
+
 ## Future hosted/public deployment notes
 
 These are not part of the current localhost MVP, but they are required before a

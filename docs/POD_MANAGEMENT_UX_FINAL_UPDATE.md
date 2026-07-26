@@ -19,6 +19,9 @@ panel gives the authenticated Pod owner immediate observability into:
 - owner-visible container status for HealthKit observations, clinical
   documents, workflow tasks, consent, and audit surfaces;
 - recent safe metadata activity for local owner actions;
+- persisted audit status for `health-pim/audit/activity.ttl`;
+- HealthKitBridge mirror readiness and observation counts for
+  `health-pim/healthkit/observations/`;
 - local data residency;
 - anonymized-only external release policy;
 - local API documentation, FHIR metadata, and privacy schema links.
@@ -28,9 +31,10 @@ material, or non-owner release controls. Identifiable personal health
 information remains available only through authenticated owner-facing domain
 APIs.
 
-The current activity trail is intentionally limited to safe metadata in the
-running PIM process. Persisting the audit trail back into an owner-controlled
-Solid Pod audit container remains a later hardening step.
+The current activity trail is intentionally limited to safe metadata and is
+persisted back into an owner-controlled Solid Pod audit container. The
+HealthKit mirror status is also metadata-only and does not expose sample
+payloads or resource URLs.
 
 ## Current local MVP posture
 
@@ -67,6 +71,7 @@ Both modes should continue to validate:
 - `/fhir/metadata`;
 - `/api/privacy/schema`;
 - `/api/pod/activity`;
+- `/api/pod/healthkit/status`;
 - owner-approved anonymized release headers.
 
 ## Next implementation focus
@@ -74,11 +79,9 @@ Both modes should continue to validate:
 The next PIM development step should stay on Pod owner management before adding
 new external integrations:
 
-1. Persist the safe metadata activity trail into an owner-controlled Solid Pod
-   audit container.
-2. Add conflict/reconciliation UX for mobile-originated versus CSS-originated
+1. Add conflict/reconciliation UX for mobile-originated versus CSS-originated
    Pod records.
-3. Add owner-visible sync summaries for HealthKitBridge-originated resources
-   once they are mirrored into the PIM Pod.
-4. Keep outbound Epic writes, mobile-native packaging, and public callback flows
+2. Expand HealthKitBridge-originated summaries when actual mirrored Observation
+   records are available from the bridge.
+3. Keep outbound Epic writes, mobile-native packaging, and public callback flows
    out of the localhost MVP until the user explicitly resumes those tracks.

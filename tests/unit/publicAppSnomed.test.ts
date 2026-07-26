@@ -96,12 +96,17 @@ describe('browser terminology manual-entry support', () => {
     expect(htmlSource).toContain('pod-base-url');
     expect(htmlSource).toContain('pod-container-list');
     expect(htmlSource).toContain('pod-activity-list');
+    expect(htmlSource).toContain('healthkit-status');
     expect(htmlSource).toContain('/fhir/metadata');
     expect(htmlSource).toContain('/api/privacy/schema');
     expect(appSource).toContain('function renderPodManagement');
     expect(appSource).toContain('async function refreshPodActivity');
     expect(appSource).toContain("fetch('/api/pod/activity?limit=8')");
     expect(appSource).toContain('function renderPodActivity');
+    expect(appSource).toContain("fetch('/api/pod/healthkit/status')");
+    expect(appSource).toContain('function renderHealthKitStatus');
+    expect(appSource).toContain('Audit persistence');
+    expect(appSource).toContain('HealthKit mirror status appears after authenticated Pod access is ready.');
     expect(appSource).toContain('Pod activity appears here after the owner performs local Pod actions.');
     expect(appSource).toContain('No owner activity has been recorded in this local process yet.');
     expect(appSource).toContain('Authenticated owner access is active');
@@ -112,6 +117,7 @@ describe('browser terminology manual-entry support', () => {
     expect(styleSource).toContain('.pod-observability');
     expect(styleSource).toContain('.pod-container-list');
     expect(styleSource).toContain('.pod-activity-list');
+    expect(styleSource).toContain('.healthkit-status');
     expect(styleSource).toContain('.pod-activity-attention');
   });
 });

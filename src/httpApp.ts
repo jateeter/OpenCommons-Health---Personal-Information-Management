@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createReadStream, existsSync } from 'node:fs';
 import path from 'node:path';
 import type { HealthPIM } from './index';
+import type { PodClient } from './pod/podClient';
 import { AuthError, AuthorizationError, ConflictError, NotFoundError, ValidationError } from './errors';
 import { DOMAIN_NAMES, OPENAPI_DOCUMENT } from './openapi';
 import { anonymizeResource, anonymizeResources, OWNER_APPROVAL_HEADER, RELEASE_PURPOSE_HEADER } from './privacy';
@@ -16,9 +17,13 @@ import {
   activitySummaryForDomainAction,
   createPodActivityResponse,
   InMemoryPodActivityLog,
+  mergePodActivityEvents,
   resourcePathFromUrl,
   type PodActivityLog,
+  type PodActivityEvent,
 } from './podActivity';
+import type { PodActivityRepository } from './podActivityRepository';
+import { createHealthKitMirrorStatus } from './healthkitStatus';
 
 export interface DomainRepository {
   findAll(): Promise<unknown[]>;
@@ -34,8 +39,10 @@ export interface ApplicationContext {
   podBaseUrl: string;
   authenticated: boolean;
   checkPodAccess(): Promise<void>;
+  pod?: PodClient;
   epic?: EpicIntegrationService;
   activityLog?: PodActivityLog;
+  activityRepository?: PodActivityRepository;
 }
 
 export type ContextProvider = () => Promise<ApplicationContext>;
@@ -46,14 +53,17 @@ export function contextFromPim(
   podBaseUrl: string,
   epic?: EpicIntegrationService,
   activityLog: PodActivityLog = new InMemoryPodActivityLog(),
+  activityRepository?: PodActivityRepository,
 ): ApplicationContext {
   return {
     podServerUrl,
     podBaseUrl,
     authenticated: pim.isAuthenticated,
     checkPodAccess: () => pim.checkPodAccess(),
+    pod: pim.pod,
     epic,
     activityLog,
+    activityRepository,
     repositories: {
       profiles: pim.profile,
       conditions: pim.conditions,
@@ -98,6 +108,9 @@ export function createRequestHandler(
       if (requestUrl.pathname === '/api/pod/activity') {
         return await handlePodActivityRequest(res, requestUrl, provideContext);
       }
+      if (requestUrl.pathname === '/api/pod/healthkit/status') {
+        return await handleHealthKitStatusRequest(res, provideContext);
+      }
       if (requestUrl.pathname === '/api/planned/epic') {
         return sendJson(res, 200, { data: EPIC_READONLY_PLANS });
       }
@@ -134,7 +147,7 @@ async function sendStatus(provideContext: ContextProvider, res: ServerResponse):
     const context = await provideContext();
     if (context.authenticated) {
       await context.checkPodAccess();
-      context.activityLog?.record({
+      await recordActivity(context, {
         kind: 'pod-access-verified',
         status: 'ok',
         summary: 'Authenticated Pod access verified',
@@ -170,7 +183,7 @@ async function handlePodActivityRequest(
     throw new AuthError('The PIM is not authenticated with the configured Solid server.');
   }
   await context.checkPodAccess();
-  context.activityLog?.record({
+  await recordActivity(context, {
     kind: 'pod-access-verified',
     status: 'ok',
     summary: 'Authenticated Pod access verified for owner activity review',
@@ -178,15 +191,53 @@ async function handlePodActivityRequest(
   });
   const limit = Number(requestUrl.searchParams.get('limit') ?? '25');
   const domainCounts = await collectDomainCounts(context);
+  const memoryEvents = context.activityLog?.list(200) ?? [];
+  const auditPersistence = context.activityRepository
+    ? await context.activityRepository.status()
+    : undefined;
+  const persistedEvents = context.activityRepository
+    ? await context.activityRepository.list(200).catch(() => [])
+    : [];
+  const events = mergePodActivityEvents(memoryEvents, persistedEvents, Number.isFinite(limit) ? limit : 25);
   sendJson(res, 200, {
     data: createPodActivityResponse({
       activityLog: context.activityLog,
+      events,
       authenticated: context.authenticated,
       podAccess: true,
       podServerUrl: context.podServerUrl,
       podBaseUrl: context.podBaseUrl,
       domainCounts,
+      auditPersistence,
       limit: Number.isFinite(limit) ? limit : 25,
+    }),
+  });
+}
+
+async function handleHealthKitStatusRequest(
+  res: ServerResponse,
+  provideContext: ContextProvider,
+): Promise<void> {
+  const context = await provideContext();
+  if (!context.authenticated) {
+    throw new AuthError('The PIM is not authenticated with the configured Solid server.');
+  }
+  await context.checkPodAccess();
+  await recordActivity(context, {
+    kind: 'healthkit-status-verified',
+    status: 'ok',
+    summary: 'HealthKit observations mirror container verified',
+    source: 'api',
+  });
+  const events = mergePodActivityEvents(
+    context.activityLog?.list(200) ?? [],
+    context.activityRepository ? await context.activityRepository.list(200).catch(() => []) : [],
+    25,
+  );
+  sendJson(res, 200, {
+    data: await createHealthKitMirrorStatus({
+      pod: context.pod,
+      activityEvents: events,
     }),
   });
 }
@@ -216,27 +267,27 @@ async function handleEpicIntegrationRequest(
   }
   if (requestUrl.pathname === '/api/integrations/epic/connect/start' && req.method === 'POST') {
     const data = await epic.connectStart();
-    context.activityLog?.record({ kind: 'epic-connect', status: 'info', summary: 'Epic SMART connection started', source: 'epic' });
+    await recordActivity(context, { kind: 'epic-connect', status: 'info', summary: 'Epic SMART connection started', source: 'epic' });
     return sendJson(res, 200, { data });
   }
   if (requestUrl.pathname === '/api/integrations/epic/connect/callback' && req.method === 'GET') {
     const data = await epic.connectCallback(requestUrl.searchParams);
-    context.activityLog?.record({ kind: 'epic-connect', status: 'ok', summary: 'Epic SMART connection callback completed', source: 'epic' });
+    await recordActivity(context, { kind: 'epic-connect', status: 'ok', summary: 'Epic SMART connection callback completed', source: 'epic' });
     return sendJson(res, 200, { data });
   }
   if (requestUrl.pathname === '/api/integrations/epic/disconnect' && req.method === 'POST') {
     const data = await epic.disconnect();
-    context.activityLog?.record({ kind: 'epic-disconnect', status: 'ok', summary: 'Epic connection disconnected', source: 'epic' });
+    await recordActivity(context, { kind: 'epic-disconnect', status: 'ok', summary: 'Epic connection disconnected', source: 'epic' });
     return sendJson(res, 200, { data });
   }
   if (requestUrl.pathname === '/api/integrations/epic/sync/preview' && req.method === 'POST') {
     const data = await epic.preview(await readJsonBodyOrEmpty(req));
-    context.activityLog?.record({ kind: 'epic-preview', status: 'info', summary: 'Epic import preview generated for owner review', source: 'epic' });
+    await recordActivity(context, { kind: 'epic-preview', status: 'info', summary: 'Epic import preview generated for owner review', source: 'epic' });
     return sendJson(res, 200, { data });
   }
   if (requestUrl.pathname === '/api/integrations/epic/sync/apply' && req.method === 'POST') {
     const data = await epic.apply(await readJsonBodyOrEmpty(req));
-    context.activityLog?.record({ kind: 'epic-apply', status: 'ok', summary: 'Owner-approved Epic import applied to Pod', source: 'epic' });
+    await recordActivity(context, { kind: 'epic-apply', status: 'ok', summary: 'Owner-approved Epic import applied to Pod', source: 'epic' });
     return sendJson(res, 200, { data });
   }
   if (requestUrl.pathname === '/api/integrations/epic/audit' && req.method === 'GET') {
@@ -276,7 +327,7 @@ async function handleDomainRequest(
 
   if (req.method === 'POST') {
     const data = await repository.create(await readJsonBody(req) as never);
-    context.activityLog?.record({
+    await recordActivity(context, {
       kind: 'record-created',
       status: 'ok',
       domain,
@@ -294,7 +345,7 @@ async function handleDomainRequest(
     }
     assertPodResourceUrl(entity.url, context.podBaseUrl);
     const data = await repository.update(entity as never);
-    context.activityLog?.record({
+    await recordActivity(context, {
       kind: 'record-updated',
       status: 'ok',
       domain,
@@ -310,7 +361,7 @@ async function handleDomainRequest(
     if (!resourceUrl) throw new ValidationError('A resource URL is required.', [{ field: 'url', reason: 'url query parameter is required' }]);
     assertPodResourceUrl(resourceUrl, context.podBaseUrl);
     await repository.delete(resourceUrl);
-    context.activityLog?.record({
+    await recordActivity(context, {
       kind: 'record-deleted',
       status: 'ok',
       domain,
@@ -346,7 +397,7 @@ async function handleAnonymizedDomainRequest(
   try {
     assertOwnerApprovedRelease(req);
   } catch (error) {
-    context.activityLog?.record({
+    await recordActivity(context, {
       kind: 'anonymized-release-denied',
       status: 'attention',
       domain,
@@ -366,7 +417,7 @@ async function handleAnonymizedDomainRequest(
     assertPodResourceUrl(resourceUrl, context.podBaseUrl);
     const entity = await repository.findByUrl(resourceUrl);
     if (!entity) throw new NotFoundError(resourceUrl);
-    context.activityLog?.record({
+    await recordActivity(context, {
       kind: 'anonymized-release-approved',
       status: 'ok',
       domain,
@@ -381,7 +432,7 @@ async function handleAnonymizedDomainRequest(
     });
   }
 
-  context.activityLog?.record({
+  await recordActivity(context, {
     kind: 'anonymized-release-approved',
     status: 'ok',
     domain,
@@ -406,6 +457,26 @@ async function collectDomainCounts(context: ApplicationContext): Promise<Record<
     }
   }));
   return Object.fromEntries(entries);
+}
+
+async function recordActivity(
+  context: ApplicationContext,
+  event: Omit<PodActivityEvent, 'id' | 'at'> & { at?: string },
+): Promise<void> {
+  const recorded = context.activityLog?.record(event);
+  if (!recorded || !context.activityRepository) return;
+  try {
+    await context.activityRepository.append(recorded);
+  } catch (error) {
+    context.activityLog?.record({
+      kind: 'pod-audit-persistence-failed',
+      status: 'attention',
+      summary: error instanceof Error
+        ? `Pod audit persistence needs attention: ${error.message}`
+        : 'Pod audit persistence needs attention.',
+      source: 'api',
+    });
+  }
 }
 
 function assertOwnerApprovedRelease(req: IncomingMessage): void {

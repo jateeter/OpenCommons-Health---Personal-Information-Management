@@ -378,6 +378,16 @@ export const OPENAPI_DOCUMENT = {
         })),
       },
     },
+    '/api/pod/healthkit/status': {
+      get: {
+        tags: ['pod'],
+        operationId: 'getHealthKitMirrorStatus',
+        summary: 'Read owner-visible HealthKitBridge mirror container status',
+        responses: okResponse('Owner-visible HealthKit mirror status without PHI.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/HealthKitMirrorStatus' },
+        })),
+      },
+    },
     ...plannedEpicPaths(),
     ...epicIntegrationPaths(),
     ...domainPaths(),
@@ -548,6 +558,8 @@ export const OPENAPI_DOCUMENT = {
         at: dateTime(),
         kind: enumSchema([
           'pod-access-verified',
+          'pod-audit-persistence-failed',
+          'healthkit-status-verified',
           'record-created',
           'record-updated',
           'record-deleted',
@@ -572,7 +584,15 @@ export const OPENAPI_DOCUMENT = {
         purpose: string('Container purpose without PHI or secrets'),
         status: enumSchema(['active', 'planned', 'attention']),
       }),
-      PodActivitySummary: objectSchema(['generatedAt', 'authenticated', 'podAccess', 'podServerUrl', 'podBaseUrl', 'domainCount', 'managedDomains', 'domainCounts', 'countsByKind', 'containers'], {
+      PodActivityAuditPersistence: objectSchema(['enabled', 'status', 'containerPath', 'resourcePath'], {
+        enabled: { type: 'boolean' },
+        status: enumSchema(['active', 'attention', 'unavailable']),
+        containerPath: string('Pod-relative audit container path'),
+        resourcePath: string('Pod-relative audit resource path'),
+        eventCount: { type: 'integer', minimum: 0 },
+        error: string('Sanitized audit persistence error, when attention is required'),
+      }),
+      PodActivitySummary: objectSchema(['generatedAt', 'authenticated', 'podAccess', 'podServerUrl', 'podBaseUrl', 'domainCount', 'managedDomains', 'domainCounts', 'countsByKind', 'containers', 'auditPersistence'], {
         generatedAt: dateTime(),
         authenticated: { type: 'boolean' },
         podAccess: { type: 'boolean' },
@@ -585,10 +605,24 @@ export const OPENAPI_DOCUMENT = {
         lastPodAccessAt: dateTime(),
         lastOwnerApprovedReleaseAt: dateTime(),
         containers: { type: 'array', items: { $ref: '#/components/schemas/PodContainerStatus' } },
+        auditPersistence: { $ref: '#/components/schemas/PodActivityAuditPersistence' },
       }),
       PodActivityResponse: objectSchema(['summary', 'events'], {
         summary: { $ref: '#/components/schemas/PodActivitySummary' },
         events: { type: 'array', items: { $ref: '#/components/schemas/PodActivityEvent' } },
+      }),
+      HealthKitMirrorStatus: objectSchema(['source', 'localhostMvp', 'status', 'containerPath', 'observationCount', 'supportedResourceTypes', 'acceptedObservationCodes', 'recentEvents', 'privacyBoundary', 'nextOwnerAction'], {
+        source: { type: 'string', const: 'HealthKitBridge' },
+        localhostMvp: { type: 'boolean', const: true },
+        status: enumSchema(['ready', 'attention']),
+        containerPath: string('Pod-relative HealthKit observations mirror container path'),
+        observationCount: { oneOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
+        supportedResourceTypes: { type: 'array', items: { type: 'string', enum: ['Observation'] } },
+        acceptedObservationCodes: { type: 'array', items: { type: 'string' } },
+        lastObservedAt: dateTime(),
+        recentEvents: { type: 'array', items: { $ref: '#/components/schemas/PodActivityEvent' } },
+        privacyBoundary: string('Owner-visible privacy boundary statement'),
+        nextOwnerAction: string('Owner-facing next action'),
       }),
       AnonymizedRelease: objectSchema(['domain', 'fhirResourceType', 'anonymized', 'data'], {
         domain: { type: 'string', enum: DOMAIN_NAMES },

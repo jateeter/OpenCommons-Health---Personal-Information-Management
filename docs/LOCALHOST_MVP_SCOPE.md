@@ -36,6 +36,10 @@ The localhost MVP includes:
 - privacy schema under `/api/privacy/schema`;
 - owner-visible Pod activity and container observability under
   `/api/pod/activity`;
+- persisted safe audit metadata in the owner Pod under
+  `health-pim/audit/activity.ttl`;
+- HealthKitBridge mirror status under `/api/pod/healthkit/status` for the
+  Pod-side `health-pim/healthkit/observations/` container;
 - local Solid Community Server bootstrap and authenticated pod access checks;
 - RDF/ShEx validation before pod writes;
 - terminology-assisted manual entry for supported clinical domains;
@@ -78,10 +82,15 @@ The next non-iPad work should stay inside the localhost contract:
    updates. The initial P4-A/P4-B localhost slice provides a reusable
    `ReconciliationSummary` model and an owner-facing conflict review panel in
    Epic preview.
-6. Keep document/workflow repositories in the localhost MVP acceptance path;
+6. Keep safe Pod activity audit metadata persisted in the owner Solid Pod and
+   visible through `/api/pod/activity`.
+7. Keep the PIM-side HealthKitBridge observations mirror container observable
+   through `/api/pod/healthkit/status`, without resuming native/iPhone
+   implementation work.
+8. Keep document/workflow repositories in the localhost MVP acceptance path;
    planning-only Epic surfaces are insufficient for MVP completion.
-7. Keep anonymized release tests in the release gate.
-8. Keep native/iPad implementation as a parked future milestone.
+9. Keep anonymized release tests in the release gate.
+10. Keep native/iPad implementation as a parked future milestone.
 
 Issue-style notes for the remaining localhost deployment work are maintained in
 [`LOCALHOST_MVP_DEPLOYMENT_ISSUES.md`](./LOCALHOST_MVP_DEPLOYMENT_ISSUES.md).
@@ -112,8 +121,8 @@ localhost ports.
 The deployment verification script must confirm more than process uptime. It
 must prove the UI, OpenAPI documentation, FHIR metadata, privacy schema,
 authenticated pod access, all 11 domain APIs, Pod activity observability,
-anonymized release controls, and optional Epic mock workflow are operating
-together.
+Pod-backed audit persistence, HealthKit mirror status, anonymized release
+controls, and optional Epic mock workflow are operating together.
 
 ## Future native-client reactivation criteria
 
