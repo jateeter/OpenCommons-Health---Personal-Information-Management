@@ -69,6 +69,7 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run validate:loc
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run local:release-gate');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'npm run epic:diagnostics');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/integrations/epic/diagnostics');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'ReconciliationSummary');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'LOCALHOST_MVP_DEPLOYMENT_ISSUES.md');
 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-01');
@@ -100,6 +101,10 @@ requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Retry 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-13');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/pod/activity');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'metadata activity trail');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-14');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'reconciliationSummary');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-15');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Owner reconciliation review');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
 
@@ -122,6 +127,8 @@ requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run epic:diagnostics');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:preflight');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/integrations/epic/diagnostics');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'reconciliationSummary');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'owner reconciliation review panel');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/planned/epic/documents');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/pod/activity');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/resources/documents');
@@ -131,6 +138,8 @@ requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'piiRelease: fa
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'The active MVP scope is restricted to localhost notebook deployment.');
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'Current non-iPad implementation sequence');
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, '/api/planned/epic/workflow');
+requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'ReconciliationSummary');
+requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'owner reconciliation review panel');
 requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'Native iPad/mobile issues should remain parked');
 
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/planned/epic/documents');
@@ -139,6 +148,8 @@ requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/pod/activi
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'check_pod_activity_observability');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"domainCount":11');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"id":"audit"');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, '"reconciliationSummary"');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, '"safeToApply"');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'documents workflow-tasks');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'Annual Medicare Wellness Visit Summary');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"writeEnabled":false');
@@ -154,6 +165,8 @@ requireText('public/app.js', publicApp, "documents: {");
 requireText('public/app.js', publicApp, "'workflow-tasks': {");
 requireText('public/app.js', publicApp, "fetch('/api/pod/activity?limit=8')");
 requireText('public/app.js', publicApp, 'function renderPodActivity');
+requireText('public/app.js', publicApp, 'function renderReconciliationReview');
+requireText('public/app.js', publicApp, 'Owner reconciliation review');
 requireText('public/app.js', publicApp, 'LOINC document type search');
 requireText('public/app.js', publicApp, 'SNOMED CT workflow task search');
 requireText('public/app.js', publicApp, 'Owner-held clinical document metadata');

@@ -11,6 +11,7 @@ import type {
   VitalSign,
   WorkflowTask,
 } from '../../types';
+import type { ReconciliationSummary } from '../../reconciliation';
 
 export type EpicConnectionStatus =
   | 'disabled'
@@ -162,6 +163,7 @@ export interface EpicImportPreview {
   generatedAt: string;
   patientId: string;
   changes: EpicImportCandidate[];
+  reconciliationSummary: ReconciliationSummary;
 }
 
 export interface EpicApplyResult {

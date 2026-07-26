@@ -185,6 +185,18 @@ check_epic_mock_flow() {
     echo "ERROR: Epic preview did not include workflow-tasks: ${preview}"
     exit 1
   }
+  echo "${preview}" | grep -q '"reconciliationSummary"' || {
+    echo "ERROR: Epic preview did not include reconciliationSummary: ${preview}"
+    exit 1
+  }
+  echo "${preview}" | grep -q '"safeToApply"' || {
+    echo "ERROR: Epic preview reconciliation summary did not report safeToApply: ${preview}"
+    exit 1
+  }
+  echo "${preview}" | grep -q '"conflict"' || {
+    echo "ERROR: Epic preview reconciliation summary did not report conflict counts: ${preview}"
+    exit 1
+  }
   apply=$(curl -fsS -X POST --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/integrations/epic/sync/apply" \
     -H "content-type: application/json" \
     --data '{"domains":["conditions"]}')

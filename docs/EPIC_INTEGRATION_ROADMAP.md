@@ -303,6 +303,9 @@ The active development sequence for the localhost MVP is:
    owner-selected sections.
 6. Surface local reconciliation status for Epic preview candidates so create,
    update, unchanged, and conflict states are visible before pod writes.
+   The initial localhost P4-A/P4-B implementation adds `ReconciliationSummary`
+   to preview responses and renders an owner reconciliation review panel before
+   section selection/apply.
 7. Keep document/workflow repositories in the localhost MVP completion path at
    `/api/resources/documents` and `/api/resources/workflow-tasks`; the
    `/api/planned/epic/documents` and `/api/planned/epic/workflow` surfaces

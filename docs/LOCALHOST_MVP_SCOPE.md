@@ -75,7 +75,9 @@ The next non-iPad work should stay inside the localhost contract:
    running local app, with `EPIC_DIAGNOSTICS_LIVE=true` only for explicit
    sandbox/production SMART discovery.
 5. Strengthen import preview/reconciliation UX for Annual Medicare Wellness
-   updates.
+   updates. The initial P4-A/P4-B localhost slice provides a reusable
+   `ReconciliationSummary` model and an owner-facing conflict review panel in
+   Epic preview.
 6. Keep document/workflow repositories in the localhost MVP acceptance path;
    planning-only Epic surfaces are insufficient for MVP completion.
 7. Keep anonymized release tests in the release gate.

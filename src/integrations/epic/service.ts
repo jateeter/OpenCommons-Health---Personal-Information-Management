@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { EpicRuntimeConfig } from '../../runtimeConfig';
 import type { DomainRepository } from '../../httpApp';
 import { ValidationError } from '../../errors';
+import { summarizeReconciliation } from '../../reconciliation';
 import { nowIso } from '../../utils/rdfUtils';
 import { decryptJson, encryptJson } from './crypto';
 import { mapEpicResourcesToPim } from './mapper';
@@ -265,12 +266,14 @@ export class EpicIntegrationService {
       authorizationGrantId: record.connectedAt,
       importedAt: generatedAt,
     });
+    const changes = await this.reconcile(mapped);
     return {
       importJobId,
       source: this.config.mode === 'mock' ? 'mock' : 'epic',
       generatedAt,
       patientId: record.patientId as string,
-      changes: await this.reconcile(mapped),
+      changes,
+      reconciliationSummary: summarizeReconciliation(changes),
     };
   }
 

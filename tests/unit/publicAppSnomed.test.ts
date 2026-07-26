@@ -75,10 +75,17 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain('owner-reviewed section');
     expect(appSource).toContain('formatEpicActionCounts');
     expect(appSource).toContain('epic-action-${change.action}');
+    expect(appSource).toContain('function renderReconciliationReview');
+    expect(appSource).toContain('Owner reconciliation review');
+    expect(appSource).toContain('Conflict candidates are skipped');
+    expect(appSource).toContain('function summarizePreviewReconciliation');
     expect(styleSource).toContain('.epic-review-checklist');
     expect(styleSource).toContain('.epic-selection-summary');
     expect(styleSource).toContain('.epic-action-update');
     expect(styleSource).toContain('.epic-action-conflict');
+    expect(styleSource).toContain('.reconciliation-review');
+    expect(styleSource).toContain('.reconciliation-chip');
+    expect(styleSource).toContain('.reconciliation-conflicts');
   });
 
   it('gives pod management first-class owner-facing observability', () => {

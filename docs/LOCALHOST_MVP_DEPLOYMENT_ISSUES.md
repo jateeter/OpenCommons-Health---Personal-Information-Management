@@ -273,6 +273,49 @@ inside the Solid Pod remains a future hardening task.
   `/api/pod/activity` or if activity output exposes smoke-test PHI/secret-like
   strings.
 
+### Issue LHMVP-14: Create a first-class reconciliation summary model
+
+**Problem:** Epic preview reconciliation existed as per-candidate metadata, but
+there was no reusable summary model for owner review, API documentation, tests,
+or future non-Epic pod-mirror flows.
+
+**Status:** Initial P4-A slice implemented by `src/reconciliation.ts` and the
+`reconciliationSummary` field on Epic import previews.
+
+**Scope:** localhost preview/review only. The model summarizes create, update,
+unchanged, and conflict states; it does not automatically resolve conflicts.
+
+**Acceptance criteria:**
+
+- Reconciliation summaries report total candidates, safe-to-apply candidates,
+  blocked conflict candidates, unchanged candidates, action counts, status
+  counts, per-domain counts, and owner advisories.
+- Epic preview responses include `reconciliationSummary`.
+- OpenAPI documents `ReconciliationSummary`.
+- Unit tests cover update, conflict, unchanged, and empty review states.
+
+### Issue LHMVP-15: Add first-class owner conflict review UX
+
+**Problem:** Reconciliation details were visible only inline inside individual
+Epic preview rows. The owner needed a lower-friction summary before choosing
+sections to apply.
+
+**Status:** Initial P4-B slice implemented in the browser Epic preview panel.
+
+**Scope:** localhost Epic preview UI. Conflict candidates remain skipped during
+apply until the owner resolves them manually.
+
+**Acceptance criteria:**
+
+- Epic preview renders an `Owner reconciliation review` panel before section
+  selection.
+- The panel shows safe-to-apply, update, conflict, and unchanged counts.
+- Advisories explain update review, conflict resolution, and unchanged skip
+  behavior.
+- Conflict candidates are listed separately with domain, display name, and
+  reconciliation detail.
+- Static UI tests assert the review panel and conflict styling are present.
+
 ## Future hosted/public deployment notes
 
 These are not part of the current localhost MVP, but they are required before a

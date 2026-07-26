@@ -443,7 +443,7 @@ export const OPENAPI_DOCUMENT = {
           }),
         },
       }),
-      EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'patientId', 'changes'], {
+      EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'patientId', 'changes', 'reconciliationSummary'], {
         importJobId: string('Import job id'),
         source: enumSchema(['mock', 'epic']),
         generatedAt: dateTime(),
@@ -463,6 +463,35 @@ export const OPENAPI_DOCUMENT = {
             }),
           }),
         },
+        reconciliationSummary: { $ref: '#/components/schemas/ReconciliationSummary' },
+      }),
+      ReconciliationDomainSummary: objectSchema(['domain', 'total', 'create', 'update', 'unchanged', 'conflict', 'reviewRequired'], {
+        domain: { type: 'string', enum: DOMAIN_NAMES },
+        total: { type: 'integer', minimum: 0 },
+        create: { type: 'integer', minimum: 0 },
+        update: { type: 'integer', minimum: 0 },
+        unchanged: { type: 'integer', minimum: 0 },
+        conflict: { type: 'integer', minimum: 0 },
+        reviewRequired: { type: 'boolean' },
+      }),
+      ReconciliationSummary: objectSchema(['total', 'safeToApply', 'blocked', 'unchanged', 'reviewRequired', 'byAction', 'byStatus', 'byDomain', 'advisories'], {
+        total: { type: 'integer', minimum: 0 },
+        safeToApply: { type: 'integer', minimum: 0 },
+        blocked: { type: 'integer', minimum: 0 },
+        unchanged: { type: 'integer', minimum: 0 },
+        reviewRequired: { type: 'boolean' },
+        byAction: objectSchema(['create', 'update', 'unchanged', 'conflict'], {
+          create: { type: 'integer', minimum: 0 },
+          update: { type: 'integer', minimum: 0 },
+          unchanged: { type: 'integer', minimum: 0 },
+          conflict: { type: 'integer', minimum: 0 },
+        }),
+        byStatus: {
+          type: 'object',
+          additionalProperties: { type: 'integer', minimum: 0 },
+        },
+        byDomain: { type: 'array', items: { $ref: '#/components/schemas/ReconciliationDomainSummary' } },
+        advisories: { type: 'array', items: string('Owner review advisory') },
       }),
       EpicImportProvenance: objectSchema(['sourceSystem', 'sourceFhirBaseUrl', 'sourcePatientId', 'sourceResourceType', 'sourceResourceId', 'mapperVersion'], {
         sourceSystem: { type: 'string', const: 'epic' },
