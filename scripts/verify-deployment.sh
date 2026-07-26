@@ -224,6 +224,47 @@ check_epic_planning_surfaces() {
   echo "  OK – Epic document/workflow planning surfaces are read-only and privacy-safe"
 }
 
+check_pod_activity_observability() {
+  echo "Checking owner-visible Pod activity observability..."
+  activity=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/pod/activity?limit=20") || {
+    echo "ERROR: could not reach ${PIM_URL}/api/pod/activity"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"podAccess":true' || {
+    echo "ERROR: Pod activity did not report podAccess=true: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"domainCount":11' || {
+    echo "ERROR: Pod activity did not report all 11 domains: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"id":"audit"' || {
+    echo "ERROR: Pod activity did not include the audit container status: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"id":"healthkit-observations"' || {
+    echo "ERROR: Pod activity did not include the planned HealthKit observations container: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"record-created"' || {
+    echo "ERROR: Pod activity did not include record-created events from deployment smoke: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"anonymized-release-denied"' || {
+    echo "ERROR: Pod activity did not include the denied anonymized release event: ${activity}"
+    exit 1
+  }
+  echo "${activity}" | grep -q '"anonymized-release-approved"' || {
+    echo "ERROR: Pod activity did not include the approved anonymized release event: ${activity}"
+    exit 1
+  }
+  if echo "${activity}" | grep -Eiq 'Direct PHI note|Named Smoke Provider|clientSecret|password|authorization|dpop'; then
+    echo "ERROR: Pod activity exposed PHI or secret-like material: ${activity}"
+    exit 1
+  fi
+  echo "  OK – Pod activity proves authenticated access, domain visibility, and safe metadata"
+}
+
 # ── 1. Wait for CSS ───────────────────────────────────────────────────────────
 wait_for "Community Solid Server" "${CSS_URL}/"
 
@@ -258,6 +299,10 @@ for planned_path in /api/planned/epic /api/planned/epic/documents /api/planned/e
     exit 1
   }
 done
+echo "${openapi}" | grep -q '"/api/pod/activity"' || {
+  echo "ERROR: OpenAPI contract is missing /api/pod/activity."
+  exit 1
+}
 echo "  OK – OpenAPI contract covers all domain API paths"
 echo "Checking local API documentation at ${PIM_URL}/api/docs..."
 api_docs=$(curl -fsS --max-time "${PROBE_TIMEOUT}" "${PIM_URL}/api/docs") || { echo "ERROR: could not reach ${PIM_URL}/api/docs"; exit 1; }
@@ -316,6 +361,7 @@ check_domain_crud \
 
 check_anonymized_release_controls
 check_epic_planning_surfaces
+check_pod_activity_observability
 
 if [ "${EPIC_ENABLED:-false}" = "true" ]; then
   check_epic_mock_flow

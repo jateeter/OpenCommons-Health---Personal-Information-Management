@@ -70,6 +70,7 @@ export * from './errors';
 export * from './privacy';
 export * from './standards/fhir';
 export * from './integrations/epic';
+export * from './podActivity';
 
 /** Options passed to {@link HealthPIM.create}. */
 export interface HealthPIMOptions {

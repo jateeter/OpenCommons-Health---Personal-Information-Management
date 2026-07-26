@@ -60,6 +60,7 @@ requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Native iPad, iPhone,
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '11 owner-controlled domain APIs');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/resources/documents');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/resources/workflow-tasks');
+requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, '/api/pod/activity');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Container-local');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'Host-local');
 requireText('docs/LOCALHOST_MVP_SCOPE.md', localhostScope, 'APP_PORT');
@@ -96,6 +97,9 @@ requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue 
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '.github/workflows/ci.yml');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-12');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Retry authenticated readiness');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Issue LHMVP-13');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, '/api/pod/activity');
+requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'metadata activity trail');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Future hosted/public deployment notes');
 requireText('docs/LOCALHOST_MVP_DEPLOYMENT_ISSUES.md', deploymentIssues, 'Native iPad/iPhone work remains on hold.');
 
@@ -119,6 +123,7 @@ requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run epic:d
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'npm run local:preflight');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/integrations/epic/diagnostics');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/planned/epic/documents');
+requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/pod/activity');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/resources/documents');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, '/api/resources/workflow-tasks');
 requireText('docs/OPERATIONAL_STACK_DEPLOYMENT.md', operational, 'piiRelease: false');
@@ -130,6 +135,10 @@ requireText('docs/EPIC_INTEGRATION_ROADMAP.md', epicRoadmap, 'Native iPad/mobile
 
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/planned/epic/documents');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/planned/epic/workflow');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, '/api/pod/activity');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, 'check_pod_activity_observability');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, '"domainCount":11');
+requireText('scripts/verify-deployment.sh', deploymentVerifier, '"id":"audit"');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'documents workflow-tasks');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, 'Annual Medicare Wellness Visit Summary');
 requireText('scripts/verify-deployment.sh', deploymentVerifier, '"writeEnabled":false');
@@ -143,6 +152,8 @@ requireText('scripts/verify-deployment.sh', deploymentVerifier, 'Full response')
 
 requireText('public/app.js', publicApp, "documents: {");
 requireText('public/app.js', publicApp, "'workflow-tasks': {");
+requireText('public/app.js', publicApp, "fetch('/api/pod/activity?limit=8')");
+requireText('public/app.js', publicApp, 'function renderPodActivity');
 requireText('public/app.js', publicApp, 'LOINC document type search');
 requireText('public/app.js', publicApp, 'SNOMED CT workflow task search');
 requireText('public/app.js', publicApp, 'Owner-held clinical document metadata');

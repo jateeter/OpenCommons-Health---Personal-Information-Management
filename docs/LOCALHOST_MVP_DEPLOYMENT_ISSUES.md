@@ -242,6 +242,37 @@ is unchanged.
   can distinguish authentication, authorization, parsing, and service startup
   problems.
 
+### Issue LHMVP-13: Add owner-visible Pod activity and container observability
+
+**Problem:** The Pod Management panel showed configured Pod access and visible
+domains, but it did not give the owner a safe operational view of recent local
+Pod actions or the intended Pod storage surfaces for HealthKit, documents,
+workflow, consent, and audit data.
+
+**Status:** Implemented by `/api/pod/activity`, the browser Pod Management
+observability panel, and live deployment smoke validation.
+
+**Scope:** localhost MVP only. The current implementation records a safe
+metadata activity trail in the running PIM process. Durable audit persistence
+inside the Solid Pod remains a future hardening task.
+
+**Acceptance criteria:**
+
+- `/api/pod/activity` requires authenticated owner Pod access.
+- The response reports `podAccess: true`, all 11 managed domains, per-domain
+  counts where available, and container status for HealthKit observations,
+  clinical documents, workflow tasks, owner consents, and audit.
+- Recent events include safe metadata for owner actions such as record create,
+  update, delete, anonymized release denial/approval, and Epic mock workflow
+  actions.
+- Event summaries and paths redact secret-like material and do not include raw
+  PHI or full Pod URLs.
+- The browser Pod Management panel renders containers and recent owner activity
+  without exposing credentials or identifiable release data.
+- `scripts/verify-deployment.sh` fails if the running local stack cannot serve
+  `/api/pod/activity` or if activity output exposes smoke-test PHI/secret-like
+  strings.
+
 ## Future hosted/public deployment notes
 
 These are not part of the current localhost MVP, but they are required before a
