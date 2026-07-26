@@ -226,6 +226,64 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
   color: var(--teal-dark) !important;
   font-weight: 750;
 }
+.reconciliation-review {
+  display: grid;
+  gap: 10px;
+  padding: 13px 14px;
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.reconciliation-review.has-conflicts {
+  border-color: #efb5a5;
+  background: #fff7f4;
+}
+.reconciliation-review h3, .reconciliation-review p {
+  margin: 0;
+}
+.reconciliation-review p {
+  color: var(--muted);
+}
+.reconciliation-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.reconciliation-chip {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--teal-dark);
+  background: var(--mint);
+  font-size: 12px;
+  font-weight: 800;
+}
+.reconciliation-advisories {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+.reconciliation-conflicts {
+  display: grid;
+  gap: 8px;
+}
+.reconciliation-conflicts article {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 1px solid #efb5a5;
+  border-radius: 11px;
+  background: #fff;
+}
+.reconciliation-conflicts strong {
+  color: #923e2b;
+}
+.reconciliation-conflicts span {
+  color: var(--ink);
+}
+.reconciliation-conflicts small {
+  color: var(--muted);
+}
 .epic-domain-section {
   padding-top: 10px;
   border-top: 1px solid #edf0eb;

@@ -131,6 +131,11 @@ Implemented MVP API endpoints:
 | `GET /api/integrations/epic/audit` | Read pod-owned Epic integration audit events. |
 | `GET /api/pod/activity` | Read owner-visible Pod activity, domain counts, and storage-surface status without PHI or secrets. |
 
+Epic preview responses include `reconciliationSummary` so the browser and API
+clients can present create, update, unchanged, and conflict counts before the
+owner chooses which sections to apply. Conflict candidates are visible for
+review and are skipped during apply until manually resolved.
+
 ## Deployment gates
 
 Every Epic-enabled deployment should pass these gates:
@@ -159,6 +164,8 @@ Every Epic-enabled deployment should pass these gates:
    anonymized-release probes.
 9. Epic enabled mode verifies:
    - mock mode can connect, preview, and apply synthetic Medicare Wellness data;
+   - preview responses include `reconciliationSummary`;
+   - the browser shows the owner reconciliation review panel before apply;
    - diagnostics report localhost MVP readiness without exposing secrets;
    - sandbox/production SMART discovery document is reachable;
    - authorization and token endpoints are configured;

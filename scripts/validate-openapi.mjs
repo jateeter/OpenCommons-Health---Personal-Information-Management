@@ -52,7 +52,7 @@ for (const plannedPath of ['/api/planned/epic', '/api/planned/epic/documents', '
   if (!operation.operationId) throw new Error(`Missing operationId for GET ${plannedPath}`);
 }
 
-for (const schema of ['AnonymizedRelease', 'FhirCapabilityStatement', 'PlannedEpicSurface', 'PlannedEpicResourceMapping', 'PodActivityResponse']) {
+for (const schema of ['AnonymizedRelease', 'FhirCapabilityStatement', 'PlannedEpicSurface', 'PlannedEpicResourceMapping', 'PodActivityResponse', 'ReconciliationSummary']) {
   if (!OPENAPI_DOCUMENT.components?.schemas?.[schema]) {
     throw new Error(`Missing component schema ${schema}`);
   }

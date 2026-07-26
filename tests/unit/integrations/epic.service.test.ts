@@ -75,6 +75,18 @@ describe('Epic MVP integration service', () => {
       'workflow-tasks',
     ]));
     expect(preview.changes.every((change) => change.provenance.sourceSystem === 'epic')).toBe(true);
+    expect(preview.reconciliationSummary).toMatchObject({
+      total: preview.changes.length,
+      safeToApply: preview.changes.length,
+      blocked: 0,
+      reviewRequired: false,
+      byAction: {
+        create: preview.changes.length,
+        update: 0,
+        unchanged: 0,
+        conflict: 0,
+      },
+    });
   });
 
   it('reports localhost MVP diagnostics in mock mode without live network checks', async () => {
@@ -160,6 +172,13 @@ describe('Epic MVP integration service', () => {
         status: 'changed',
       },
     });
+    expect(preview.reconciliationSummary).toMatchObject({
+      safeToApply: preview.changes.length,
+      blocked: 0,
+      reviewRequired: true,
+      byAction: expect.objectContaining({ update: 1 }),
+      byStatus: expect.objectContaining({ changed: 1 }),
+    });
 
     const result = await service.apply({ domains: ['conditions'] });
 
@@ -201,6 +220,12 @@ describe('Epic MVP integration service', () => {
       reconciliation: {
         status: 'ambiguous',
       },
+    });
+    expect(preview.reconciliationSummary).toMatchObject({
+      blocked: 1,
+      reviewRequired: true,
+      byAction: expect.objectContaining({ conflict: 1 }),
+      byStatus: expect.objectContaining({ ambiguous: 1 }),
     });
 
     const result = await service.apply({ domains: ['conditions'] });

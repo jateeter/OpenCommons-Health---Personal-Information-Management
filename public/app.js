@@ -679,6 +679,7 @@ function renderEpicPreview(applyResult = null) {
   const grouped = groupEpicChangesByDomain(epicPreview.changes);
   summary.textContent = `${epicPreview.changes.length} mapped FHIR resources are ready for owner review before pod write. ${formatEpicActionCounts(epicPreview.changes)} Review each section and choose what to apply.`;
   list.append(summary);
+  list.append(renderReconciliationReview(epicPreview));
 
   const checklist = document.createElement('div');
   checklist.className = 'epic-review-checklist';
@@ -737,6 +738,92 @@ function groupEpicChangesByDomain(changes) {
     grouped.set(change.domain, [...(grouped.get(change.domain) || []), change]);
   }
   return [...grouped.entries()].sort(([a], [b]) => (domains[a]?.plural || a).localeCompare(domains[b]?.plural || b));
+}
+
+function renderReconciliationReview(preview) {
+  const summary = preview.reconciliationSummary || summarizePreviewReconciliation(preview.changes);
+  const panel = document.createElement('section');
+  panel.className = `reconciliation-review ${summary.blocked > 0 ? 'has-conflicts' : ''}`;
+  const heading = document.createElement('h3');
+  heading.textContent = 'Owner reconciliation review';
+  const guidance = document.createElement('p');
+  guidance.textContent = summary.reviewRequired
+    ? 'Review updates and conflicts before applying. Conflict candidates are skipped until the owner resolves them manually.'
+    : 'No update conflicts are currently detected; create candidates can be applied by selected section.';
+  panel.append(heading, guidance);
+
+  const chips = document.createElement('div');
+  chips.className = 'reconciliation-chips';
+  for (const [label, value] of [
+    ['Safe to apply', summary.safeToApply],
+    ['Updates', summary.byAction.update],
+    ['Conflicts', summary.byAction.conflict],
+    ['Unchanged', summary.unchanged],
+  ]) {
+    const chip = document.createElement('span');
+    chip.className = 'reconciliation-chip';
+    chip.textContent = `${label}: ${value}`;
+    chips.append(chip);
+  }
+  panel.append(chips);
+
+  if (summary.advisories?.length) {
+    const advisories = document.createElement('ul');
+    advisories.className = 'reconciliation-advisories';
+    for (const advisory of summary.advisories) {
+      const item = document.createElement('li');
+      item.textContent = advisory;
+      advisories.append(item);
+    }
+    panel.append(advisories);
+  }
+
+  const conflicts = preview.changes.filter((change) => change.action === 'conflict');
+  if (conflicts.length > 0) {
+    const conflictList = document.createElement('div');
+    conflictList.className = 'reconciliation-conflicts';
+    for (const change of conflicts) {
+      const item = document.createElement('article');
+      const label = domains[change.domain]?.plural || change.domain;
+      item.innerHTML = `<strong>${label}</strong><span></span><small></small>`;
+      item.querySelector('span').textContent = change.display;
+      item.querySelector('small').textContent = change.reconciliation?.detail || 'Manual owner review is required.';
+      conflictList.append(item);
+    }
+    panel.append(conflictList);
+  }
+
+  return panel;
+}
+
+function summarizePreviewReconciliation(changes) {
+  const byAction = { create: 0, update: 0, unchanged: 0, conflict: 0 };
+  const byStatus = {};
+  const byDomain = new Map();
+  for (const change of changes) {
+    byAction[change.action] += 1;
+    if (change.reconciliation?.status) byStatus[change.reconciliation.status] = (byStatus[change.reconciliation.status] || 0) + 1;
+    const domain = byDomain.get(change.domain) || { domain: change.domain, total: 0, create: 0, update: 0, unchanged: 0, conflict: 0, reviewRequired: false };
+    domain.total += 1;
+    domain[change.action] += 1;
+    domain.reviewRequired = domain.reviewRequired || change.action === 'update' || change.action === 'conflict';
+    byDomain.set(change.domain, domain);
+  }
+  const summary = {
+    total: changes.length,
+    safeToApply: byAction.create + byAction.update,
+    blocked: byAction.conflict,
+    unchanged: byAction.unchanged,
+    reviewRequired: byAction.update > 0 || byAction.conflict > 0,
+    byAction,
+    byStatus,
+    byDomain: [...byDomain.values()],
+    advisories: [],
+  };
+  if (byAction.conflict > 0) summary.advisories.push('Resolve conflict candidates manually before applying those records to the owner Pod.');
+  if (byAction.update > 0) summary.advisories.push('Review update candidates because matching local Pod records will be changed.');
+  if (byAction.unchanged > 0) summary.advisories.push('Unchanged candidates are visible for provenance review and are skipped during apply.');
+  return summary;
 }
 
 function renderEpicSelectionSummary() {
