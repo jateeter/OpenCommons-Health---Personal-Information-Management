@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Data and Information Disclosure Statement for OpenCommons Health PIM.">
+    <meta property="og:image" content="/opencommons-health-thumbnail.png">
+    <meta name="twitter:image" content="/opencommons-health-thumbnail.png">
+    <title>Data Disclosure Statement | OpenCommons Health PIM</title>
+    <link rel="icon" type="image/png" href="/opencommons-health-thumbnail.png">
+    <link rel="apple-touch-icon" href="/opencommons-health-thumbnail.png">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true"><img src="/opencommons-health-thumbnail.png" alt=""></span>
+        <span><strong>OpenCommons</strong><small>Personal health, held by you</small></span>
+      </a>
+      <nav class="masthead-actions" aria-label="Legal documents">
+        <a class="text-link" href="/terms.html">Terms</a>
+        <a class="text-link" href="/">Return to app</a>
+      </nav>
+    </header>
+
+    <main class="legal-document">
+      <p class="eyebrow">OpenCommons Health PIM</p>
+      <h1>Data and Information Disclosure Statement</h1>
+      <p class="legal-effective">Effective date: July 28, 2026</p>
+
+      <section class="notice">
+        <strong>Plain-language summary.</strong>
+        <span>
+          OpenCommons Health PIM is designed to keep identifiable personal
+          health information under the authenticated individual’s control. The
+          Application stores selected records in the owner’s local Solid Pod or
+          owner-controlled application environment. It does not sell personal
+          health information, does not intentionally disclose identifiable
+          health information to non-owner recipients, and does not collect
+          Epic/MyChart usernames or passwords.
+        </span>
+      </section>
+
+      <section>
+        <h2>1. Purpose of this disclosure</h2>
+        <p>
+          This Data and Information Disclosure Statement explains what
+          categories of information OpenCommons Health PIM may process, where
+          that information is stored, when information may move between systems,
+          what information is not disclosed by design, and what choices the
+          authenticated owner has before information is imported, stored,
+          exported, or released. This document is intended for sandbox
+          registration, local deployment, container deployment, and future
+          iPhone/mobile review workflows.
+        </p>
+        <p>
+          This statement is not a substitute for legal advice, a HIPAA Notice
+          of Privacy Practices, or a production privacy policy. Legal status and
+          regulatory obligations may vary depending on who deploys the
+          Application, whether a covered entity or business associate is
+          involved, the user’s jurisdiction, and the operational environment.
+          Production or customer activation should be reviewed by qualified
+          legal and privacy counsel.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Information the Application may process</h2>
+        <p>
+          With owner configuration and authorization, the Application may
+          process personal health information and related metadata, including:
+          profile and demographic information, conditions, medications,
+          allergies, immunizations, vital signs, providers, lab results,
+          insurance policies, clinical document metadata, workflow task
+          metadata, import provenance, terminology codes, Solid Pod connection
+          status, Epic SMART/FHIR authorization status, owner-visible audit
+          events, and local deployment diagnostics.
+        </p>
+        <p>
+          The Application may also process non-health technical information
+          needed to operate locally, such as localhost URLs, configured port
+          numbers, Solid Pod base URLs, Epic FHIR endpoint hosts, registered
+          redirect URI hosts and paths, feature flags, and diagnostic status
+          labels. Diagnostic outputs are designed to avoid secrets, tokens,
+          authorization codes, raw FHIR payloads, patient identifiers, and raw
+          personal health information.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Information source categories</h2>
+        <p>
+          Information may come from the authenticated owner through manual
+          entry, from the owner’s local Solid Pod, from deterministic sandbox or
+          mock data used during development, from owner-approved Epic SMART on
+          FHIR read access, from future owner-approved HealthKit/iPhone local
+          resources, or from local administrative configuration supplied by the
+          owner/operator.
+        </p>
+      </section>
+
+      <section>
+        <h2>4. Epic/MyChart and SMART on FHIR authorization</h2>
+        <p>
+          When Epic integration is enabled, the Application uses SMART on FHIR
+          authorization to request access to selected patient-facing FHIR
+          resources. The owner authenticates with Epic/MyChart or the applicable
+          health-system authorization page, not inside OpenCommons Health PIM.
+          The Application must not ask for, log, store, or transmit Epic/MyChart
+          usernames or passwords.
+        </p>
+        <p>
+          The initial Epic workflow is read-only and owner-mediated. The owner
+          can review requested scopes, run local and live readiness diagnostics,
+          connect through the SMART flow, preview available records, review
+          reconciliation status, and choose whether selected records should be
+          written to the owner’s Solid Pod. Outbound Epic writeback, provider
+          messaging, and task updates are disabled unless a future deployment
+          receives separate health-system approval, scope approval, audit
+          design, and validation.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Where information is stored</h2>
+        <p>
+          Identifiable personal health information is intended to remain in the
+          owner-controlled Solid Pod or owner-controlled local application
+          environment. Epic authorization grant material, if stored, is designed
+          to be encrypted before being written to owner-controlled storage.
+          Localhost and container deployments may store data on the owner’s
+          device or local network. Future mobile deployments may use
+          owner-controlled device storage and platform security controls.
+        </p>
+      </section>
+
+      <section>
+        <h2>6. Information disclosed by design</h2>
+        <p>
+          The Application is not designed to disclose identifiable personal
+          health information to non-owner recipients. Information may move
+          between the owner-authorized external data source, the Application,
+          and the owner’s Solid Pod when the owner initiates or approves a
+          workflow. Anonymized or de-identified release workflows require owner
+          approval and are intended to remove direct identifiers before data is
+          returned through release APIs.
+        </p>
+        <p>
+          Safe operational diagnostics may disclose non-secret configuration
+          status, such as whether a feature is enabled, whether a URL host is
+          configured, whether a client id is present, whether a redirect path is
+          configured, whether scope names are requested, and whether capability
+          checks succeeded. These diagnostics are intended for troubleshooting
+          and registration readiness without exposing personal health
+          information or credentials.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Information not disclosed by design</h2>
+        <p>
+          The Application is designed not to disclose or intentionally expose:
+          Epic/MyChart passwords, Solid passwords, client secrets, encryption
+          keys, access tokens, refresh tokens, authorization codes, raw OAuth
+          grant material, raw personal health records, raw FHIR payloads,
+          patient identifiers, raw clinical documents, source document URLs,
+          device secrets, or personal health information through anonymized
+          release APIs or diagnostics.
+        </p>
+      </section>
+
+      <section>
+        <h2>8. Owner choices and controls</h2>
+        <p>
+          The owner controls whether to enable Epic integration, whether to use
+          mock, sandbox, or production configuration, whether to start SMART
+          authorization, whether to preview imports, which sections to apply,
+          whether to disconnect, and whether to approve anonymized release. The
+          owner is responsible for protecting local device access, Solid Pod
+          credentials, local environment files, browser sessions, screenshots,
+          logs, backups, and any copied exports.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Anonymized release and research-style outputs</h2>
+        <p>
+          The Application includes owner-approved anonymized release workflows
+          for selected local records. These workflows are intended to transform
+          identifiable records before they are released. They should not be used
+          as a guarantee that every dataset is impossible to re-identify,
+          especially when small populations, rare conditions, detailed dates,
+          linked documents, or external datasets could enable re-identification.
+          Use of anonymized outputs must be limited to the owner-approved
+          purpose and should be reviewed before any production or external
+          sharing workflow.
+        </p>
+      </section>
+
+      <section>
+        <h2>10. Logs, diagnostics, screenshots, and support requests</h2>
+        <p>
+          Support requests, issue reports, screenshots, terminal output, browser
+          logs, and diagnostic exports should not include personal health
+          information, passwords, tokens, authorization codes, client secrets,
+          encryption keys, raw FHIR responses, patient identifiers, or raw
+          document URLs. When evidence is needed, use the safe diagnostics
+          export and review all content before sharing.
+        </p>
+      </section>
+
+      <section>
+        <h2>11. Third-party systems</h2>
+        <p>
+          Epic, MyChart, health-system FHIR endpoints, Solid Community Server,
+          Apple/iOS services, terminology providers, browsers, operating
+          systems, container runtimes, and network infrastructure are governed
+          by their own terms, policies, and security controls. OpenCommons
+          Health PIM does not control those third-party systems and cannot
+          guarantee their availability, accuracy, authorization decisions, or
+          disclosure practices.
+        </p>
+      </section>
+
+      <section>
+        <h2>12. Breach, incident, and production review</h2>
+        <p>
+          If the Application is operated beyond personal local development, the
+          operator should establish incident-response, breach-assessment,
+          notification, logging, retention, deletion, support, and audit
+          procedures appropriate to the deployment and applicable law. Health
+          applications and personal health record products may be subject to
+          privacy, security, consumer-protection, breach-notification, health
+          data, platform, or app-store obligations depending on how they are
+          deployed and by whom.
+        </p>
+      </section>
+
+      <section>
+        <h2>13. Changes to this disclosure</h2>
+        <p>
+          This disclosure may be updated as OpenCommons Health PIM evolves. The
+          effective date above identifies the version distributed with this
+          deployment. Material changes to data collection, storage, use,
+          disclosure, release, or third-party integrations should be reflected
+          in an updated disclosure before those changes are used in a production
+          or customer-facing environment.
+        </p>
+      </section>
+
+      <section>
+        <h2>14. Reference guidance</h2>
+        <p>
+          This disclosure is informed by public guidance from the U.S.
+          Department of Health and Human Services and the Federal Trade
+          Commission regarding health information privacy, health apps,
+          individual access APIs, notices of privacy practices, and health
+          breach notification obligations. Operators should review current
+          official guidance and obtain legal review before production use.
+        </p>
+        <ul class="legal-references">
+          <li><a href="https://www.hhs.gov/hipaa/for-individuals/notice-privacy-practices/index.html">HHS: Notice of Privacy Practices</a></li>
+          <li><a href="https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/access-right-health-apps-apis/index.html">HHS: The access right, health apps, and APIs</a></li>
+          <li><a href="https://www.hhs.gov/hipaa/for-professionals/special-topics/health-apps/index.html">HHS: Resources for Mobile Health Apps Developers</a></li>
+          <li><a href="https://www.ftc.gov/business-guidance/resources/complying-ftcs-health-breach-notification-rule-0">FTC: Complying with the Health Breach Notification Rule</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

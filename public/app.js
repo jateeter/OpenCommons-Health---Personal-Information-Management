@@ -247,6 +247,7 @@ let records = [];
 let editing = null;
 let applicationReady = false;
 let epicStatus = { enabled: false, status: 'disabled' };
+let epicDiagnostics = null;
 let epicPreview = null;
 let epicSelectedDomains = new Set();
 const $ = (id) => document.getElementById(id);
@@ -283,6 +284,7 @@ async function checkStatus() {
     await refreshPodActivity(ready);
     await refreshHealthKitStatus(ready);
     renderEpicStatus(status.epic || { enabled: false, status: 'disabled' }, ready);
+    await refreshEpicDiagnostics(ready, false, status.epic || { enabled: false, status: 'disabled' });
     return ready;
   } catch {
     applicationReady = false;
@@ -294,6 +296,7 @@ async function checkStatus() {
     renderPodActivity(null);
     renderHealthKitStatus(null);
     renderEpicStatus({ enabled: false, status: 'disabled' }, false);
+    renderEpicReadiness(null);
     return false;
   }
 }
@@ -427,9 +430,85 @@ function renderEpicStatus(status, ready = applicationReady) {
   $('epic-summary').textContent = enabled
     ? `Mode: ${status.mode}. Status: ${status.status}${status.lastSyncAt ? `. Last sync: ${formatDate(status.lastSyncAt)}` : ''}.`
     : 'Epic integration is disabled for this local deployment. Set EPIC_ENABLED=true and use EPIC_MODE=mock for local MVP review.';
+  $('epic-diagnostics').disabled = !ready || !enabled || status.mode === 'mock';
+  $('epic-diagnostics').title = status.mode === 'mock'
+    ? 'Mock mode does not perform live Epic SMART/FHIR checks.'
+    : 'Run explicit live SMART discovery and FHIR CapabilityStatement checks.';
   $('epic-connect').disabled = !ready || !enabled || connected;
   $('epic-preview').disabled = !ready || !enabled || !connected;
   $('epic-apply').disabled = !ready || !enabled || !connected || !epicPreview || epicSelectedDomains.size === 0;
+}
+
+async function refreshEpicDiagnostics(ready = applicationReady, live = false, status = epicStatus) {
+  if (!ready || !status?.enabled) {
+    epicDiagnostics = null;
+    renderEpicReadiness(null);
+    return;
+  }
+  try {
+    const response = await fetch(`/api/integrations/epic/diagnostics${live ? '?live=true' : ''}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(formatApiError(payload));
+    epicDiagnostics = payload.data;
+    renderEpicReadiness(epicDiagnostics);
+  } catch (error) {
+    renderEpicReadiness({ error: error.message });
+  }
+}
+
+function renderEpicReadiness(diagnostics) {
+  const target = $('epic-readiness');
+  if (!target) return;
+  target.replaceChildren();
+  if (!diagnostics || diagnostics.error) {
+    const empty = document.createElement('p');
+    empty.textContent = diagnostics?.error || 'Epic registration readiness appears after the local connector status is available.';
+    target.append(empty);
+    return;
+  }
+
+  const registration = diagnostics.registration || {};
+  const configured = registration.configured || {};
+  const summary = document.createElement('article');
+  summary.className = `epic-readiness-card epic-readiness-${diagnostics.readiness}`;
+  const title = document.createElement('strong');
+  title.textContent = `Registration readiness: ${diagnostics.readiness}`;
+  const detail = document.createElement('span');
+  detail.textContent = diagnostics.live
+    ? `Live Epic discovery checked. SMART/FHIR readiness: ${registration.liveDiscoveryReadiness}.`
+    : `Local configuration checked. Live Epic discovery: ${registration.liveDiscoveryReadiness}.`;
+  summary.append(title, detail);
+
+  const checklist = document.createElement('dl');
+  checklist.className = 'epic-readiness-grid';
+  for (const [label, value] of [
+    ['Mode', registration.mode || diagnostics.mode],
+    ['FHIR host', configured.fhirBaseUrlHost || (configured.fhirBaseUrl ? 'configured' : 'not configured')],
+    ['Redirect URI', configured.redirectUriPath ? `${configured.redirectUriHost}${configured.redirectUriPath}` : configured.redirectUri ? 'configured' : 'not configured'],
+    ['Client ID', configured.clientId ? 'configured' : 'not configured'],
+    ['Client secret', configured.clientSecret ? 'configured' : 'not configured'],
+    ['Grant encryption', configured.grantEncryptionKey ? 'configured' : 'not configured'],
+    ['Scopes', `${registration.scopeCount || 0} requested`],
+  ]) {
+    const term = document.createElement('dt');
+    term.textContent = label;
+    const description = document.createElement('dd');
+    description.textContent = value;
+    checklist.append(term, description);
+  }
+
+  const support = document.createElement('div');
+  support.className = 'epic-resource-support';
+  const supported = (diagnostics.resourceSupport || []).filter((item) => item.capability === 'supported').length;
+  const notChecked = (diagnostics.resourceSupport || []).filter((item) => item.capability === 'not-checked').length;
+  const missingScopes = (diagnostics.resourceSupport || []).filter((item) => !item.configuredScopePresent).length;
+  support.textContent = diagnostics.live
+    ? `${supported} Epic resource families are listed by live metadata; ${missingScopes} roadmap families still lack configured patient read scopes.`
+    : `${notChecked} Epic resource families await explicit live metadata checking; ${missingScopes} roadmap families lack configured patient read scopes.`;
+
+  const exportNote = document.createElement('small');
+  exportNote.textContent = 'Safe diagnostics export is available from /api/integrations/epic/diagnostics and omits secrets, tokens, authorization codes, patient identifiers, raw PHI, and document URLs.';
+  target.append(summary, checklist, support, exportNote);
 }
 
 async function selectDomain(key) {
@@ -918,6 +997,7 @@ $('add-button').addEventListener('click', () => openForm());
 $('record-form').addEventListener('submit', saveRecord);
 $('search').addEventListener('input', renderRecords);
 $('epic-connect').addEventListener('click', connectEpic);
+$('epic-diagnostics').addEventListener('click', () => refreshEpicDiagnostics(applicationReady, true, epicStatus));
 $('epic-preview').addEventListener('click', previewEpicImport);
 $('epic-apply').addEventListener('click', applyEpicImport);
 initializeNavigation();

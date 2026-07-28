@@ -553,7 +553,7 @@ function allowedEpicMethods(pathname: string): string {
 
 function servePublicAsset(requestPath: string, publicDirectory: string, res: ServerResponse): void {
   const asset = requestPath === '/' ? 'index.html' : requestPath.slice(1);
-  const allowed = new Set(['index.html', 'app.js', 'styles.css', 'api-docs.html']);
+  const allowed = new Set(['index.html', 'app.js', 'styles.css', 'api-docs.html', 'terms.html', 'data-disclosure.html', 'opencommons-health-thumbnail.png']);
   if (!allowed.has(asset)) return sendJson(res, 404, { error: 'Not found' });
   const filePath = path.join(publicDirectory, asset);
   if (!existsSync(filePath)) return sendJson(res, 404, { error: 'UI asset not found' });

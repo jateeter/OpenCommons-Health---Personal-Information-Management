@@ -325,3 +325,249 @@ explicitly opened.
 See [`LOCALHOST_MVP_DEPLOYMENT_ISSUES.md`](./LOCALHOST_MVP_DEPLOYMENT_ISSUES.md)
 for issue-style notes that track localhost deployment hardening and future
 hosted/public deployment prerequisites.
+
+## Current implementation review for Epic completion
+
+Status as of the current codebase review:
+
+| Area | Current state | Completion gap |
+|---|---|---|
+| Local deployment contract | Host-local and container-local startup scripts keep Epic optional and configurable. `npm start` runs the HTTP server, Node 22/24 is the supported runtime, ShEx files are copied into `dist`, and local release gates include Epic mock validation. | Continue to treat local deployment as the authoritative MVP target. Do not make Epic, public DNS, iPad packaging, or production customer activation required for the localhost MVP. |
+| Epic configuration | `EPIC_ENABLED`, `EPIC_MODE`, `EPIC_FHIR_BASE_URL`, `EPIC_CLIENT_ID`, `EPIC_CLIENT_SECRET_FILE`, `EPIC_REDIRECT_URI`, `EPIC_SCOPES`, `EPIC_GRANT_ENCRYPTION_KEY`, and `EPIC_SYNC_ON_STARTUP` are modeled in runtime configuration. | Add a guided operator checklist that verifies actual registration values against the target Epic sandbox/customer environment before live personal-data use. |
+| SMART authorization | SMART discovery, authorization-code-with-PKCE URL generation, callback state validation, token exchange, refresh handling, and sanitized public status are implemented. Pending PKCE verifier and grant material are encrypted before pod storage. | Validate the complete browser redirect flow against a real Epic sandbox or approved personal provider endpoint and capture failure-specific UX for denied consent, bad state, expired code, missing patient context, missing scopes, and refresh failure. |
+| FHIR reads | Live patient-scoped reads currently fetch `Patient`, `Condition`, `MedicationRequest`, `MedicationStatement`, `AllergyIntolerance`, `Immunization`, `Observation`, `DiagnosticReport`, `Coverage`, and `DocumentReference`. 403/404 search responses are skipped without failing the full import. | Add capability-aware fetch planning, bounded date-window parameters, `_since`/pagination evidence where supported, and explicit user-facing summaries when resources are unsupported or withheld by scope/site policy. |
+| PIM domain mapping | The mapper converts Epic resources into the 11 MVP domains: profiles, conditions, medications, allergies, immunizations, vital signs, providers, lab results, insurance policies, documents, and workflow tasks. `Task` mapping exists when Task resources are supplied by tests/mock data. | Extend the live fetcher and mapper for Annual Wellness workflow resources not yet read from Epic: `CarePlan`, `Goal`, `ServiceRequest`, `Task`, `Communication`, `Questionnaire`, `QuestionnaireResponse`, `Practitioner`, `Organization`, and `Binary` payload metadata/content handling. |
+| Preview and reconciliation | Preview produces `EpicImportCandidate[]` plus `ReconciliationSummary`; apply skips unchanged/conflict candidates and writes selected domains through the existing validated Solid-backed repositories. | Add persistent per-resource sync cursors, richer provenance/version comparison, manual conflict resolution UX, and an apply token so the owner applies the reviewed preview snapshot rather than a newly generated preview. |
+| Documents and workflow | Document and workflow repositories exist as first-class local PIM domains. Epic planning surfaces remain read-only and explicitly report writeback disabled. | Move from planning surfaces to live read-only Epic document/workflow imports, including DocumentReference attachment availability, Binary access status, message/task status normalization, and no-write affordances. |
+| Privacy and audit | Epic grant material is not returned in public status; audit records cover connect, callback, refresh, apply, startup, and disconnect. Anonymized release controls exist outside the Epic connector. | Add owner-visible Epic consent/authorization history, explicit “delete imported Epic data” support, exportable non-PHI diagnostics bundles, and tests proving Epic source URLs, tokens, patient ids, and document URLs are not released through anonymized APIs. |
+| End-to-end automation | Mock Epic connect, preview, apply, audit, planning surfaces, and reconciliation are included in deployment smoke/release validation. | Add a live-safe Playwright/operator script for sandbox manual authorization evidence that never records credentials or PHI, plus CI-safe mock coverage for each newly supported FHIR resource family. |
+
+## Epic completion roadmap: localhost MVP first
+
+The next implementation cycle should be managed as phases P7 through P12. Each
+phase keeps the localhost notebook/Solid pod deployment as the happy path and
+ends with a commit, pull request, merge, and release-gate validation checkpoint
+when the user explicitly asks for the git publication workflow.
+
+### P7: Epic registration readiness and diagnostics hardening
+
+Goal: make the application tell the operator whether supplied Epic app
+registration values are usable before any patient PHI is requested.
+
+Development tasks:
+
+1. Add a checklist-oriented Epic configuration page or panel section showing:
+   configured mode, FHIR base URL host, registered redirect URI, client id
+   presence, requested scope set, and live discovery readiness.
+2. Extend `/api/integrations/epic/diagnostics?live=true` to include FHIR
+   `CapabilityStatement` reachability in addition to SMART discovery.
+3. Compare configured resource families against available capability/search
+   support where the target Epic endpoint publishes enough metadata.
+4. Add sanitized diagnostics export for issue reporting. It must include no
+   access tokens, refresh tokens, authorization codes, patient identifiers,
+   document URLs, or raw PHI.
+
+Validation gate:
+
+```bash
+npm run validate:localhost-mvp
+npm test -- --runTestsByPath tests/unit/integrations/epic.service.test.ts
+APP_URL=http://localhost:<app-port> npm run epic:diagnostics
+EPIC_DIAGNOSTICS_LIVE=true APP_URL=http://localhost:<app-port> npm run epic:diagnostics
+```
+
+The live diagnostics command is allowed to return `attention` while registration
+is incomplete; it must fail only for malformed local configuration or unexpected
+runtime errors.
+
+Implementation checkpoint:
+
+- Initial P7 slice adds sanitized `registration`, `resourceSupport`, and
+  `safeExport` fields to `/api/integrations/epic/diagnostics`.
+- Explicit `?live=true` diagnostics now check both SMART discovery and the Epic
+  FHIR `CapabilityStatement` endpoint.
+- The browser Epic panel includes a registration-readiness checklist and an
+  explicit **Check live readiness** action for sandbox/production modes.
+- The safe diagnostics export reports configured booleans, hosts, paths, scope
+  names, resource-family readiness, and check statuses without returning client
+  secrets, grant encryption keys, tokens, authorization codes, patient ids, raw
+  FHIR resources, PHI, or document URLs.
+
+### P8: SMART callback and grant lifecycle live proof
+
+Goal: complete a real Epic sandbox or approved provider SMART authorization
+flow from localhost without collecting Epic/MyChart credentials in
+OpenCommons, Codex, source control, or logs.
+
+Development tasks:
+
+1. Add browser-visible callback outcomes for success, denied consent, expired
+   code, state mismatch, missing patient context, missing scope, and token
+   exchange failure.
+2. Add token refresh test coverage and a reconnect path when no refresh token is
+   granted.
+3. Persist a human-readable authorization summary in the pod:
+   mode, issuer, connected time, granted scope names, last refresh time, and
+   disconnect/delete actions.
+4. Add a safe manual test runbook for the real Epic login page that records
+   only timestamps, endpoint hostnames, status labels, and screenshots with no
+   PHI.
+
+Validation gate:
+
+```bash
+npm test -- --runTestsByPath tests/unit/integrations/epic.service.test.ts
+npm run test:e2e:playwright
+npm run local:release-gate
+```
+
+Live proof should be stored as a redacted evidence note under `docs/` only
+after the owner has reviewed it for PHI.
+
+### P9: Live patient-mediated import preview
+
+Goal: prove that live Epic patient resources can be retrieved, normalized, and
+previewed without writing to the Solid pod until the owner approves.
+
+Development tasks:
+
+1. Add preview request parameters for use case and date window:
+   `workflow=annual-medicare-wellness`, `from`, `to`, and selected domains.
+2. Fetch live resource families using least-privilege patient scopes and
+   capture unsupported/empty families as preview diagnostics.
+3. Preserve source provenance on every candidate:
+   source FHIR base URL, patient context, resource type/id/version,
+   `meta.lastUpdated`, import job id, mapper version, and authorization grant
+   id.
+4. Keep raw FHIR out of ordinary UI and audit output. Provide only display,
+   coded summary, action, provenance summary, and reconciliation status.
+5. Add CI-safe fixture tests that mirror representative Epic sandbox resources
+   for each supported domain.
+
+Validation gate:
+
+```bash
+npm test
+npm run validate:openapi
+npm run test:e2e:playwright
+```
+
+The phase is complete when live preview can be demonstrated with real
+registration values and mock automation still passes without network access.
+
+### P10: Annual Medicare Wellness workflow completion
+
+Goal: make the Annual Medicare Wellness Evaluation a complete guided workflow
+instead of a generic import list.
+
+Development tasks:
+
+1. Group preview sections by wellness task: demographics, conditions/risk
+   factors, medication reconciliation, allergies, immunizations, vitals/BMI/BP,
+   screening/labs, insurance, visit documents, and follow-up tasks/messages.
+2. Add change summaries that explain why a candidate is new, changed,
+   unchanged, conflicting, unavailable, or unsupported.
+3. Generate an owner-held local wellness summary document after apply, linking
+   back to imported PIM records and Epic `DocumentReference` metadata when
+   available.
+4. Keep owner approval section-by-section. Conflicts require manual resolution
+   and remain skipped by default.
+5. Add post-apply status showing what changed in the 11 domain navigation areas.
+
+Validation gate:
+
+```bash
+npm run test:e2e:playwright
+APP_PORT=<free-port> CSS_PORT=<free-port> npm run local:host-smoke
+```
+
+### P11: Documents, workflow, and messaging read-only Epic streams
+
+Goal: support the document-management and workflow/messaging parts of the Epic
+integration roadmap without enabling outbound Epic writes.
+
+Development tasks:
+
+1. Extend the live fetcher for `Task`, `Communication`, `Questionnaire`,
+   `QuestionnaireResponse`, `ServiceRequest`, `CarePlan`, `Goal`,
+   `Practitioner`, `Organization`, and `Binary` only when scopes and
+   capability metadata indicate that the target site supports them.
+2. Import DocumentReference metadata independently from Binary payload access.
+   Store owner-only Binary payloads only after explicit owner approval and only
+   when content type and size policy are accepted.
+3. Normalize workflow/message status into owner-facing states:
+   imported, needs review, patient completed, sent to provider, closed, and
+   unavailable.
+4. Keep writeback disabled in OpenAPI, UI controls, and runtime configuration
+   until a site-specific outbound policy is approved.
+5. Add PHI/PII redaction tests for document URLs, message bodies, task notes,
+   and Binary metadata in anonymized release paths and diagnostics.
+
+Validation gate:
+
+```bash
+npm test
+npm run validate:openapi
+npm run local:release-gate
+```
+
+### P12: MVP release evidence and pilot handoff
+
+Goal: package a repeatable localhost Epic MVP that can be visually reviewed,
+re-run, and used for the next feature/issue-management cycle.
+
+Development tasks:
+
+1. Produce a release evidence document covering:
+   host-local mode, container-local mode, Epic disabled mode, Epic mock mode,
+   optional live diagnostics, optional live SMART authorization, preview,
+   owner-approved apply, audit, anonymized release denial/approval, and
+   no-secret/no-PHI log review.
+2. Update end-user documentation with screenshots for:
+   connect Epic/MyChart, review scopes, run diagnostics, preview Annual
+   Medicare Wellness updates, resolve conflicts, apply selected sections,
+   review imported records, disconnect, and delete imported Epic data.
+3. Update OpenAPI/Swagger examples for Epic diagnostics, preview, apply, audit,
+   documents, workflow tasks, and read-only planning/write-disabled status.
+4. Add issue-ready backlog entries for hosted/public deployment prerequisites:
+   HTTPS termination, DNS-visible redirect URI, production secret management,
+   customer-specific Epic approval, observability, backup/restore, and incident
+   handling.
+
+Validation gate:
+
+```bash
+npm run validate:localhost-mvp
+npm run validate:openapi
+npm run test
+npm run test:e2e:playwright
+npm run local:release-gate
+```
+
+## Principal Epic blockers remaining
+
+1. Real Epic app registration values and health-system authorization are still
+   external prerequisites. The code can accept the values, but it cannot
+   manufacture the target FHIR base URL, client id, redirect URI approval, or
+   permitted scope set.
+2. The current live read path does not yet fetch the full document/workflow
+   resource set needed for complete Annual Medicare Wellness document
+   management and messaging context.
+3. Binary document payload ingestion must be designed with size limits,
+   content-type policy, owner-only ACLs, checksum validation, and redaction
+   rules before it is safe to enable.
+4. Preview/apply currently regenerates preview during apply. A reviewed preview
+   snapshot or apply token is needed before live imports should be considered
+   operationally safe.
+5. Sync state is coarse-grained. Per-resource cursors, source-version history,
+   retry state, and deletion/withdrawal handling are needed for repeatable
+   live synchronization.
+6. Conflict resolution is visible but not complete. Ambiguous matches are
+   blocked, but the UI still needs merge/keep-local/replace-with-Epic
+   workflows.
+7. Outbound Epic messaging, task updates, or clinical writeback remain out of
+   MVP scope and must stay disabled until a target health system approves the
+   policy, scopes, audit model, and failure handling.
+8. Native iPad/iPhone Epic behavior is deferred. HealthKitBridge observability
+   remains separate from SMART/FHIR Epic authorization and should not be used
+   as a substitute for Epic consent or patient-scoped FHIR access.

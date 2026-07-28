@@ -7,7 +7,7 @@ import { nowIso } from '../../utils/rdfUtils';
 import { decryptJson, encryptJson } from './crypto';
 import { mapEpicResourcesToPim } from './mapper';
 import { mockAnnualWellnessResources } from './mockFhir';
-import { EpicSmartClient, grantNeedsRefresh } from './smartClient';
+import { EpicSmartClient, grantNeedsRefresh, type FhirCapabilityStatement } from './smartClient';
 import type {
   EpicApplyResult,
   EpicAuditEvent,
@@ -19,10 +19,40 @@ import type {
   EpicImportCandidate,
   EpicImportPreview,
   EpicMvpDomain,
+  EpicRegistrationReadiness,
+  EpicResourceSupport,
+  EpicSafeDiagnosticsExport,
 } from './types';
 import { EpicConnectionPodRepository } from './podRepository';
 
 type FetchLike = typeof fetch;
+
+const EPIC_RESOURCE_FAMILIES: Array<{
+  resourceType: string;
+  pimDomains: EpicMvpDomain[];
+  scopeResource: string;
+}> = [
+  { resourceType: 'Patient', pimDomains: ['profiles'], scopeResource: 'Patient' },
+  { resourceType: 'Condition', pimDomains: ['conditions'], scopeResource: 'Condition' },
+  { resourceType: 'MedicationRequest', pimDomains: ['medications'], scopeResource: 'MedicationRequest' },
+  { resourceType: 'MedicationStatement', pimDomains: ['medications'], scopeResource: 'MedicationStatement' },
+  { resourceType: 'AllergyIntolerance', pimDomains: ['allergies'], scopeResource: 'AllergyIntolerance' },
+  { resourceType: 'Immunization', pimDomains: ['immunizations'], scopeResource: 'Immunization' },
+  { resourceType: 'Observation', pimDomains: ['vital-signs', 'lab-results'], scopeResource: 'Observation' },
+  { resourceType: 'DiagnosticReport', pimDomains: ['lab-results', 'documents'], scopeResource: 'DiagnosticReport' },
+  { resourceType: 'Coverage', pimDomains: ['insurance-policies'], scopeResource: 'Coverage' },
+  { resourceType: 'DocumentReference', pimDomains: ['documents'], scopeResource: 'DocumentReference' },
+  { resourceType: 'Task', pimDomains: ['workflow-tasks'], scopeResource: 'Task' },
+  { resourceType: 'Communication', pimDomains: ['workflow-tasks'], scopeResource: 'Communication' },
+  { resourceType: 'Questionnaire', pimDomains: ['workflow-tasks', 'documents'], scopeResource: 'Questionnaire' },
+  { resourceType: 'QuestionnaireResponse', pimDomains: ['workflow-tasks', 'documents'], scopeResource: 'QuestionnaireResponse' },
+  { resourceType: 'ServiceRequest', pimDomains: ['workflow-tasks'], scopeResource: 'ServiceRequest' },
+  { resourceType: 'CarePlan', pimDomains: ['workflow-tasks'], scopeResource: 'CarePlan' },
+  { resourceType: 'Goal', pimDomains: ['workflow-tasks'], scopeResource: 'Goal' },
+  { resourceType: 'Practitioner', pimDomains: ['providers'], scopeResource: 'Practitioner' },
+  { resourceType: 'Organization', pimDomains: ['providers'], scopeResource: 'Organization' },
+  { resourceType: 'Binary', pimDomains: ['documents'], scopeResource: 'Binary' },
+];
 
 export class EpicIntegrationService {
   private readonly smartClient: EpicSmartClient;
@@ -78,21 +108,15 @@ export class EpicIntegrationService {
     const checks: EpicDiagnosticCheck[] = [];
     const checkedAt = nowIso();
     const live = options.live === true;
+    let liveDiscoveryReadiness: EpicRegistrationReadiness['liveDiscoveryReadiness'] = live ? 'failed' : 'not-requested';
+    let resourceSupport = this.resourceSupport();
     const add = (name: string, status: EpicDiagnosticCheck['status'], detail: string): void => {
       checks.push({ name, status, detail });
     };
 
     if (!this.config.enabled) {
       add('epic-enabled', 'skipped', 'Epic integration is disabled; localhost MVP can run Solid-only.');
-      return {
-        enabled: false,
-        mode: this.config.mode,
-        readiness: 'disabled',
-        checkedAt,
-        live,
-        localhostMvp: true,
-        checks,
-      };
+      return this.diagnosticsResult(checks, checkedAt, live, this.registrationReadiness('skipped'), resourceSupport);
     }
 
     add('epic-enabled', 'ok', 'Epic integration is enabled for this localhost deployment.');
@@ -111,7 +135,8 @@ export class EpicIntegrationService {
         ? 'Mock mode redirect URI is configured.'
         : 'Mock mode will use the local Epic callback path.');
       add('smart-discovery', 'skipped', 'SMART discovery is skipped in mock mode.');
-      return this.diagnosticsResult(checks, checkedAt, live);
+      resourceSupport = this.resourceSupport(undefined, 'not-checked');
+      return this.diagnosticsResult(checks, checkedAt, live, this.registrationReadiness('skipped'), resourceSupport);
     }
 
     add('fhir-base-url', this.config.fhirBaseUrl ? 'ok' : 'failed', this.config.fhirBaseUrl
@@ -126,11 +151,12 @@ export class EpicIntegrationService {
 
     if (!live) {
       add('smart-discovery', 'skipped', 'Live SMART discovery was not requested; use ?live=true for a network diagnostic.');
-      return this.diagnosticsResult(checks, checkedAt, live);
+      return this.diagnosticsResult(checks, checkedAt, live, this.registrationReadiness('not-requested'), resourceSupport);
     }
 
     try {
       const discovery = await this.smartClient.discover();
+      liveDiscoveryReadiness = 'ready';
       add('smart-discovery', 'ok', 'SMART configuration was discovered from the Epic FHIR base URL.');
       add('authorization-endpoint', discovery.authorization_endpoint ? 'ok' : 'failed', discovery.authorization_endpoint
         ? 'SMART authorization endpoint is present.'
@@ -147,10 +173,39 @@ export class EpicIntegrationService {
         add('scope-support', 'warning', 'SMART discovery did not publish scopes_supported; configured scopes could not be compared.');
       }
     } catch (error) {
+      liveDiscoveryReadiness = 'failed';
       add('smart-discovery', 'failed', error instanceof Error ? error.message : 'SMART discovery failed.');
     }
 
-    return this.diagnosticsResult(checks, checkedAt, live);
+    try {
+      const capability = await this.smartClient.capabilityStatement();
+      add('fhir-capability-statement', 'ok', 'FHIR CapabilityStatement was retrieved from the Epic FHIR metadata endpoint.');
+      resourceSupport = this.resourceSupport(capability);
+      const unsupportedConfigured = resourceSupport
+        .filter((resource) => resource.configuredScopePresent && resource.capability === 'unsupported')
+        .map((resource) => resource.resourceType);
+      const missingScopes = resourceSupport
+        .filter((resource) => !resource.configuredScopePresent)
+        .map((resource) => resource.resourceType);
+      if (unsupportedConfigured.length > 0) {
+        add('resource-support', 'warning', `CapabilityStatement did not list ${unsupportedConfigured.length} configured resource type(s): ${unsupportedConfigured.join(', ')}`);
+        liveDiscoveryReadiness = liveDiscoveryReadiness === 'failed' ? 'failed' : 'attention';
+      } else {
+        add('resource-support', 'ok', 'Configured Epic resource families are listed by the CapabilityStatement or not required by the current scope set.');
+      }
+      if (missingScopes.length > 0) {
+        add('resource-scope-readiness', 'warning', `${missingScopes.length} roadmap resource type(s) do not have matching configured patient read scopes: ${missingScopes.join(', ')}`);
+        liveDiscoveryReadiness = liveDiscoveryReadiness === 'failed' ? 'failed' : 'attention';
+      } else {
+        add('resource-scope-readiness', 'ok', 'Configured scopes cover all roadmap Epic resource families.');
+      }
+    } catch (error) {
+      resourceSupport = this.resourceSupport(undefined, 'unknown');
+      add('fhir-capability-statement', 'failed', error instanceof Error ? error.message : 'FHIR CapabilityStatement lookup failed.');
+      liveDiscoveryReadiness = 'failed';
+    }
+
+    return this.diagnosticsResult(checks, checkedAt, live, this.registrationReadiness(liveDiscoveryReadiness), resourceSupport);
   }
 
   async connectStart(): Promise<Record<string, unknown>> {
@@ -457,18 +512,82 @@ export class EpicIntegrationService {
     };
   }
 
-  private diagnosticsResult(checks: EpicDiagnosticCheck[], checkedAt: string, live: boolean): EpicDiagnostics {
+  private diagnosticsResult(
+    checks: EpicDiagnosticCheck[],
+    checkedAt: string,
+    live: boolean,
+    registration: EpicRegistrationReadiness,
+    resourceSupport: EpicResourceSupport[],
+  ): EpicDiagnostics {
     const hasFailure = checks.some((check) => check.status === 'failed');
     const hasWarning = checks.some((check) => check.status === 'warning');
+    const readiness: EpicDiagnostics['readiness'] = hasFailure ? 'failed' : hasWarning ? 'attention' : this.config.enabled ? 'ready' : 'disabled';
+    const safeExport: EpicSafeDiagnosticsExport = {
+      generatedAt: checkedAt,
+      localhostMvp: true as const,
+      enabled: this.config.enabled,
+      mode: this.config.mode,
+      readiness,
+      live,
+      registration,
+      resourceSupport,
+      checks,
+    };
     return {
       enabled: this.config.enabled,
       mode: this.config.mode,
-      readiness: hasFailure ? 'failed' : hasWarning ? 'attention' : 'ready',
+      readiness,
       checkedAt,
       live,
       localhostMvp: true,
+      registration,
+      resourceSupport,
+      safeExport,
       checks,
     };
+  }
+
+  private registrationReadiness(liveDiscoveryReadiness: EpicRegistrationReadiness['liveDiscoveryReadiness']): EpicRegistrationReadiness {
+    const fhirBase = safeUrlParts(this.config.fhirBaseUrl);
+    const redirect = safeUrlParts(this.config.redirectUri);
+    return {
+      localhostMvp: true,
+      mode: this.config.mode,
+      configured: {
+        fhirBaseUrl: Boolean(this.config.fhirBaseUrl),
+        fhirBaseUrlHost: fhirBase?.host,
+        clientId: Boolean(this.config.clientId),
+        clientSecret: Boolean(this.config.clientSecret),
+        redirectUri: Boolean(this.config.redirectUri),
+        redirectUriHost: redirect?.host,
+        redirectUriPath: redirect?.pathname,
+        grantEncryptionKey: Boolean(this.config.encryptionKey),
+        syncOnStartup: this.config.syncOnStartup,
+      },
+      requestedScopes: this.config.scopes,
+      scopeCount: this.config.scopes.length,
+      liveDiscoveryReadiness,
+    };
+  }
+
+  private resourceSupport(
+    capability?: FhirCapabilityStatement,
+    fallback: EpicResourceSupport['capability'] = 'not-checked',
+  ): EpicResourceSupport[] {
+    const supportedResourceTypes = capabilityResourceTypes(capability);
+    return EPIC_RESOURCE_FAMILIES.map((family) => {
+      const configuredScopePresent = hasConfiguredReadScope(this.config.scopes, family.scopeResource);
+      const capabilityStatus = supportedResourceTypes
+        ? supportedResourceTypes.has(family.resourceType) ? 'supported' : 'unsupported'
+        : fallback;
+      return {
+        resourceType: family.resourceType,
+        pimDomains: family.pimDomains,
+        configuredScopePresent,
+        capability: capabilityStatus,
+        detail: resourceSupportDetail(family.resourceType, configuredScopePresent, capabilityStatus),
+      };
+    });
   }
 
   private withAudit(
@@ -485,6 +604,50 @@ export class EpicIntegrationService {
       ].slice(-100),
     };
   }
+}
+
+function safeUrlParts(value: string | undefined): { host: string; pathname: string } | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return { host: url.host, pathname: url.pathname || '/' };
+  } catch {
+    return undefined;
+  }
+}
+
+function hasConfiguredReadScope(scopes: string[], resourceType: string): boolean {
+  return scopes.some((scope) => {
+    if (scope === 'patient/*.rs' || scope === 'patient/*.*' || scope === 'patient/*.read') return true;
+    return scope === `patient/${resourceType}.rs`
+      || scope === `patient/${resourceType}.read`
+      || scope === `patient/${resourceType}.*`;
+  });
+}
+
+function capabilityResourceTypes(capability: FhirCapabilityStatement | undefined): Set<string> | undefined {
+  if (!capability) return undefined;
+  const types = new Set<string>();
+  for (const rest of capability.rest ?? []) {
+    for (const resource of rest.resource ?? []) {
+      if (typeof resource.type === 'string' && resource.type.trim()) types.add(resource.type);
+    }
+  }
+  return types;
+}
+
+function resourceSupportDetail(
+  resourceType: string,
+  configuredScopePresent: boolean,
+  capability: EpicResourceSupport['capability'],
+): string {
+  const scopeDetail = configuredScopePresent
+    ? 'a matching patient read scope is configured'
+    : 'no matching patient read scope is configured';
+  if (capability === 'supported') return `${resourceType} is listed by the CapabilityStatement and ${scopeDetail}.`;
+  if (capability === 'unsupported') return `${resourceType} was not listed by the CapabilityStatement; ${scopeDetail}.`;
+  if (capability === 'unknown') return `${resourceType} support could not be determined from live metadata; ${scopeDetail}.`;
+  return `${resourceType} support has not been checked live; ${scopeDetail}.`;
 }
 
 function selectedDomainSet(body: Record<string, unknown>): Set<EpicMvpDomain> | undefined {
