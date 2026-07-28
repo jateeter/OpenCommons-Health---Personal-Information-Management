@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Terms and Conditions for OpenCommons Health PIM.">
+    <meta property="og:image" content="/opencommons-health-thumbnail.png">
+    <meta name="twitter:image" content="/opencommons-health-thumbnail.png">
+    <title>Terms and Conditions | OpenCommons Health PIM</title>
+    <link rel="icon" type="image/png" href="/opencommons-health-thumbnail.png">
+    <link rel="apple-touch-icon" href="/opencommons-health-thumbnail.png">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true"><img src="/opencommons-health-thumbnail.png" alt=""></span>
+        <span><strong>OpenCommons</strong><small>Personal health, held by you</small></span>
+      </a>
+      <nav class="masthead-actions" aria-label="Legal documents">
+        <a class="text-link" href="/data-disclosure.html">Data disclosure</a>
+        <a class="text-link" href="/">Return to app</a>
+      </nav>
+    </header>
+
+    <main class="legal-document">
+      <p class="eyebrow">OpenCommons Health PIM</p>
+      <h1>Terms and Conditions</h1>
+      <p class="legal-effective">Effective date: July 28, 2026</p>
+
+      <section class="notice">
+        <strong>Important notice.</strong>
+        <span>
+          These Terms are provided for the OpenCommons Health PIM sandbox,
+          local, container, and future mobile application workflows. They are a
+          project template and should be reviewed by qualified legal counsel
+          before production use, customer activation, public hosting, or
+          distribution through an app store.
+        </span>
+      </section>
+
+      <section>
+        <h2>1. Acceptance of these Terms</h2>
+        <p>
+          By installing, running, accessing, or using OpenCommons Health PIM
+          (the “Application”), you agree to these Terms and Conditions
+          (“Terms”). If you do not agree to these Terms, do not use the
+          Application. If you are evaluating the Application in a development,
+          sandbox, or testing environment, you agree to use only test,
+          synthetic, or personally authorized data as permitted by the
+          applicable data source.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Application purpose</h2>
+        <p>
+          OpenCommons Health PIM is a patient-owned personal health information
+          management application. It is designed to help an individual collect,
+          review, reconcile, and manage selected health records in a
+          user-controlled Solid Pod. The Application is intended to support
+          personal recordkeeping, owner-mediated data import, and
+          privacy-preserving local workflows. It is not an electronic health
+          record system operated by a healthcare provider, not a substitute for
+          professional medical judgment, and not intended for emergency use.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. No medical advice or emergency use</h2>
+        <p>
+          The Application does not provide medical advice, diagnosis, treatment,
+          monitoring, emergency response, or clinical decision support. Health
+          information displayed by the Application may be incomplete, outdated,
+          delayed, or manually entered. Always consult qualified healthcare
+          professionals for medical questions. In an emergency, call emergency
+          services immediately.
+        </p>
+      </section>
+
+      <section>
+        <h2>4. Patient-owned data and Solid Pod storage</h2>
+        <p>
+          The Application is designed around local, owner-controlled storage.
+          Identifiable personal health information is stored in the
+          authenticated user’s Solid Pod or local application environment. You
+          are responsible for maintaining the device, account, pod, passwords,
+          backups, local network access, and physical security of the
+          environment in which you run the Application.
+        </p>
+        <p>
+          The Application may store locally managed records such as profile
+          information, conditions, medications, allergies, immunizations, vital
+          signs, providers, lab results, insurance policies, clinical document
+          metadata, workflow tasks, authorization status, import provenance, and
+          owner-visible audit metadata.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Epic, MyChart, and SMART on FHIR connections</h2>
+        <p>
+          When enabled, the Epic integration uses standards-based SMART on FHIR
+          authorization to request access to patient-authorized FHIR resources.
+          Epic/MyChart authentication occurs through the applicable Epic or
+          healthcare organization authorization page. The Application must not
+          ask you to enter your Epic/MyChart username or password directly into
+          OpenCommons, source code, chat tools, logs, issue trackers, or local
+          configuration files.
+        </p>
+        <p>
+          The current Epic integration is intended first for sandbox validation
+          and patient-mediated read-only import workflows. Production access,
+          customer activation, organization-specific endpoints, approved
+          redirect URIs, requested scopes, and any outbound writeback or
+          messaging behavior require separate authorization, review, and
+          validation by the applicable healthcare organization and data source.
+        </p>
+      </section>
+
+      <section>
+        <h2>6. Credentials and authorization material</h2>
+        <p>
+          You are responsible for protecting Solid credentials, local
+          configuration values, device credentials, and any platform or app
+          registration secrets. When Epic integration is enabled, the
+          Application is designed to store OAuth grant material only after
+          authorization and to encrypt that material before writing it to the
+          owner-controlled pod or local storage. You must not commit secrets,
+          tokens, authorization codes, passwords, client secrets, or encryption
+          keys to source control or share them in logs, screenshots, or support
+          requests.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Import preview, reconciliation, and owner approval</h2>
+        <p>
+          Imported health information should be previewed and reviewed before it
+          is written to the Solid Pod. The Application may present create,
+          update, unchanged, conflict, unsupported, or unavailable states for
+          imported records. You are responsible for deciding whether to apply,
+          skip, correct, or remove imported information. Conflict records may
+          require manual review.
+        </p>
+      </section>
+
+      <section>
+        <h2>8. Privacy, anonymized release, and prohibited disclosure</h2>
+        <p>
+          The Application is designed so that identifiable personal health
+          information remains under the authenticated owner’s control.
+          Non-owner release workflows must use authenticated owner approval and
+          privacy-preserving transformations. Anonymized release APIs are
+          intended to remove direct identifiers and should not expose names,
+          contact details, patient identifiers, access tokens, authorization
+          codes, source document URLs, raw clinical documents, or other
+          personal identifiers.
+        </p>
+        <p>
+          You should not use the Application to disclose another person’s
+          information unless you have the legal right and authorization to do
+          so. Do not use screenshots, logs, exports, or issue reports that
+          contain personal health information unless the owner has explicitly
+          approved that disclosure and the disclosure is legally permitted.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Local, container, and mobile deployments</h2>
+        <p>
+          The Application may be run in localhost, Docker/container, or future
+          mobile/iPhone environments. Localhost and container deployments may
+          use local network addresses, local Solid Community Server instances,
+          and development configuration. Future mobile versions may use native
+          platform storage, platform authentication, and local pod mirroring.
+          Each deployment must be configured with appropriate access controls,
+          transport protection, credential storage, and owner consent
+          workflows.
+        </p>
+      </section>
+
+      <section>
+        <h2>10. Security and transport</h2>
+        <p>
+          External clinical integrations, including Epic SMART on FHIR
+          connections, should use HTTPS or other appropriate encrypted
+          transport. Localhost development may use HTTP for local-only
+          development flows where permitted by the data source, but production
+          or customer-facing deployments should use HTTPS, approved redirect
+          URIs, secure secret storage, device security, and appropriate backup
+          and recovery practices.
+        </p>
+      </section>
+
+      <section>
+        <h2>11. Third-party services and data sources</h2>
+        <p>
+          The Application may interoperate with third-party systems such as Epic
+          on FHIR, MyChart, Solid Community Server, Apple/iOS platform
+          services, terminology systems, or other data sources. Those services
+          are governed by their own terms, privacy policies, access rules,
+          availability, and authorization decisions. OpenCommons Health PIM does
+          not control those third-party services and is not responsible for
+          their content, availability, policies, or data quality.
+        </p>
+      </section>
+
+      <section>
+        <h2>12. User responsibilities</h2>
+        <p>
+          You agree to use the Application only for lawful purposes and only
+          with data that you own, control, or are authorized to access. You are
+          responsible for verifying imported information, maintaining secure
+          local devices and accounts, backing up owner-controlled data when
+          appropriate, and complying with applicable laws, data source terms,
+          and healthcare organization policies.
+        </p>
+      </section>
+
+      <section>
+        <h2>13. Development status and warranty disclaimer</h2>
+        <p>
+          The Application is provided for development, evaluation, and
+          owner-controlled personal information management workflows. It is
+          provided “as is” and “as available,” without warranties of any kind,
+          whether express, implied, statutory, or otherwise, including implied
+          warranties of merchantability, fitness for a particular purpose,
+          accuracy, security, availability, or non-infringement.
+        </p>
+      </section>
+
+      <section>
+        <h2>14. Limitation of liability</h2>
+        <p>
+          To the maximum extent permitted by law, the contributors,
+          maintainers, operators, and distributors of OpenCommons Health PIM
+          will not be liable for indirect, incidental, special, consequential,
+          exemplary, or punitive damages, or for loss of data, loss of use,
+          health-related decisions, third-party service failures, unauthorized
+          access, or configuration errors arising from use of the Application.
+        </p>
+      </section>
+
+      <section>
+        <h2>15. Changes to these Terms</h2>
+        <p>
+          These Terms may be updated as the Application evolves. The effective
+          date at the top of this document identifies the version currently
+          distributed with this deployment. Continued use after an updated
+          version is made available means you accept the updated Terms.
+        </p>
+      </section>
+
+      <section>
+        <h2>16. Contact and project information</h2>
+        <p>
+          For development, sandbox registration, and project questions, use the
+          project repository, issue-management process, or maintainer contact
+          information associated with the OpenCommons Health PIM distribution.
+          Do not include personal health information, passwords, tokens,
+          authorization codes, or client secrets in support requests.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

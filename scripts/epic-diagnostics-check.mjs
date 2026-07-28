@@ -33,6 +33,18 @@ if (diagnostics.live !== live) {
   fail(`Epic diagnostics live flag was ${JSON.stringify(diagnostics.live)}, expected ${live}: ${bodyText}`);
 }
 
+if (!diagnostics.registration || diagnostics.registration.localhostMvp !== true) {
+  fail(`Epic diagnostics did not include a localhost registration readiness object: ${bodyText}`);
+}
+
+if (!Array.isArray(diagnostics.resourceSupport)) {
+  fail(`Epic diagnostics did not include resourceSupport array: ${bodyText}`);
+}
+
+if (!diagnostics.safeExport || diagnostics.safeExport.localhostMvp !== true) {
+  fail(`Epic diagnostics did not include a safe diagnostics export: ${bodyText}`);
+}
+
 if (expectedReadiness.length > 0 && !expectedReadiness.includes(diagnostics.readiness)) {
   fail(`Epic diagnostics readiness was ${JSON.stringify(diagnostics.readiness)}, expected one of ${expectedReadiness.join(', ')}.`);
 }
@@ -61,6 +73,7 @@ function stripTrailingSlash(value) {
 function secretValues() {
   return [
     ['EPIC_CLIENT_SECRET', process.env.EPIC_CLIENT_SECRET],
+    ['EPIC_CLIENT_ID', process.env.EPIC_CLIENT_ID],
     ['EPIC_GRANT_ENCRYPTION_KEY', process.env.EPIC_GRANT_ENCRYPTION_KEY],
     ['SOLID_CLIENT_SECRET', process.env.SOLID_CLIENT_SECRET],
     ['CSS_ACCOUNT_PASSWORD', process.env.CSS_ACCOUNT_PASSWORD],

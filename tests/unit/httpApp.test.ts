@@ -57,7 +57,7 @@ describe('OpenCommons Health HTTP application', () => {
       repositories: { conditions: repository },
     };
     server = http.createServer((req, res) => {
-      void createRequestHandler(async () => context)(req, res);
+      void createRequestHandler(async () => context, `${process.cwd()}/public`)(req, res);
     });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
@@ -77,6 +77,20 @@ describe('OpenCommons Health HTTP application', () => {
       podBaseUrl: 'http://pod/',
       podAccess: true,
     });
+  });
+
+  it('serves legal disclosure pages for Epic registration and local deployments', async () => {
+    const terms = await fetch(`${baseUrl}/terms.html`);
+    expect(terms.status).toBe(200);
+    await expect(terms.text()).resolves.toContain('Terms and Conditions');
+
+    const disclosure = await fetch(`${baseUrl}/data-disclosure.html`);
+    expect(disclosure.status).toBe(200);
+    const body = await disclosure.text();
+    expect(body).toContain('Data and Information Disclosure Statement');
+    expect(body).toContain('does not sell personal');
+    expect(body).toContain('health information');
+    expect(body).toContain('SMART on FHIR');
   });
 
   it('serves Epic localhost MVP diagnostics when the connector is configured', async () => {

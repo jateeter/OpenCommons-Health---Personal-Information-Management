@@ -4,16 +4,24 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Private, Solid-backed personal health records.">
+    <meta property="og:image" content="/opencommons-health-thumbnail.png">
+    <meta name="twitter:image" content="/opencommons-health-thumbnail.png">
     <title>OpenCommons Health</title>
+    <link rel="icon" type="image/png" href="/opencommons-health-thumbnail.png">
+    <link rel="apple-touch-icon" href="/opencommons-health-thumbnail.png">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <header class="masthead">
       <a class="brand" href="/">
-        <span class="brand-mark" aria-hidden="true">OC</span>
+        <span class="brand-mark" aria-hidden="true"><img src="/opencommons-health-thumbnail.png" alt=""></span>
         <span><strong>OpenCommons</strong><small>Personal health, held by you</small></span>
       </a>
-      <div id="connection" class="connection checking"><span></span>Checking your pod</div>
+      <div class="masthead-actions">
+        <a class="text-link" href="/terms.html">Terms</a>
+        <a class="text-link" href="/data-disclosure.html">Data disclosure</a>
+        <div id="connection" class="connection checking"><span></span>Checking your pod</div>
+      </div>
     </header>
 
     <div class="shell">
@@ -112,10 +120,14 @@
               <p id="epic-summary">Checking Epic connector status…</p>
             </div>
             <div class="epic-actions">
+              <button id="epic-diagnostics" class="secondary" type="button">Check live readiness</button>
               <button id="epic-connect" class="secondary" type="button">Connect Epic</button>
               <button id="epic-preview" class="secondary" type="button">Preview import</button>
               <button id="epic-apply" class="primary" type="button">Apply to pod</button>
             </div>
+          </div>
+          <div id="epic-readiness" class="epic-readiness" aria-live="polite">
+            <p>Epic registration readiness appears after the local connector status is available.</p>
           </div>
           <div id="epic-preview-list" class="epic-preview-list hidden"></div>
         </section>

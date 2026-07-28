@@ -10,6 +10,18 @@ export interface SmartConfiguration {
   [key: string]: unknown;
 }
 
+export interface FhirCapabilityStatement {
+  resourceType: 'CapabilityStatement';
+  rest?: Array<{
+    resource?: Array<{
+      type?: string;
+      interaction?: Array<{ code?: string }>;
+      searchParam?: Array<{ name?: string; type?: string }>;
+    }>;
+  }>;
+  [key: string]: unknown;
+}
+
 export interface SmartAuthorizationStart {
   authorizationUrl: string;
   state: string;
@@ -115,6 +127,20 @@ export class EpicSmartClient {
       throw new Error('Epic SMART discovery did not include authorization_endpoint and token_endpoint.');
     }
     return body as SmartConfiguration;
+  }
+
+  async capabilityStatement(): Promise<FhirCapabilityStatement> {
+    const response = await this.httpFetch(this.fhirUrl('metadata'), {
+      headers: { accept: 'application/fhir+json, application/json' },
+    });
+    if (!response.ok) {
+      throw new Error(`Epic FHIR CapabilityStatement failed with HTTP ${response.status}.`);
+    }
+    const body = await response.json().catch(() => ({})) as Partial<FhirCapabilityStatement>;
+    if (body.resourceType !== 'CapabilityStatement') {
+      throw new Error('Epic FHIR metadata did not return a CapabilityStatement resource.');
+    }
+    return body as FhirCapabilityStatement;
   }
 
   private async tokenRequest(tokenEndpoint: string, params: URLSearchParams): Promise<EpicGrant> {

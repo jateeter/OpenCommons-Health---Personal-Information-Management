@@ -101,11 +101,26 @@ describe('Epic MVP integration service', () => {
       readiness: 'ready',
       live: false,
       localhostMvp: true,
+      registration: {
+        localhostMvp: true,
+        mode: 'mock',
+        liveDiscoveryReadiness: 'skipped',
+        configured: expect.objectContaining({
+          grantEncryptionKey: true,
+        }),
+      },
     });
     expect(diagnostics.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'epic-enabled', status: 'ok' }),
       expect.objectContaining({ name: 'smart-discovery', status: 'skipped' }),
     ]));
+    expect(diagnostics.resourceSupport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        resourceType: 'Patient',
+        capability: 'not-checked',
+      }),
+    ]));
+    expect(JSON.stringify(diagnostics.safeExport)).not.toContain(config.encryptionKey);
   });
 
   it('applies selected Epic import candidates through existing domain repositories', async () => {
@@ -304,27 +319,70 @@ describe('Epic MVP integration service', () => {
           scopes_supported: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
         });
       }
+      if (url.endsWith('/metadata')) {
+        return jsonResponse({
+          resourceType: 'CapabilityStatement',
+          rest: [{
+            resource: [
+              { type: 'Patient' },
+            ],
+          }],
+        });
+      }
       throw new Error(`Unexpected URL ${url}`);
     });
     const service = new EpicIntegrationService(sandboxConfig, new FakeEpicRepository() as never, {}, fetchMock as never);
 
     const diagnostics = await service.diagnostics({ live: true });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(diagnostics).toMatchObject({
       enabled: true,
       mode: 'sandbox',
-      readiness: 'ready',
+      readiness: 'attention',
       live: true,
       localhostMvp: true,
+      registration: {
+        liveDiscoveryReadiness: 'attention',
+        configured: expect.objectContaining({
+          fhirBaseUrl: true,
+          fhirBaseUrlHost: 'epic.example.test',
+          clientId: true,
+          redirectUri: true,
+          redirectUriHost: 'localhost:8080',
+          redirectUriPath: '/api/integrations/epic/connect/callback',
+          grantEncryptionKey: true,
+        }),
+      },
     });
     expect(diagnostics.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'smart-discovery', status: 'ok' }),
       expect.objectContaining({ name: 'authorization-endpoint', status: 'ok' }),
       expect.objectContaining({ name: 'token-endpoint', status: 'ok' }),
       expect.objectContaining({ name: 'scope-support', status: 'ok' }),
+      expect.objectContaining({ name: 'fhir-capability-statement', status: 'ok' }),
+      expect.objectContaining({ name: 'resource-scope-readiness', status: 'warning' }),
     ]));
+    expect(diagnostics.resourceSupport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        resourceType: 'Patient',
+        configuredScopePresent: true,
+        capability: 'supported',
+      }),
+      expect.objectContaining({
+        resourceType: 'Task',
+        configuredScopePresent: false,
+        capability: 'unsupported',
+      }),
+    ]));
+    expect(diagnostics.safeExport).toMatchObject({
+      localhostMvp: true,
+      mode: 'sandbox',
+      readiness: 'attention',
+      live: true,
+    });
     expect(JSON.stringify(diagnostics)).not.toContain('unit-test-epic-grant-key');
+    expect(JSON.stringify(diagnostics.safeExport)).not.toContain('smart-client-id');
   });
 });
 

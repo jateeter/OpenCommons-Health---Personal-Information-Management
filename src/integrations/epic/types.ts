@@ -85,6 +85,45 @@ export interface EpicDiagnosticCheck {
   detail: string;
 }
 
+export interface EpicRegistrationReadiness {
+  localhostMvp: true;
+  mode: 'mock' | 'sandbox' | 'production';
+  configured: {
+    fhirBaseUrl: boolean;
+    fhirBaseUrlHost?: string;
+    clientId: boolean;
+    clientSecret: boolean;
+    redirectUri: boolean;
+    redirectUriHost?: string;
+    redirectUriPath?: string;
+    grantEncryptionKey: boolean;
+    syncOnStartup: boolean;
+  };
+  requestedScopes: string[];
+  scopeCount: number;
+  liveDiscoveryReadiness: 'not-requested' | 'ready' | 'attention' | 'failed' | 'skipped';
+}
+
+export interface EpicResourceSupport {
+  resourceType: string;
+  pimDomains: EpicMvpDomain[];
+  configuredScopePresent: boolean;
+  capability: 'supported' | 'unsupported' | 'unknown' | 'not-checked';
+  detail: string;
+}
+
+export interface EpicSafeDiagnosticsExport {
+  generatedAt: string;
+  localhostMvp: true;
+  enabled: boolean;
+  mode: 'mock' | 'sandbox' | 'production';
+  readiness: 'disabled' | 'ready' | 'attention' | 'failed';
+  live: boolean;
+  registration: EpicRegistrationReadiness;
+  resourceSupport: EpicResourceSupport[];
+  checks: EpicDiagnosticCheck[];
+}
+
 export interface EpicDiagnostics {
   enabled: boolean;
   mode: 'mock' | 'sandbox' | 'production';
@@ -92,6 +131,9 @@ export interface EpicDiagnostics {
   checkedAt: string;
   live: boolean;
   localhostMvp: true;
+  registration: EpicRegistrationReadiness;
+  resourceSupport: EpicResourceSupport[];
+  safeExport: EpicSafeDiagnosticsExport;
   checks: EpicDiagnosticCheck[];
 }
 
