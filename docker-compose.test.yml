@@ -10,7 +10,7 @@
 #   docker compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test-runner
 #
 # Configurable ports (set in .env or shell before running):
-#   CSS_PORT – Solid Community Server port (default: 3000)
+#   CSS_PORT – Solid Community Server port (default: 13000)
 
 services:
   # ── Solid Community Server ──────────────────────────────────────────────────
@@ -20,17 +20,17 @@ services:
       - "-c"
       - "@css:config/default.json"
       - "-p"
-      - "${CSS_PORT:-3000}"
+      - "${CSS_PORT:-13000}"
     ports:
-      - "${CSS_PORT:-3000}:${CSS_PORT:-3000}"
+      - "${CSS_PORT:-13000}:${CSS_PORT:-13000}"
     environment:
-      CSS_LOGGING_LEVEL: warn
+      CSS_LOGGING_LEVEL: ${CSS_LOGGING_LEVEL:-warn}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-3000}/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-13000}/ || exit 1"]
       interval: 5s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
+      timeout: 10s
+      retries: 36
+      start_period: 60s
 
   # ── Test runner ─────────────────────────────────────────────────────────────
   test-runner:
@@ -41,8 +41,8 @@ services:
       css:
         condition: service_healthy
     environment:
-      INTEGRATION_TEST_BASE_URL: "http://css:${CSS_PORT:-3000}"
-      INTEGRATION_POD_BASE_URL: "http://css:${CSS_PORT:-3000}/alice/"
+      INTEGRATION_TEST_BASE_URL: "http://css:${CSS_PORT:-13000}"
+      INTEGRATION_POD_BASE_URL: "http://css:${CSS_PORT:-13000}/alice/"
       INTEGRATION_CLIENT_ID: ${INTEGRATION_CLIENT_ID:-alice-client}
       INTEGRATION_CLIENT_SECRET: ${INTEGRATION_CLIENT_SECRET:-alice-secret}
     command: ["npm", "run", "test:integration"]

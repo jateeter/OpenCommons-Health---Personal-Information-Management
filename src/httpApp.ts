@@ -564,7 +564,7 @@ function servePublicAsset(requestPath: string, publicDirectory: string, res: Ser
   };
   res.writeHead(200, {
     'content-type': types[path.extname(asset)] ?? 'application/octet-stream',
-    'cache-control': asset === 'index.html' ? 'no-store' : 'public, max-age=3600',
+    'cache-control': asset === 'opencommons-health-thumbnail.png' ? 'public, max-age=3600' : 'no-store',
   });
   createReadStream(filePath).pipe(res);
 }

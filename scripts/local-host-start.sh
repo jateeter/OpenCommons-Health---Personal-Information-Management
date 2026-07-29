@@ -4,7 +4,7 @@
 set -e
 
 APP_PORT="${APP_PORT:-8080}"
-CSS_PORT="${CSS_PORT:-3000}"
+CSS_PORT="${CSS_PORT:-13000}"
 ENV_FILE="${HOST_LOCAL_ENV_FILE:-.solid/host-local-${APP_PORT}-${CSS_PORT}.env}"
 
 if [ ! -f "${ENV_FILE}" ]; then

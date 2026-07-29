@@ -10,7 +10,7 @@
 #
 # Defaults:
 #   PIM_URL  http://localhost:8080
-#   CSS_URL  http://localhost:3000
+#   CSS_URL  http://localhost:13000
 #
 # Environment overrides:
 #   WAIT_TIMEOUT  – total seconds to wait per service (default: 60)
@@ -20,7 +20,7 @@
 set -e
 
 PIM_URL="${1:-http://localhost:8080}"
-CSS_URL="${2:-http://localhost:3000}"
+CSS_URL="${2:-http://localhost:13000}"
 
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-60}"
 WAIT_INTERVAL="${WAIT_INTERVAL:-3}"

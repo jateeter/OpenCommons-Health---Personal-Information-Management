@@ -10,7 +10,7 @@ const warnings = [];
 
 const requestedPorts = [
   ['APP_PORT', process.env.APP_PORT ?? '8080'],
-  ['CSS_PORT', process.env.CSS_PORT ?? '3000'],
+  ['CSS_PORT', process.env.CSS_PORT ?? '13000'],
   ...extraPorts(),
 ];
 
@@ -65,7 +65,7 @@ for (const warning of warnings) {
 }
 console.log(`  Host: ${host}`);
 console.log(`  APP_PORT: ${process.env.APP_PORT ?? '8080'}`);
-console.log(`  CSS_PORT: ${process.env.CSS_PORT ?? '3000'}`);
+console.log(`  CSS_PORT: ${process.env.CSS_PORT ?? '13000'}`);
 console.log(`  Docker: ${checkDocker ? 'reachable' : 'not checked'}`);
 console.log(`  Ports: ${checkPorts ? portStatus() : 'not checked'}`);
 

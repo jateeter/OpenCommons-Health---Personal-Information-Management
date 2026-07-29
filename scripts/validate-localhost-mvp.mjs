@@ -199,7 +199,7 @@ requireText('docs/EXECUTIVE_OVERVIEW.md', executiveOverview, 'The current MVP is
 requireText('docs/EXECUTIVE_OVERVIEW.md', executiveOverview, 'native/iPad work parked');
 
 requireRegex('.env.example', envExample, /^APP_PORT=8080$/m, 'APP_PORT default');
-requireRegex('.env.example', envExample, /^CSS_PORT=3000$/m, 'CSS_PORT default');
+requireRegex('.env.example', envExample, /^CSS_PORT=13000$/m, 'CSS_PORT default');
 requireRegex('.env.example', envExample, /^EPIC_ENABLED=false$/m, 'Epic disabled by default');
 requireRegex('.env.example', envExample, /^EPIC_MODE=mock$/m, 'Epic mock mode default');
 

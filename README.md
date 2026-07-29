@@ -29,7 +29,7 @@ management workflows, see
 │         ▼                    ▼                        ▼             │
 │   ┌────────────────────────────────────────────────────────┐       │
 │   │            Solid Community Server (local pod)          │       │
-│   │                 http://localhost:3000                   │       │
+│   │                 http://localhost:13000                  │       │
 │   └────────────────────────────────────────────────────────┘       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -109,7 +109,7 @@ APP_PORT=18080 CSS_PORT=13000 ./scripts/local-container-up.sh
 ```
 
 Open `http://localhost:${APP_PORT:-8080}`. CSS is available locally at
-`http://localhost:${CSS_PORT:-3000}`. Pod data is retained in the `css_data` named volume;
+`http://localhost:${CSS_PORT:-13000}`. Pod data is retained in the `css_data` named volume;
 generated client credentials are retained separately in `css_credentials` and
 mounted read-only into the PIM container. Normal `docker compose down` and
 container rebuilds preserve both. `docker compose down --volumes` deliberately
@@ -121,7 +121,7 @@ local Solid volumes by port assignment, because Solid WebIDs and client
 credentials include the deployment base URL.
 
 Inside the Compose network the CSS base URL is
-`http://css.localhost:${CSS_PORT:-3000}`.
+`http://css.localhost:${CSS_PORT:-13000}`.
 That keeps container-to-container DNS working while satisfying Solid-OIDC's
 localhost-only allowance for non-HTTPS local WebIDs.
 
@@ -186,8 +186,8 @@ and a non-empty `x-opencommons-release-purpose` header; those responses remove
 direct identifiers and generalize exact dates.
 
 ```bash
-SOLID_POD_SERVER_URL=http://localhost:3000
-SOLID_POD_BASE_URL=http://localhost:3000/alice/
+SOLID_POD_SERVER_URL=http://localhost:13000
+SOLID_POD_BASE_URL=http://localhost:13000/alice/
 SOLID_POD_PATH=/health-pim/
 SOLID_CLIENT_CREDENTIALS_FILE=/secure/path/client-credentials.json
 npm run build
@@ -243,8 +243,8 @@ for the use case and acceptance criteria.
 import { HealthPIM } from './dist';
 
 const pim = await HealthPIM.create({
-  podServerUrl: 'http://localhost:3000',
-  podBaseUrl:   'http://localhost:3000/alice/',
+  podServerUrl: 'http://localhost:13000',
+  podBaseUrl:   'http://localhost:13000/alice/',
   podPath:      '/health-pim/',
   clientId:     'alice-client-id',
   clientSecret: 'alice-client-secret',
