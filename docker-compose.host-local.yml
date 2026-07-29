@@ -19,24 +19,24 @@ services:
       - "-f"
       - "/data"
       - "-p"
-      - "${CSS_PORT:-3000}"
+      - "${CSS_PORT:-13000}"
       - "-b"
-      - "http://localhost:${CSS_PORT:-3000}/"
+      - "http://localhost:${CSS_PORT:-13000}/"
     ports:
-      - "127.0.0.1:${CSS_PORT:-3000}:${CSS_PORT:-3000}"
+      - "127.0.0.1:${CSS_PORT:-13000}:${CSS_PORT:-13000}"
     environment:
-      CSS_LOGGING_LEVEL: warn
+      CSS_LOGGING_LEVEL: ${CSS_LOGGING_LEVEL:-warn}
       OPENCOMMONS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
       OPENCOMMONS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
       OPENCOMMONS_POD_NAME: ${CSS_POD_NAME:-alice}
     volumes:
       - css_host_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-3000}/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-13000}/ || exit 1"]
       interval: 5s
-      timeout: 5s
-      retries: 15
-      start_period: 15s
+      timeout: 10s
+      retries: 36
+      start_period: 60s
     restart: unless-stopped
 
   bootstrap:
@@ -44,19 +44,19 @@ services:
     command: ["node", "/bootstrap/provision-css.mjs"]
     network_mode: "service:css"
     environment:
-      CSS_BASE_URL: "http://localhost:${CSS_PORT:-3000}/"
-      CSS_PUBLIC_BASE_URL: "http://localhost:${CSS_PORT:-3000}/"
-      CSS_INTERNAL_BASE_URL: "http://localhost:${CSS_PORT:-3000}/"
+      CSS_BASE_URL: "http://localhost:${CSS_PORT:-13000}/"
+      CSS_PUBLIC_BASE_URL: "http://localhost:${CSS_PORT:-13000}/"
+      CSS_INTERNAL_BASE_URL: "http://localhost:${CSS_PORT:-13000}/"
       CSS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
       CSS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
       CSS_POD_NAME: ${CSS_POD_NAME:-alice}
       CSS_CLIENT_CREDENTIALS_FILE: /credentials/client-credentials.json
     volumes:
       - ./scripts/provision-css.mjs:/bootstrap/provision-css.mjs:ro
-      - ${HOST_CREDENTIALS_DIR:-./.solid/host-3000}:/credentials
+      - ${HOST_CREDENTIALS_DIR:-./.solid/host-13000}:/credentials
     depends_on:
       css:
-        condition: service_healthy
+        condition: service_started
     restart: "no"
 
 volumes:

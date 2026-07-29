@@ -33,7 +33,7 @@ values into your local `.env`. Do not commit the filled file.
 ```dotenv
 # Local OpenCommons/Solid runtime
 APP_PORT=8080
-CSS_PORT=3000
+CSS_PORT=13000
 HOST=0.0.0.0
 
 # Your local Solid identity. Use values that identify your local owner pod.
@@ -41,9 +41,9 @@ CSS_ACCOUNT_EMAIL=<your-local-solid-owner-email>
 CSS_ACCOUNT_PASSWORD=<long-local-solid-password>
 CSS_POD_NAME=<your-solid-pod-name>
 
-SOLID_POD_SERVER_URL=http://localhost:3000
-SOLID_OIDC_ISSUER=http://localhost:3000
-SOLID_POD_BASE_URL=http://localhost:3000/<your-solid-pod-name>/
+SOLID_POD_SERVER_URL=http://localhost:13000
+SOLID_OIDC_ISSUER=http://localhost:13000
+SOLID_POD_BASE_URL=http://localhost:13000/<your-solid-pod-name>/
 SOLID_POD_PATH=/health-pim/
 SOLID_REDIRECT_URL=http://localhost:8080/callback
 
@@ -67,7 +67,7 @@ EPIC_GRANT_ENCRYPTION_KEY=<long-random-local-encryption-key>
 EPIC_SYNC_ON_STARTUP=false
 
 # Minimum read-only MVP scope set.
-EPIC_SCOPES=openid fhirUser launch/patient offline_access patient/Patient.rs patient/Condition.rs patient/MedicationRequest.rs patient/MedicationStatement.rs patient/AllergyIntolerance.rs patient/Immunization.rs patient/Observation.rs patient/DiagnosticReport.rs patient/Coverage.rs patient/DocumentReference.rs
+EPIC_SCOPES="openid fhirUser launch/patient offline_access patient/Patient.rs patient/Condition.rs patient/MedicationRequest.rs patient/MedicationStatement.rs patient/AllergyIntolerance.rs patient/Immunization.rs patient/Observation.rs patient/DiagnosticReport.rs patient/Coverage.rs patient/DocumentReference.rs"
 ```
 
 For local MVP testing without personal Epic data, keep:
@@ -127,7 +127,7 @@ EPIC_CLIENT_SECRET_FILE=<path-to-local-untracked-client-secret-file> \
 EPIC_REDIRECT_URI=http://localhost:8080/api/integrations/epic/connect/callback \
 EPIC_GRANT_ENCRYPTION_KEY=<long-random-local-encryption-key> \
 APP_PORT=8080 \
-CSS_PORT=3000 \
+CSS_PORT=13000 \
 ./scripts/local-container-up.sh
 ```
 
@@ -142,7 +142,7 @@ EPIC_CLIENT_SECRET_FILE=<path-to-local-untracked-client-secret-file> \
 EPIC_REDIRECT_URI=http://localhost:8080/api/integrations/epic/connect/callback \
 EPIC_GRANT_ENCRYPTION_KEY=<long-random-local-encryption-key> \
 APP_PORT=8080 \
-CSS_PORT=3000 \
+CSS_PORT=13000 \
 ./scripts/local-host-solid-up.sh
 
 ./scripts/local-host-start.sh

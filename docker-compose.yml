@@ -9,7 +9,7 @@
 #   docker compose up --build
 #
 # Configurable ports (set in .env or shell before running):
-#   CSS_PORT   – Solid Community Server port  (default: 3000)
+#   CSS_PORT   – Solid Community Server port  (default: 13000)
 #   APP_PORT   – PIM web app host port        (default: 8080)
 #
 # Visit:
@@ -32,13 +32,13 @@ services:
       - "-f"
       - "/data"
       - "-p"
-      - "${CSS_PORT:-3000}"
+      - "${CSS_PORT:-13000}"
       - "-b"
-      - "http://css.localhost:${CSS_PORT:-3000}/"
+      - "http://css.localhost:${CSS_PORT:-13000}/"
     ports:
-      - "127.0.0.1:${CSS_PORT:-3000}:${CSS_PORT:-3000}"
+      - "127.0.0.1:${CSS_PORT:-13000}:${CSS_PORT:-13000}"
     environment:
-      CSS_LOGGING_LEVEL: warn
+      CSS_LOGGING_LEVEL: ${CSS_LOGGING_LEVEL:-warn}
       OPENCOMMONS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
       OPENCOMMONS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
       OPENCOMMONS_POD_NAME: ${CSS_POD_NAME:-alice}
@@ -49,11 +49,11 @@ services:
         aliases:
           - css.localhost
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-3000}/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-13000}/ || exit 1"]
       interval: 5s
-      timeout: 5s
-      retries: 15
-      start_period: 15s
+      timeout: 10s
+      retries: 36
+      start_period: 60s
     restart: unless-stopped
 
   # ── Idempotent CSS provisioning ────────────────────────────────────────────
@@ -61,7 +61,7 @@ services:
     image: node:22-alpine
     command: ["node", "/bootstrap/provision-css.mjs"]
     environment:
-      CSS_BASE_URL: "http://css.localhost:${CSS_PORT:-3000}/"
+      CSS_BASE_URL: "http://css.localhost:${CSS_PORT:-13000}/"
       CSS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
       CSS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:?Copy .env.example to .env and set CSS_ACCOUNT_PASSWORD}
       CSS_POD_NAME: ${CSS_POD_NAME:-alice}
@@ -86,9 +86,9 @@ services:
       NODE_ENV: production
       PORT: "${APP_PORT:-8080}"
       HOST: 0.0.0.0
-      SOLID_POD_SERVER_URL: "http://css.localhost:${CSS_PORT:-3000}"
-      SOLID_OIDC_ISSUER: "http://css.localhost:${CSS_PORT:-3000}"
-      SOLID_POD_BASE_URL: "http://css.localhost:${CSS_PORT:-3000}/${CSS_POD_NAME:-alice}/"
+      SOLID_POD_SERVER_URL: "http://css.localhost:${CSS_PORT:-13000}"
+      SOLID_OIDC_ISSUER: "http://css.localhost:${CSS_PORT:-13000}"
+      SOLID_POD_BASE_URL: "http://css.localhost:${CSS_PORT:-13000}/${CSS_POD_NAME:-alice}/"
       SOLID_POD_PATH: ${SOLID_POD_PATH:-/health-pim/}
       SOLID_REDIRECT_URL: "http://localhost:${APP_PORT:-8080}/callback"
       SOLID_CLIENT_CREDENTIALS_FILE: /run/opencommons/client-credentials.json

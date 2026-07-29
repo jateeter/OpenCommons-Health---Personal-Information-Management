@@ -93,6 +93,23 @@ describe('OpenCommons Health HTTP application', () => {
     expect(body).toContain('SMART on FHIR');
   });
 
+  it('serves local UI shell assets without stale rebuild caching', async () => {
+    const appScript = await fetch(`${baseUrl}/app.js`);
+    expect(appScript.status).toBe(200);
+    expect(appScript.headers.get('cache-control')).toBe('no-store');
+    await appScript.text();
+
+    const styles = await fetch(`${baseUrl}/styles.css`);
+    expect(styles.status).toBe(200);
+    expect(styles.headers.get('cache-control')).toBe('no-store');
+    await styles.text();
+
+    const thumbnail = await fetch(`${baseUrl}/opencommons-health-thumbnail.png`);
+    expect(thumbnail.status).toBe(200);
+    expect(thumbnail.headers.get('cache-control')).toBe('public, max-age=3600');
+    await thumbnail.arrayBuffer();
+  });
+
   it('serves Epic localhost MVP diagnostics when the connector is configured', async () => {
     const diagnostics = jest.fn(async () => ({
       enabled: true,

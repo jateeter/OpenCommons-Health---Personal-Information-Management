@@ -5,7 +5,7 @@
 # expires), then executes the provided command.
 #
 # Usage:
-#   ./scripts/wait-for-pod.sh http://localhost:3000 -- npm run test:integration
+#   ./scripts/wait-for-pod.sh http://localhost:13000 -- npm run test:integration
 #
 # Environment:
 #   WAIT_TIMEOUT  – total seconds to wait before giving up (default: 60)
