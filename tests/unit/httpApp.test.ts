@@ -359,6 +359,48 @@ describe('OpenCommons Health HTTP application', () => {
     expect(context.activityLog?.list().some((event) => event.kind === 'record-deleted' && event.domain === 'conditions')).toBe(true);
   });
 
+  it('serves the wellness landing summary with axis and browse domains', async () => {
+    const response = await fetch(`${baseUrl}/api/wellness/summary`);
+    expect(response.status).toBe(200);
+    const payload = await response.json() as {
+      data: {
+        axes: Array<{ domain: string; status: string; score: number | null; summary: string }>;
+        browse: Array<{ domain: string; count: number | null }>;
+      };
+    };
+    expect(payload.data.axes.map((axis) => axis.domain)).toEqual([
+      'vital-signs', 'lab-results', 'medications', 'conditions', 'allergies', 'immunizations',
+    ]);
+    expect(payload.data.browse.map((entry) => entry.domain)).toEqual([
+      'profiles', 'providers', 'insurance-policies', 'documents', 'workflow-tasks',
+    ]);
+    // The stub context only registers a conditions repository; the rest report no data.
+    const conditions = payload.data.axes.find((axis) => axis.domain === 'conditions');
+    expect(conditions).toMatchObject({ status: 'yellow' });
+    expect(payload.data.browse.every((entry) => entry.count === null)).toBe(true);
+  });
+
+  it('does not leak record values or identifiers through the wellness summary', async () => {
+    const response = await fetch(`${baseUrl}/api/wellness/summary`);
+    const body = await response.text();
+    expect(containsDirectIdentifier(body)).toBe(false);
+    expect(body).not.toContain('Jane Doe private note');
+    expect(body).not.toContain('Dr Named Provider');
+    expect(body).not.toContain('http://pod/conditions/1');
+  });
+
+  it('rejects the wellness summary when the Solid session is not authenticated', async () => {
+    context.authenticated = false;
+    const response = await fetch(`${baseUrl}/api/wellness/summary`);
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects non-GET methods on the wellness summary', async () => {
+    const response = await fetch(`${baseUrl}/api/wellness/summary`, { method: 'POST' });
+    expect(response.status).toBe(405);
+    expect(response.headers.get('allow')).toBe('GET');
+  });
+
   it('rejects domain access when the Solid session is not authenticated', async () => {
     context.authenticated = false;
     const response = await fetch(`${baseUrl}/api/resources/conditions`);

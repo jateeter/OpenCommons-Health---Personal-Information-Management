@@ -74,6 +74,7 @@ export * from './podActivity';
 export * from './podActivityRepository';
 export * from './reconciliation';
 export * from './healthkitStatus';
+export * from './wellness';
 
 /** Options passed to {@link HealthPIM.create}. */
 export interface HealthPIMOptions {
