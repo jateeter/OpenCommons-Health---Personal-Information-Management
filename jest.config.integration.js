@@ -18,11 +18,11 @@ module.exports = {
   roots: ['<rootDir>/tests'],
   testMatch: ['**/integration/**/*.test.ts'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
+    '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
   // Allow Jest to transform ESM packages that integration tests need directly.
   transformIgnorePatterns: [
-    '/node_modules/(?!(@inrupt|jose|n3|@rdfjs)/)',
+    '/node_modules/(?!(@inrupt|jose|n3|@rdfjs|uuid)/)',
   ],
   testTimeout: 30000,
   moduleNameMapper: {

@@ -37,6 +37,8 @@ Required values:
 | `EPIC_ENABLED` | `true` for Epic mock review | Enables the local Epic connector panel and mock workflow. |
 | `EPIC_MODE` | `mock` | Uses deterministic local Medicare Wellness data with no live Epic credentials. |
 | `EPIC_GRANT_ENCRYPTION_KEY` | local review key in `.env` | Encrypts mock grant material before pod storage. |
+| `REALITYENGINE_SUITE_ENABLED` | `1` | Starts `../RealityEngine_CI/startUniverse.sh` before the PIM container stack. |
+| `REALITYENGINE_SUITE_ARGS` | `--engines=scala:1,cpp:1,lsp:1 --machine-load=runtime --pe-source-bootstrap=auto --no-openclaw --no-local-ai` | Spawns one Scala, C++, and LSP RealityEngine runtime for suite review. |
 
 Do not commit `.env`, generated `.solid/` files, or local Docker volume data.
 
@@ -65,13 +67,17 @@ EPIC_GRANT_ENCRYPTION_KEY=local-review-epic-key \
 The script will:
 
 1. validate the configured localhost ports and Docker availability;
-2. build the local PIM and CSS images;
-3. create isolated Docker volumes for this port pair;
-4. start Solid Community Server;
-5. provision the local account, WebID, pod, and client credentials;
-6. start the PIM app;
-7. verify the UI, liveness, OpenAPI docs, authenticated pod readiness, and CRUD
+2. start the sibling RealityEngine suite through `../RealityEngine_CI/startUniverse.sh`;
+3. build the local PIM and CSS images;
+4. create isolated Docker volumes for this port pair;
+5. start Solid Community Server;
+6. provision the local account, WebID, pod, and client credentials;
+7. start the PIM app;
+8. verify the UI, liveness, OpenAPI docs, authenticated pod readiness, and CRUD
    coverage for all 11 health domains.
+
+For a Solid/PIM-only visual review, add `REALITYENGINE_SUITE_ENABLED=0` to the
+startup command.
 
 ## Stop without deleting pod data
 
@@ -80,7 +86,9 @@ APP_PORT=18080 CSS_PORT=13000 ./scripts/local-container-down.sh
 ```
 
 The normal stop workflow preserves Docker volumes for the review pod and
-generated credentials.
+generated credentials. It also stops the RealityEngine suite by default; use
+`REALITYENGINE_SUITE_STOP_ON_DOWN=0` only when you intentionally want to leave
+that suite running.
 
 ## Reset review data
 

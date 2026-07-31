@@ -15,16 +15,32 @@
 services:
   # ── Solid Community Server ──────────────────────────────────────────────────
   css:
-    image: solidproject/community-server:7.1.8
+    build:
+      context: .
+      dockerfile: Dockerfile.css
+    image: opencommons-health-css:7.1.8-local
     command:
       - "-c"
-      - "@css:config/default.json"
+      - "@css:config/file.json"
+      - "-f"
+      - "/data"
       - "-p"
       - "${CSS_PORT:-13000}"
+      - "-b"
+      - "http://css.localhost:${CSS_PORT:-13000}/"
     ports:
       - "${CSS_PORT:-13000}:${CSS_PORT:-13000}"
     environment:
       CSS_LOGGING_LEVEL: ${CSS_LOGGING_LEVEL:-warn}
+      OPENCOMMONS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
+      OPENCOMMONS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:-integration-only-opencommons-password}
+      OPENCOMMONS_POD_NAME: ${CSS_POD_NAME:-alice}
+    volumes:
+      - css_test_data:/data
+    networks:
+      default:
+        aliases:
+          - css.localhost
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-13000}/ || exit 1"]
       interval: 5s
@@ -41,8 +57,17 @@ services:
       css:
         condition: service_healthy
     environment:
-      INTEGRATION_TEST_BASE_URL: "http://css:${CSS_PORT:-13000}"
-      INTEGRATION_POD_BASE_URL: "http://css:${CSS_PORT:-13000}/alice/"
-      INTEGRATION_CLIENT_ID: ${INTEGRATION_CLIENT_ID:-alice-client}
-      INTEGRATION_CLIENT_SECRET: ${INTEGRATION_CLIENT_SECRET:-alice-secret}
-    command: ["npm", "run", "test:integration"]
+      CSS_BASE_URL: "http://css.localhost:${CSS_PORT:-13000}/"
+      CSS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
+      CSS_ACCOUNT_PASSWORD: ${CSS_ACCOUNT_PASSWORD:-integration-only-opencommons-password}
+      CSS_POD_NAME: ${CSS_POD_NAME:-alice}
+      CSS_CLIENT_CREDENTIALS_FILE: /tmp/opencommons/client-credentials.json
+      INTEGRATION_TEST_BASE_URL: "http://css.localhost:${CSS_PORT:-13000}"
+      INTEGRATION_POD_BASE_URL: "http://css.localhost:${CSS_PORT:-13000}/${CSS_POD_NAME:-alice}/"
+      INTEGRATION_CLIENT_CREDENTIALS_FILE: /tmp/opencommons/client-credentials.json
+      INTEGRATION_CLIENT_ID: ${INTEGRATION_CLIENT_ID:-}
+      INTEGRATION_CLIENT_SECRET: ${INTEGRATION_CLIENT_SECRET:-}
+    command: ["sh", "-c", "node scripts/provision-css.mjs && npm run test:integration"]
+
+volumes:
+  css_test_data:
