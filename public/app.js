@@ -242,6 +242,32 @@ const domains = {
   },
 };
 
+// ── Wellness landing configuration (issue #32) ───────────────────────────────
+// Axis domains are the wellness-meaningful ones plotted as spider-graph vectors.
+// Browse domains are reference/administrative records reached from the nav area.
+const WELLNESS_AXIS_DOMAINS = ['vital-signs', 'lab-results', 'medications', 'conditions', 'allergies', 'immunizations'];
+const WELLNESS_BROWSE_DOMAINS = ['profiles', 'providers', 'insurance-policies', 'documents', 'workflow-tasks'];
+
+// One colour per domain, shared by graph vectors and browse tiles.
+const DOMAIN_COLORS = {
+  'vital-signs': '#0f8a8d',
+  'lab-results': '#2f6bd8',
+  medications: '#7a5bd0',
+  conditions: '#c2557a',
+  allergies: '#d1762f',
+  immunizations: '#3f9142',
+  profiles: '#176c5c',
+  providers: '#4a7fa5',
+  'insurance-policies': '#8a7a3d',
+  documents: '#5f6f8a',
+  'workflow-tasks': '#6b8f5a',
+};
+
+const STATUS_COLORS = { green: '#2b9a73', yellow: '#d9a441', red: '#cf5240', empty: '#a9b6b1' };
+const STATUS_LABELS = { green: 'On track', yellow: 'Watch', red: 'Attention', empty: 'No data' };
+
+let activeView = 'wellness';
+let wellnessSummary = null;
 let activeDomain = 'conditions';
 let records = [];
 let editing = null;
@@ -254,6 +280,14 @@ const $ = (id) => document.getElementById(id);
 
 function initializeNavigation() {
   const nav = $('domain-nav');
+  const wellness = document.createElement('button');
+  wellness.type = 'button';
+  wellness.dataset.view = 'wellness';
+  wellness.className = 'nav-wellness';
+  wellness.innerHTML = '<span class="nav-icon">✳</span>Wellness';
+  wellness.addEventListener('click', () => showView('wellness'));
+  nav.append(wellness);
+
   const label = document.createElement('p');
   label.className = 'nav-label';
   label.textContent = 'Health records';
@@ -266,6 +300,167 @@ function initializeNavigation() {
     button.addEventListener('click', () => selectDomain(key));
     nav.append(button);
   }
+
+  const status = document.createElement('button');
+  status.type = 'button';
+  status.dataset.view = 'status';
+  status.className = 'nav-status';
+  status.innerHTML = '<span class="nav-icon">◈</span>Pod status';
+  status.addEventListener('click', () => showView('status'));
+  nav.append(status);
+}
+
+/** Switches the single-page view. 'wellness' is the landing view. */
+function showView(view) {
+  activeView = view;
+  for (const name of ['wellness', 'records', 'status']) {
+    $(`view-${name}`).classList.toggle('hidden', name !== view);
+  }
+  document.querySelectorAll('.domain-nav button').forEach((button) => {
+    const isActive = button.dataset.view
+      ? button.dataset.view === view
+      : view === 'records' && button.dataset.domain === activeDomain;
+    button.classList.toggle('active', isActive);
+  });
+  if (view === 'wellness') void refreshWellness();
+}
+
+async function refreshWellness(ready = applicationReady) {
+  if (!ready) {
+    renderWellness(null);
+    return;
+  }
+  try {
+    const response = await fetch('/api/wellness/summary');
+    const payload = await response.json();
+    if (!response.ok) throw new Error(formatApiError(payload));
+    wellnessSummary = payload.data;
+    renderWellness(wellnessSummary);
+  } catch (error) {
+    renderWellness({ error: error.message });
+  }
+}
+
+function renderWellness(summary) {
+  const target = $('wellness-graph');
+  target.replaceChildren();
+  if (!summary || summary.error) {
+    const message = document.createElement('p');
+    message.className = 'wellness-loading';
+    message.textContent = summary?.error
+      || 'Your wellness overview appears once the pod connection is ready. Open Pod status for details.';
+    target.append(message);
+    renderBrowseNav(null);
+    return;
+  }
+  target.append(createSpiderGraph(summary.axes));
+  renderBrowseNav(summary.browse);
+}
+
+/**
+ * Draws the wellness spider graph: one colour-coded vector per axis domain with
+ * the owner's current normalized value plotted as a red/yellow/green point.
+ */
+function createSpiderGraph(axes) {
+  const size = 320;
+  const center = size / 2;
+  const radius = center - 46;
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.setAttribute('class', 'spider');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `Wellness spider graph across ${axes.length} health domains`);
+
+  const node = (name, attributes) => {
+    const element = document.createElementNS(svgNs, name);
+    for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+    return element;
+  };
+  const point = (index, fraction) => {
+    const angle = (Math.PI * 2 * index) / axes.length - Math.PI / 2;
+    return [center + Math.cos(angle) * radius * fraction, center + Math.sin(angle) * radius * fraction];
+  };
+
+  for (const ring of [0.25, 0.5, 0.75, 1]) {
+    const outline = axes.map((_, index) => point(index, ring).join(',')).join(' ');
+    svg.append(node('polygon', { points: outline, class: 'spider-ring' }));
+  }
+
+  const plotted = axes.map((axis, index) => point(index, Math.max((axis.score ?? 0) / 100, 0.04)));
+  svg.append(node('polygon', { points: plotted.map((pair) => pair.join(',')).join(' '), class: 'spider-area' }));
+
+  axes.forEach((axis, index) => {
+    const [ax, ay] = point(index, 1);
+    const color = DOMAIN_COLORS[axis.domain] || '#176c5c';
+    svg.append(node('line', { x1: center, y1: center, x2: ax, y2: ay, stroke: color, 'stroke-width': 2, 'stroke-opacity': .55 }));
+
+    const [px, py] = plotted[index];
+    const marker = node('circle', {
+      cx: px, cy: py, r: 7,
+      fill: STATUS_COLORS[axis.status] || STATUS_COLORS.empty,
+      stroke: '#fffdf7', 'stroke-width': 2,
+      class: 'spider-point', tabindex: '0', role: 'button',
+      'aria-label': `${axis.label}: ${STATUS_LABELS[axis.status]}${axis.score === null ? '' : `, score ${axis.score}`}. ${axis.summary}`,
+    });
+    const tip = node('title', {});
+    tip.textContent = `${axis.label} — ${STATUS_LABELS[axis.status]}${axis.score === null ? '' : ` (${axis.score}/100)`}\n${axis.summary}`;
+    marker.append(tip);
+    marker.addEventListener('click', () => selectDomain(axis.domain));
+    marker.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectDomain(axis.domain); }
+    });
+    svg.append(marker);
+
+    const [lx, ly] = point(index, 1.2);
+    const label = node('text', {
+      x: lx, y: ly, fill: color, class: 'spider-label',
+      'text-anchor': lx > center + 4 ? 'start' : lx < center - 4 ? 'end' : 'middle',
+      'dominant-baseline': ly > center ? 'hanging' : ly < center ? 'auto' : 'middle',
+    });
+    label.textContent = axis.label;
+    label.addEventListener('click', () => selectDomain(axis.domain));
+    svg.append(label);
+  });
+
+  return svg;
+}
+
+/** Non-graph domains: a browse/exploration row with per-domain record counts. */
+function renderBrowseNav(browse) {
+  const nav = $('browse-nav');
+  nav.replaceChildren();
+  const entries = browse || WELLNESS_BROWSE_DOMAINS.map((domain) => ({ domain, count: null }));
+  for (const entry of entries) {
+    const config = domains[entry.domain];
+    if (!config) continue;
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'browse-tile';
+    tile.style.setProperty('--tile-color', DOMAIN_COLORS[entry.domain] || '#176c5c');
+    tile.setAttribute('aria-label', `Browse ${config.plural}${Number.isInteger(entry.count) ? `, ${entry.count} record${entry.count === 1 ? '' : 's'}` : ''}`);
+    tile.innerHTML = `<span class="browse-icon">${config.icon}</span><span class="browse-label">${config.plural}</span><span class="browse-count">${Number.isInteger(entry.count) ? entry.count : '—'}</span>`;
+    tile.addEventListener('click', () => selectDomain(entry.domain));
+    nav.append(tile);
+  }
+}
+
+/**
+ * The masthead pill is the only pod-connectivity signal on the landing view and
+ * the way into the full status page. On narrow screens it collapses to its dot,
+ * so the label lives in the accessible name as well as the visible text.
+ */
+function setConnectionIndicator(state, label) {
+  const indicator = $('connection');
+  indicator.className = `connection ${state}`;
+  indicator.setAttribute('aria-label', `Pod connection: ${label}. Open pod connection status.`);
+  indicator.replaceChildren();
+  const dot = document.createElement('span');
+  dot.className = 'connection-dot';
+  const text = document.createElement('span');
+  text.className = 'connection-label';
+  text.textContent = label;
+  indicator.append(dot, text);
 }
 
 async function checkStatus() {
@@ -274,8 +469,7 @@ async function checkStatus() {
     const status = await response.json();
     const ready = response.ok && status.ok;
     applicationReady = ready;
-    $('connection').className = `connection ${ready ? '' : 'offline'}`;
-    $('connection').innerHTML = `<span></span>${ready ? 'Pod connected' : 'Pod setup needed'}`;
+    setConnectionIndicator(ready ? '' : 'offline', ready ? 'Pod connected' : 'Pod setup needed');
     $('pod-state').textContent = ready ? 'Connected' : 'Unavailable';
     $('setup-warning').classList.toggle('hidden', ready);
     $('setup-message').textContent = ready ? '' : (status.error || 'Configure the Solid server, pod URL, client ID, and client secret for this deployment.');
@@ -285,11 +479,11 @@ async function checkStatus() {
     await refreshHealthKitStatus(ready);
     renderEpicStatus(status.epic || { enabled: false, status: 'disabled' }, ready);
     await refreshEpicDiagnostics(ready, false, status.epic || { enabled: false, status: 'disabled' });
+    await refreshWellness(ready);
     return ready;
   } catch {
     applicationReady = false;
-    $('connection').className = 'connection offline';
-    $('connection').innerHTML = '<span></span>Application offline';
+    setConnectionIndicator('offline', 'Application offline');
     $('pod-state').textContent = 'Unavailable';
     $('add-button').disabled = true;
     renderPodManagement({ error: 'Application offline' }, false);
@@ -297,6 +491,7 @@ async function checkStatus() {
     renderHealthKitStatus(null);
     renderEpicStatus({ enabled: false, status: 'disabled' }, false);
     renderEpicReadiness(null);
+    renderWellness(null);
     return false;
   }
 }
@@ -514,6 +709,10 @@ function renderEpicReadiness(diagnostics) {
 async function selectDomain(key) {
   activeDomain = key;
   const config = domains[key];
+  activeView = 'records';
+  for (const name of ['wellness', 'records', 'status']) {
+    $(`view-${name}`).classList.toggle('hidden', name !== 'records');
+  }
   document.querySelectorAll('.domain-nav button').forEach((button) => button.classList.toggle('active', button.dataset.domain === key));
   $('page-title').textContent = config.plural;
   $('page-description').textContent = config.description;
@@ -701,6 +900,7 @@ async function saveRecord(event) {
     if (!response.ok) throw new Error(formatApiError(payload));
     $('record-dialog').close();
     await loadRecords();
+    await refreshWellness();
   } catch (error) {
     $('form-error').textContent = error.message;
     $('form-error').classList.remove('hidden');
@@ -716,6 +916,7 @@ async function deleteRecord(record) {
     return;
   }
   await loadRecords();
+  await refreshWellness();
 }
 
 async function connectEpic() {
@@ -1000,5 +1201,11 @@ $('epic-connect').addEventListener('click', connectEpic);
 $('epic-diagnostics').addEventListener('click', () => refreshEpicDiagnostics(applicationReady, true, epicStatus));
 $('epic-preview').addEventListener('click', previewEpicImport);
 $('epic-apply').addEventListener('click', applyEpicImport);
+$('connection').addEventListener('click', () => showView('status'));
+document.querySelector('.brand').addEventListener('click', (event) => {
+  event.preventDefault();
+  showView('wellness');
+});
 initializeNavigation();
-checkStatus().then(() => selectDomain(activeDomain));
+showView('wellness');
+checkStatus();

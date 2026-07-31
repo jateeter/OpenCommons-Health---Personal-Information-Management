@@ -28,6 +28,7 @@ export interface SolidAuthConfig {
 export class SolidAuthService {
   private readonly config: SolidAuthConfig;
   private session: Session;
+  private reauthentication: Promise<void> | null = null;
 
   constructor(config: SolidAuthConfig) {
     this.config = config;
@@ -109,12 +110,47 @@ export class SolidAuthService {
     return this.session.info.webId;
   }
 
+  /** Whether a fresh session can be obtained without user interaction. */
+  private get canReauthenticate(): boolean {
+    return Boolean(this.config.clientId && this.config.clientSecret);
+  }
+
+  /**
+   * Re-runs client-credentials login, sharing one attempt across concurrent
+   * callers so a burst of expired requests triggers a single token exchange.
+   */
+  private async reauthenticate(): Promise<void> {
+    if (!this.reauthentication) {
+      this.reauthentication = (async () => {
+        this.session = new Session();
+        await this.loginWithClientCredentials();
+      })().finally(() => {
+        this.reauthentication = null;
+      });
+    }
+    await this.reauthentication;
+  }
+
   /**
    * Fetch API compatible with `@inrupt/solid-client` – includes the
    * session's authentication credentials automatically.
+   *
+   * CSS client-credentials tokens are short-lived and the flow issues no
+   * refresh token, so an expired session silently starts sending anonymous
+   * requests. Retry once through a fresh login when the pod rejects a request,
+   * otherwise every read fails a few minutes after startup until the process
+   * restarts. Bodies are re-sent on retry, so callers must pass replayable
+   * bodies (strings/buffers) rather than streams.
    */
   get authenticatedFetch(): typeof fetch {
-    return this.session.fetch as typeof fetch;
+    return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const response = await (this.session.fetch as typeof fetch)(input, init);
+      if ((response.status !== 401 && response.status !== 403) || !this.canReauthenticate) {
+        return response;
+      }
+      await this.reauthenticate();
+      return (this.session.fetch as typeof fetch)(input, init);
+    }) as typeof fetch;
   }
 
   /** The underlying Inrupt session object. */

@@ -317,6 +317,7 @@ export const OPENAPI_DOCUMENT = {
     { name: 'epic', description: 'Patient-owned Epic SMART/FHIR connection, import preview, and pod sync operations.' },
     { name: 'planning', description: 'Localhost MVP planning surfaces for future read-only Epic document and workflow APIs.' },
     { name: 'pod', description: 'Owner-visible Solid Pod activity, audit, and observability surfaces.' },
+    { name: 'wellness', description: 'Aggregated owner wellness summary for the landing spider graph.' },
   ],
   paths: {
     '/livez': {
@@ -375,6 +376,16 @@ export const OPENAPI_DOCUMENT = {
         ],
         responses: okResponse('Owner-visible safe Pod activity summary.', objectSchema(['data'], {
           data: { $ref: '#/components/schemas/PodActivityResponse' },
+        })),
+      },
+    },
+    '/api/wellness/summary': {
+      get: {
+        tags: ['wellness'],
+        operationId: 'getWellnessSummary',
+        summary: 'Aggregated per-domain wellness scores and browse counts for the landing view',
+        responses: okResponse('Normalized wellness axes with red/yellow/green status and browse-domain record counts.', objectSchema(['data'], {
+          data: { $ref: '#/components/schemas/WellnessSummary' },
         })),
       },
     },
@@ -669,6 +680,28 @@ export const OPENAPI_DOCUMENT = {
         recentEvents: { type: 'array', items: { $ref: '#/components/schemas/PodActivityEvent' } },
         privacyBoundary: string('Owner-visible privacy boundary statement'),
         nextOwnerAction: string('Owner-facing next action'),
+      }),
+      WellnessSummary: objectSchema(['generatedAt', 'axes', 'browse'], {
+        generatedAt: dateTime(),
+        axes: {
+          type: 'array',
+          items: objectSchema(['domain', 'label', 'score', 'status', 'summary', 'recordCount'], {
+            domain: { type: 'string', enum: ['vital-signs', 'lab-results', 'medications', 'conditions', 'allergies', 'immunizations'] },
+            label: string('Short axis label for the spider graph'),
+            score: { oneOf: [{ type: 'number', minimum: 0, maximum: 100 }, { type: 'null' }] },
+            status: enumSchema(['green', 'yellow', 'red', 'empty']),
+            summary: string('Owner-facing status reason without PHI values'),
+            latestAt: dateTime(),
+            recordCount: { type: 'integer', minimum: 0 },
+          }),
+        },
+        browse: {
+          type: 'array',
+          items: objectSchema(['domain', 'count'], {
+            domain: { type: 'string', enum: ['profiles', 'providers', 'insurance-policies', 'documents', 'workflow-tasks'] },
+            count: { oneOf: [{ type: 'integer', minimum: 0 }, { type: 'null' }] },
+          }),
+        },
       }),
       AnonymizedRelease: objectSchema(['domain', 'fhirResourceType', 'anonymized', 'data'], {
         domain: { type: 'string', enum: DOMAIN_NAMES },

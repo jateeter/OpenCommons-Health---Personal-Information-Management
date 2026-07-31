@@ -54,10 +54,11 @@ button { cursor: pointer; }
 .connection {
   padding: 8px 13px; border-radius: 999px; color: var(--teal-dark);
   background: var(--mint); font-size: 12px; font-weight: 700;
+  border: 0;
 }
-.connection span { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #2b9a73; margin-right: 7px; }
+.connection-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #2b9a73; margin-right: 7px; }
 .connection.offline { color: #8a3d2a; background: #fae3dc; }
-.connection.offline span { background: var(--coral); }
+.connection.offline .connection-dot { background: var(--coral); }
 
 .shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); max-width: 1440px; margin: 0 auto; }
 .domain-nav { padding: 32px 18px; border-right: 1px solid var(--line); min-height: calc(100vh - 76px); }
@@ -69,6 +70,43 @@ button { cursor: pointer; }
 .domain-nav button:hover { background: rgba(255,255,255,.55); }
 .domain-nav button.active { color: var(--teal-dark); background: var(--mint); font-weight: 750; }
 .nav-icon { width: 25px; text-align: center; }
+.domain-nav .nav-wellness { margin-bottom: 14px; font-weight: 750; color: var(--teal-dark); }
+.domain-nav .nav-status { margin-top: 14px; color: var(--muted); }
+
+/* ── Wellness landing (issue #32) ─────────────────────────────────────────── */
+.wellness-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.wellness-head h1 { margin: 0; }
+.wellness-legend { display: flex; gap: 14px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.wellness-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot-green { background: #2b9a73; }
+.dot-yellow { background: #d9a441; }
+.dot-red { background: #cf5240; }
+
+.wellness-graph { display: grid; place-items: center; padding: 10px 0 4px; }
+.wellness-loading { color: var(--muted); text-align: center; max-width: 30ch; padding: 40px 0; }
+.spider { width: min(100%, 400px); height: auto; overflow: visible; }
+.spider-ring { fill: none; stroke: rgba(25, 53, 47, .12); stroke-width: 1; }
+.spider-area { fill: rgba(23, 108, 92, .13); stroke: var(--teal); stroke-width: 2; }
+.spider-point { cursor: pointer; transition: r .12s ease; }
+.spider-point:hover, .spider-point:focus-visible { r: 9; outline: none; }
+.spider-label { font-size: 12px; font-weight: 800; cursor: pointer; }
+
+.browse-nav {
+  display: flex; gap: 10px; margin-top: 22px; padding-bottom: 6px;
+  overflow-x: auto; scrollbar-width: thin;
+}
+.browse-tile {
+  flex: 0 0 auto; min-width: 96px;
+  display: grid; justify-items: center; gap: 3px;
+  padding: 12px 14px; border-radius: 15px;
+  border: 1px solid var(--line); background: var(--surface);
+  border-top: 3px solid var(--tile-color, var(--teal));
+}
+.browse-tile:hover { background: #fff; box-shadow: 0 6px 18px rgba(25, 53, 47, .08); }
+.browse-icon { color: var(--tile-color, var(--teal)); font-size: 18px; line-height: 1; }
+.browse-label { font-size: 12px; font-weight: 750; white-space: nowrap; }
+.browse-count { color: var(--muted); font-size: 11px; font-weight: 700; }
 
 main { padding: 46px clamp(28px, 5vw, 72px) 80px; min-width: 0; }
 .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
@@ -463,4 +501,24 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .record { grid-template-columns: 40px 1fr; }
   .record-actions { grid-column: 2; }
   .form-fields { grid-template-columns: 1fr; }
+  .domain-nav .nav-wellness, .domain-nav .nav-status { margin: 0 4px 0 0; }
+}
+
+/* iPhone-class viewports: the graph owns the first screen, browse row follows. */
+@media (max-width: 480px) {
+  /* The masthead collapses to brand + a connection dot that opens Pod status. */
+  .masthead { height: 62px; padding: 0 12px; gap: 10px; }
+  .brand strong { font-size: 16px; }
+  .masthead-actions { gap: 9px; }
+  .masthead-actions .text-link { font-size: 11px; }
+  .connection { padding: 9px; }
+  .connection-dot { margin-right: 0; }
+  .connection-label { display: none; }
+  main { padding: 18px 14px 48px; }
+  .wellness-head h1 { font-size: 30px; }
+  .wellness-legend { gap: 11px; font-size: 11px; }
+  .wellness-graph { padding: 4px 0 0; }
+  .spider { width: min(100%, 330px); }
+  .browse-nav { margin-top: 14px; gap: 8px; }
+  .browse-tile { min-width: 84px; padding: 10px 12px; }
 }

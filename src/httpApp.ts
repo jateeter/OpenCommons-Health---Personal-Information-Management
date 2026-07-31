@@ -24,6 +24,12 @@ import {
 } from './podActivity';
 import type { PodActivityRepository } from './podActivityRepository';
 import { createHealthKitMirrorStatus } from './healthkitStatus';
+import {
+  computeWellnessSummary,
+  WELLNESS_AXIS_DOMAINS,
+  WELLNESS_BROWSE_DOMAINS,
+  type WellnessSourceRecords,
+} from './wellness';
 
 export interface DomainRepository {
   findAll(): Promise<unknown[]>;
@@ -110,6 +116,9 @@ export function createRequestHandler(
       }
       if (requestUrl.pathname === '/api/pod/healthkit/status') {
         return await handleHealthKitStatusRequest(res, provideContext);
+      }
+      if (requestUrl.pathname === '/api/wellness/summary') {
+        return await handleWellnessSummaryRequest(req, res, provideContext);
       }
       if (requestUrl.pathname === '/api/planned/epic') {
         return sendJson(res, 200, { data: EPIC_READONLY_PLANS });
@@ -240,6 +249,40 @@ async function handleHealthKitStatusRequest(
       activityEvents: events,
     }),
   });
+}
+
+async function handleWellnessSummaryRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  provideContext: ContextProvider,
+): Promise<void> {
+  if (req.method !== 'GET') {
+    res.setHeader('allow', 'GET');
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  const context = await provideContext();
+  if (!context.authenticated) {
+    throw new AuthError('The PIM is not authenticated with the configured Solid server.');
+  }
+  // Axis reads are deliberately not error-swallowed: a failed pod read must not
+  // render as an empty domain, which would tell the owner they have no records
+  // when the pod is simply unreachable.
+  const sourceEntries = await Promise.all(WELLNESS_AXIS_DOMAINS.map(async (domain) => {
+    const repository = context.repositories[domain];
+    if (!repository) return [domain, []] as const;
+    return [domain, await repository.findAll()] as const;
+  }));
+  const sources = Object.fromEntries(sourceEntries) as unknown as WellnessSourceRecords;
+  const browseEntries = await Promise.all(WELLNESS_BROWSE_DOMAINS.map(async (domain) => {
+    try {
+      const repository = context.repositories[domain];
+      if (!repository) return [domain, null] as const;
+      return [domain, (await repository.findAll()).length] as const;
+    } catch {
+      return [domain, null] as const;
+    }
+  }));
+  sendJson(res, 200, { data: computeWellnessSummary(sources, Object.fromEntries(browseEntries)) });
 }
 
 async function handleEpicIntegrationRequest(

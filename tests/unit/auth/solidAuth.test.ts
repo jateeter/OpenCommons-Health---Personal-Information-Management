@@ -16,16 +16,24 @@ const mockSessionInfo = {
   webId: undefined as string | undefined,
 };
 
+/** Every Session the service constructs, so tests can drive re-authentication. */
+const mockSessions: Array<{ fetch: jest.Mock }> = [];
+
 jest.mock('@inrupt/solid-client-authn-node', () => ({
-  Session: jest.fn().mockImplementation(() => ({
-    login: mockLogin,
-    logout: mockLogout,
-    handleIncomingRedirect: mockHandleIncomingRedirect,
-    get info() {
-      return mockSessionInfo;
-    },
-    fetch: jest.fn() as typeof fetch,
-  })),
+  Session: jest.fn().mockImplementation(() => {
+    const session = {
+      login: mockLogin,
+      logout: mockLogout,
+      handleIncomingRedirect: mockHandleIncomingRedirect,
+      get info() {
+        return mockSessionInfo;
+      },
+      // Sessions succeed by default; tests override to simulate expiry.
+      fetch: jest.fn().mockResolvedValue(new Response(null, { status: 200 })) as unknown as jest.Mock,
+    };
+    mockSessions.push(session);
+    return session;
+  }),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -156,6 +164,65 @@ describe('SolidAuthService', () => {
     it('authenticatedFetch returns the session fetch', () => {
       const svc = makeService();
       expect(typeof svc.authenticatedFetch).toBe('function');
+    });
+  });
+
+  describe('expired client-credentials sessions', () => {
+    const credentials = { clientId: 'id', clientSecret: 'secret' };
+    const response = (status: number) => new Response(null, { status });
+
+    beforeEach(() => {
+      mockSessions.length = 0;
+      mockSessionInfo.isLoggedIn = true;
+    });
+
+    it('re-authenticates and retries once when the pod rejects an expired token', async () => {
+      const svc = makeService(credentials);
+      mockSessions[0].fetch.mockResolvedValue(response(401));
+
+      const result = await svc.authenticatedFetch('http://pod/health-pim/conditions/');
+
+      // A second Session is built by the re-login, and the retry runs on it.
+      expect(mockSessions).toHaveLength(2);
+      expect(mockLogin).toHaveBeenCalledTimes(1);
+      expect(mockSessions[1].fetch).toHaveBeenCalledTimes(1);
+      expect(result.status).toBe(200);
+    });
+
+    it('shares a single re-login across concurrent expired requests', async () => {
+      const svc = makeService(credentials);
+      mockSessions[0].fetch.mockResolvedValue(response(401));
+
+      await Promise.all([
+        svc.authenticatedFetch('http://pod/health-pim/conditions/'),
+        svc.authenticatedFetch('http://pod/health-pim/medications/'),
+        svc.authenticatedFetch('http://pod/health-pim/labresults/'),
+      ]);
+
+      expect(mockLogin).toHaveBeenCalledTimes(1);
+      expect(mockSessions).toHaveLength(2);
+    });
+
+    it('does not retry responses that are not authorization failures', async () => {
+      const svc = makeService(credentials);
+      mockSessions[0].fetch.mockResolvedValue(response(404));
+
+      const result = await svc.authenticatedFetch('http://pod/health-pim/missing');
+
+      expect(result.status).toBe(404);
+      expect(mockLogin).not.toHaveBeenCalled();
+      expect(mockSessions).toHaveLength(1);
+    });
+
+    it('does not retry when no client credentials are configured', async () => {
+      const svc = makeService();
+      mockSessions[0].fetch.mockResolvedValue(response(401));
+
+      const result = await svc.authenticatedFetch('http://pod/health-pim/conditions/');
+
+      expect(result.status).toBe(401);
+      expect(mockLogin).not.toHaveBeenCalled();
+      expect(mockSessions).toHaveLength(1);
     });
   });
 });

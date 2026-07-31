@@ -180,6 +180,18 @@ drift. The `.solid/` directory is gitignored.
 The production server serves the browser application at `http://localhost:8080`
 and exposes the Solid-backed domain API under `/api/resources/:domain`.
 
+The landing view is a **wellness spider graph**: one colour-coded vector per
+wellness-meaningful domain (vitals, labs, medications, conditions, allergies,
+immunizations) with the owner's current normalized value plotted as a
+red/yellow/green data point. Reference and administrative domains (profile,
+providers, insurance, documents, workflow tasks) sit in a browse row beneath the
+graph with record counts. Tapping any point, axis label, or tile opens that
+domain's records. The pod connection status page — pod management, containers,
+owner activity, HealthKit mirror, and the Epic panel — remains available from
+the masthead connection pill or the "Pod status" navigation item. Scoring rules
+and the privacy boundary are documented in
+[`docs/WELLNESS_LANDING_SCORING.md`](docs/WELLNESS_LANDING_SCORING.md).
+
 OpenAPI/Swagger-compatible documentation is available in every deployment:
 
 | Endpoint | Purpose |
@@ -191,6 +203,7 @@ OpenAPI/Swagger-compatible documentation is available in every deployment:
 | `GET /api/privacy/schema` | PHI and anonymized release schema artifacts |
 | `GET /api/pod/activity` | Owner-visible Pod activity, domain counts, and storage-surface status without PHI or secrets |
 | `GET /api/pod/healthkit/status` | Owner-visible HealthKitBridge mirror container readiness and counts without sample payloads |
+| `GET /api/wellness/summary` | Normalized per-domain wellness scores and red/yellow/green status for the landing spider graph, plus browse-domain record counts |
 
 Identifiable PHI is only available through the authenticated owner-facing PIM
 resource API. External release flows must use `GET
