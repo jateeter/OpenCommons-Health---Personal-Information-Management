@@ -389,6 +389,17 @@ describe('OpenCommons Health HTTP application', () => {
     expect(body).not.toContain('http://pod/conditions/1');
   });
 
+  it('surfaces a failed pod read instead of reporting the domain as empty', async () => {
+    (context.repositories.conditions.findAll as jest.Mock).mockRejectedValue(
+      new Error('Fetching the Resource failed: [401] [Unauthorized]'),
+    );
+    const response = await fetch(`${baseUrl}/api/wellness/summary`);
+    expect(response.status).toBe(502);
+    const payload = await response.json() as { error: string; data?: unknown };
+    expect(payload.data).toBeUndefined();
+    expect(payload.error).toContain('Unauthorized');
+  });
+
   it('rejects the wellness summary when the Solid session is not authenticated', async () => {
     context.authenticated = false;
     const response = await fetch(`${baseUrl}/api/wellness/summary`);

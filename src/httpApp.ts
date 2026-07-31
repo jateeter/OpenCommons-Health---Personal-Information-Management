@@ -264,10 +264,13 @@ async function handleWellnessSummaryRequest(
   if (!context.authenticated) {
     throw new AuthError('The PIM is not authenticated with the configured Solid server.');
   }
+  // Axis reads are deliberately not error-swallowed: a failed pod read must not
+  // render as an empty domain, which would tell the owner they have no records
+  // when the pod is simply unreachable.
   const sourceEntries = await Promise.all(WELLNESS_AXIS_DOMAINS.map(async (domain) => {
     const repository = context.repositories[domain];
     if (!repository) return [domain, []] as const;
-    return [domain, await repository.findAll().catch(() => [])] as const;
+    return [domain, await repository.findAll()] as const;
   }));
   const sources = Object.fromEntries(sourceEntries) as unknown as WellnessSourceRecords;
   const browseEntries = await Promise.all(WELLNESS_BROWSE_DOMAINS.map(async (domain) => {
