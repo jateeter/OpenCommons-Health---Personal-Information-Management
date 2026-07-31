@@ -100,8 +100,7 @@ cd OpenCommons-Health---Personal-Information-Management
 cp .env.example .env
 # Edit CSS_ACCOUNT_PASSWORD in .env
 
-# 3. Start CSS, provision the account/WebID/pod/client credentials, start PIM,
-#    and verify UI, OpenAPI docs, readiness, and all 11 domain APIs
+# 3. Start the RealityEngine suite, CSS, PIM, and the local deployment verifier
 ./scripts/local-container-up.sh
 
 # Optional: verify again with explicit, conflict-free ports
@@ -120,6 +119,17 @@ The helper scripts default `COMPOSE_PROJECT_NAME` to
 local Solid volumes by port assignment, because Solid WebIDs and client
 credentials include the deployment base URL.
 
+By default, `./scripts/local-container-up.sh` also starts the sibling
+`../RealityEngine_CI/startUniverse.sh` suite with:
+
+```bash
+--engines=scala:1,cpp:1,lsp:1 --machine-load=runtime --pe-source-bootstrap=auto --no-openclaw --no-local-ai
+```
+
+Set `REALITYENGINE_SUITE_ENABLED=0` for a Solid/PIM-only startup, or override
+`REALITYENGINE_CI_DIR` and `REALITYENGINE_SUITE_ARGS` when the RealityEngine
+checkout lives elsewhere or needs a different spawn shape.
+
 Inside the Compose network the CSS base URL is
 `http://css.localhost:${CSS_PORT:-13000}`.
 That keeps container-to-container DNS working while satisfying Solid-OIDC's
@@ -136,6 +146,9 @@ Stop the container stack without deleting Solid data:
 ```bash
 ./scripts/local-container-down.sh
 ```
+
+The down script also stops the RealityEngine suite by default. Set
+`REALITYENGINE_SUITE_STOP_ON_DOWN=0` to leave it running.
 
 ## Quickstart: host-local app with containerized Solid
 

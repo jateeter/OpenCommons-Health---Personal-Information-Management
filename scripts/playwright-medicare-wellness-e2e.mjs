@@ -64,14 +64,16 @@ async function saveRecord(domainLabel, values, expectedText) {
 }
 
 async function exerciseEpicImportPanel() {
+  await page.locator('#epic-summary').getByText(/Mode:|Epic integration is disabled/).waitFor({ timeout: 15000 });
   const summary = await page.locator('#epic-summary').textContent();
   if (summary?.includes('Epic integration is disabled')) return;
 
-  if (!await page.locator('#epic-connect').isDisabled()) {
+  if (!summary?.includes('Status: connected') && !await page.locator('#epic-connect').isDisabled()) {
     await page.locator('#epic-connect').click();
     await page.locator('#epic-summary').getByText(/Status: connected/).waitFor({ timeout: 10000 });
   }
 
+  await page.locator('#epic-preview:not(:disabled)').waitFor({ timeout: 10000 });
   await page.locator('#epic-preview').click();
   await page.locator('#epic-preview-list').getByText('mapped FHIR resources', { exact: false }).waitFor({ timeout: 10000 });
   await page.locator('#epic-preview-list').getByText('Review each section and choose what to apply', { exact: false }).waitFor({ timeout: 10000 });
@@ -85,7 +87,7 @@ async function exerciseEpicImportPanel() {
     await page.locator('#epic-selection-summary').getByText(/selected candidates will be applied/, { exact: false }).waitFor({ timeout: 10000 });
   }
   await page.locator('#epic-apply').click();
-  await page.locator('#epic-preview-list').getByText('Applied', { exact: false }).waitFor({ timeout: 10000 });
+  await page.locator('#epic-preview-list').getByText(/^Applied \d+ records to the Solid pod/).waitFor({ timeout: 10000 });
 }
 
 function assertNoDirectIdentifiers(value) {

@@ -12,6 +12,8 @@ echo "Running OpenCommons Health localhost MVP release gate..."
 echo ""
 echo "1/8 Checking deployment shell scripts..."
 sh -n scripts/local-container-up.sh
+sh -n scripts/start-realityengine-suite.sh
+sh -n scripts/stop-realityengine-suite.sh
 sh -n scripts/local-host-solid-up.sh
 sh -n scripts/local-host-start.sh
 sh -n scripts/local-host-smoke.sh

@@ -3,6 +3,12 @@
 
 set -e
 
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
 APP_PORT="${APP_PORT:-8080}"
 CSS_PORT="${CSS_PORT:-13000}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-180}"
@@ -13,9 +19,14 @@ echo "Starting OpenCommons Health container stack..."
 echo "  PIM port: ${APP_PORT}"
 echo "  CSS port: ${CSS_PORT}"
 echo "  Compose project: ${COMPOSE_PROJECT_NAME}"
+echo "  RealityEngine suite: ${REALITYENGINE_SUITE_ENABLED:-1}"
 
 if [ "${SKIP_LOCAL_PREFLIGHT:-0}" != "1" ]; then
   node scripts/local-preflight.mjs
+fi
+
+if [ "${REALITYENGINE_SUITE_ENABLED:-1}" != "0" ]; then
+  ./scripts/start-realityengine-suite.sh
 fi
 
 docker compose up --build -d

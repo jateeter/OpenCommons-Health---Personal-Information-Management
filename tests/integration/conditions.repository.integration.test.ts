@@ -17,6 +17,8 @@
  *   INTEGRATION_CLIENT_SECRET=... \
  *   npm run test:integration
  */
+import fs from 'node:fs';
+
 import { SolidAuthService } from '../../src/auth/solidAuth';
 import { PodClient } from '../../src/pod/podClient';
 import { ConditionRepository } from '../../src/repositories/conditionRepository';
@@ -27,8 +29,12 @@ import type { MedicalCondition } from '../../src/types/health';
 
 const BASE_URL = process.env['INTEGRATION_TEST_BASE_URL'];
 const POD_URL = process.env['INTEGRATION_POD_BASE_URL'];
-const CLIENT_ID = process.env['INTEGRATION_CLIENT_ID'];
-const CLIENT_SECRET = process.env['INTEGRATION_CLIENT_SECRET'];
+const credentialsFile = process.env['INTEGRATION_CLIENT_CREDENTIALS_FILE'];
+const credentials = credentialsFile && fs.existsSync(credentialsFile)
+  ? JSON.parse(fs.readFileSync(credentialsFile, 'utf8')) as { clientId?: string; clientSecret?: string }
+  : undefined;
+const CLIENT_ID = process.env['INTEGRATION_CLIENT_ID'] || credentials?.clientId;
+const CLIENT_SECRET = process.env['INTEGRATION_CLIENT_SECRET'] || credentials?.clientSecret;
 
 const SKIP = !BASE_URL || !POD_URL || !CLIENT_ID || !CLIENT_SECRET;
 
@@ -52,11 +58,12 @@ const baseCondition: Omit<MedicalCondition, 'url'> = {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describeIntegration('ConditionRepository integration tests', () => {
+  let auth: SolidAuthService | undefined;
   let repo: ConditionRepository;
   const createdUrls: string[] = [];
 
   beforeAll(async () => {
-    const auth = new SolidAuthService({
+    auth = new SolidAuthService({
       oidcIssuer: BASE_URL!,
       clientId: CLIENT_ID!,
       clientSecret: CLIENT_SECRET!,
@@ -80,6 +87,7 @@ describeIntegration('ConditionRepository integration tests', () => {
         // best-effort cleanup
       }
     }
+    if (auth) await auth.logout();
   });
 
   // ── create & findByUrl ────────────────────────────────────────────────────
