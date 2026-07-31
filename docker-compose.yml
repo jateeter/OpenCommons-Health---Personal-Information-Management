@@ -49,7 +49,8 @@ services:
         aliases:
           - css.localhost
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${CSS_PORT:-13000}/ || exit 1"]
+      # 127.0.0.1 for the same IPv6-localhost reason as the pim service below.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${CSS_PORT:-13000}/ || exit 1"]
       interval: 5s
       timeout: 10s
       retries: 36
@@ -108,7 +109,10 @@ services:
       bootstrap:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-8080}/livez || exit 1"]
+      # 127.0.0.1, not localhost: inside the container localhost resolves to
+      # ::1 only, while the app binds IPv4 0.0.0.0, so a localhost probe is
+      # refused and the container is reported unhealthy while serving fine.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${APP_PORT:-8080}/livez || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
