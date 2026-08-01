@@ -60,6 +60,23 @@ button { cursor: pointer; }
 .connection.offline { color: #8a3d2a; background: #fae3dc; }
 .connection.offline .connection-dot { background: var(--coral); }
 
+/* ── Primary tabs ─────────────────────────────────────────────────────────
+   Three peer destinations. Connections sits here rather than at the end of
+   the record-category list so it is never behind a horizontal scroll. */
+.primary-tabs {
+  display: flex; gap: 6px; max-width: 1440px; margin: 0 auto; padding: 10px 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+.primary-tab {
+  border: 0; background: transparent; color: #4c665f; font: inherit; font-weight: 650;
+  padding: 11px 18px; border-radius: 11px 11px 0 0; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; border-bottom: 3px solid transparent;
+}
+.primary-tab:hover { background: rgba(255,255,255,.55); }
+.primary-tab.active { color: var(--teal-dark); background: var(--mint); border-bottom-color: var(--teal-dark); font-weight: 800; }
+.primary-tab:focus-visible { outline: 2px solid var(--teal-dark); outline-offset: -2px; }
+.tab-icon { font-size: 13px; }
+
 .shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); max-width: 1440px; margin: 0 auto; }
 .domain-nav { padding: 32px 18px; border-right: 1px solid var(--line); min-height: calc(100vh - 76px); }
 .nav-label { margin: 0 12px 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; font-size: 10px; font-weight: 800; }
@@ -70,8 +87,6 @@ button { cursor: pointer; }
 .domain-nav button:hover { background: rgba(255,255,255,.55); }
 .domain-nav button.active { color: var(--teal-dark); background: var(--mint); font-weight: 750; }
 .nav-icon { width: 25px; text-align: center; }
-.domain-nav .nav-wellness { margin-bottom: 14px; font-weight: 750; color: var(--teal-dark); }
-.domain-nav .nav-status { margin-top: 14px; color: var(--muted); }
 
 /* ── Wellness landing (issue #32) ─────────────────────────────────────────── */
 .wellness-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
@@ -501,7 +516,9 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .record { grid-template-columns: 40px 1fr; }
   .record-actions { grid-column: 2; }
   .form-fields { grid-template-columns: 1fr; }
-  .domain-nav .nav-wellness, .domain-nav .nav-status { margin: 0 4px 0 0; }
+  /* Tabs share the width evenly so all three stay reachable without scrolling. */
+  .primary-tabs { padding: 8px 12px 0; gap: 4px; }
+  .primary-tab { flex: 1 1 0; justify-content: center; padding: 11px 8px; }
 }
 
 /* iPhone-class viewports: the graph owns the first screen, browse row follows. */
