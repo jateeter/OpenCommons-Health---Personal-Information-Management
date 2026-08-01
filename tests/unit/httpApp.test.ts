@@ -400,6 +400,34 @@ describe('OpenCommons Health HTTP application', () => {
     expect(payload.error).toContain('Unauthorized');
   });
 
+  it('treats a missing domain container as empty rather than failing the summary', async () => {
+    // A freshly provisioned pod has no container until the first record is
+    // written. That is genuinely "no records", not an unreachable pod, so the
+    // landing must still render — previously every axis 502'd on a new pod.
+    const notFound = Object.assign(
+      new Error('Fetching the Resource at [http://pod/health-pim/conditions/] failed: [404] [Not Found]'),
+      { statusCode: 404 },
+    );
+    (context.repositories.conditions.findAll as jest.Mock).mockRejectedValue(notFound);
+    const response = await fetch(`${baseUrl}/api/wellness/summary`);
+    expect(response.status).toBe(200);
+    const payload = await response.json() as {
+      data: { axes: Array<{ domain: string; status: string; score: number | null }> };
+    };
+    const conditions = payload.data.axes.find((axis) => axis.domain === 'conditions');
+    expect(conditions).toMatchObject({ status: 'empty', score: null });
+  });
+
+  it('still fails the summary when a pod read fails for any reason other than 404', async () => {
+    const serverError = Object.assign(
+      new Error('Fetching the Resource failed: [500] [Internal Server Error]'),
+      { statusCode: 500 },
+    );
+    (context.repositories.conditions.findAll as jest.Mock).mockRejectedValue(serverError);
+    const response = await fetch(`${baseUrl}/api/wellness/summary`);
+    expect(response.status).toBe(502);
+  });
+
   it('rejects the wellness summary when the Solid session is not authenticated', async () => {
     context.authenticated = false;
     const response = await fetch(`${baseUrl}/api/wellness/summary`);

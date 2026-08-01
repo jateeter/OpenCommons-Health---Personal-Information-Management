@@ -3,6 +3,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import path from 'node:path';
 import type { HealthPIM } from './index';
 import type { PodClient } from './pod/podClient';
+import { isNotFound } from './pod/podClient';
 import { AuthError, AuthorizationError, ConflictError, NotFoundError, ValidationError } from './errors';
 import { DOMAIN_NAMES, OPENAPI_DOCUMENT } from './openapi';
 import { anonymizeResource, anonymizeResources, OWNER_APPROVAL_HEADER, RELEASE_PURPOSE_HEADER } from './privacy';
@@ -267,10 +268,21 @@ async function handleWellnessSummaryRequest(
   // Axis reads are deliberately not error-swallowed: a failed pod read must not
   // render as an empty domain, which would tell the owner they have no records
   // when the pod is simply unreachable.
+  //
+  // A 404 is the exception, and is genuinely different: the domain container
+  // has never been created, so the owner really does have no records there.
+  // Failing the whole summary on it meant a freshly provisioned pod could never
+  // render the wellness landing at all — every axis 502'd until the first
+  // record was written.
   const sourceEntries = await Promise.all(WELLNESS_AXIS_DOMAINS.map(async (domain) => {
     const repository = context.repositories[domain];
     if (!repository) return [domain, []] as const;
-    return [domain, await repository.findAll()] as const;
+    try {
+      return [domain, await repository.findAll()] as const;
+    } catch (error) {
+      if (isNotFound(error)) return [domain, []] as const;
+      throw error;
+    }
   }));
   const sources = Object.fromEntries(sourceEntries) as unknown as WellnessSourceRecords;
   const browseEntries = await Promise.all(WELLNESS_BROWSE_DOMAINS.map(async (domain) => {

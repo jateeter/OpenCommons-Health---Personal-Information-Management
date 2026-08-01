@@ -190,7 +190,12 @@ function isConflict(error: unknown): boolean {
   return status?.status === 409 || status?.statusCode === 409;
 }
 
-function isNotFound(error: unknown): boolean {
+/**
+ * True when an error is a 404 from the pod. Exported so callers can tell
+ * "this container has never been created" apart from "the pod is unreachable"
+ * — the two must not be handled the same way for health data.
+ */
+export function isNotFound(error: unknown): boolean {
   const response = (error as { response?: { status?: number } } | undefined)?.response;
   if (response?.status === 404) return true;
   const status = (error as { status?: number; statusCode?: number } | undefined);
