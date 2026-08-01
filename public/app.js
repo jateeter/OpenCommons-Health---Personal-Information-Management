@@ -278,16 +278,26 @@ let epicPreview = null;
 let epicSelectedDomains = new Set();
 const $ = (id) => document.getElementById(id);
 
-function initializeNavigation() {
-  const nav = $('domain-nav');
-  const wellness = document.createElement('button');
-  wellness.type = 'button';
-  wellness.dataset.view = 'wellness';
-  wellness.className = 'nav-wellness';
-  wellness.innerHTML = '<span class="nav-icon">✳</span>Wellness';
-  wellness.addEventListener('click', () => showView('wellness'));
-  nav.append(wellness);
+const PRIMARY_TABS = ['wellness', 'records', 'status'];
 
+function initializeNavigation() {
+  // Primary tabs own the top-level destinations. The sidebar below is only a
+  // domain selector for the Records tab — Wellness and Connections are no
+  // longer buried in it.
+  for (const view of PRIMARY_TABS) {
+    const tab = $(`tab-${view}`);
+    tab.addEventListener('click', () => showView(view));
+    tab.addEventListener('keydown', (event) => {
+      const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+      if (!offset) return;
+      event.preventDefault();
+      const next = PRIMARY_TABS[(PRIMARY_TABS.indexOf(view) + offset + PRIMARY_TABS.length) % PRIMARY_TABS.length];
+      showView(next);
+      $(`tab-${next}`).focus();
+    });
+  }
+
+  const nav = $('domain-nav');
   const label = document.createElement('p');
   label.className = 'nav-label';
   label.textContent = 'Health records';
@@ -300,27 +310,24 @@ function initializeNavigation() {
     button.addEventListener('click', () => selectDomain(key));
     nav.append(button);
   }
-
-  const status = document.createElement('button');
-  status.type = 'button';
-  status.dataset.view = 'status';
-  status.className = 'nav-status';
-  status.innerHTML = '<span class="nav-icon">◈</span>Pod status';
-  status.addEventListener('click', () => showView('status'));
-  nav.append(status);
 }
 
 /** Switches the single-page view. 'wellness' is the landing view. */
 function showView(view) {
   activeView = view;
-  for (const name of ['wellness', 'records', 'status']) {
+  for (const name of PRIMARY_TABS) {
     $(`view-${name}`).classList.toggle('hidden', name !== view);
+    const tab = $(`tab-${name}`);
+    const selected = name === view;
+    tab.classList.toggle('active', selected);
+    tab.setAttribute('aria-selected', String(selected));
+    // Roving tabindex: only the selected tab is in the tab order.
+    tab.tabIndex = selected ? 0 : -1;
   }
+  // The domain sidebar is a selector for the Records tab only.
+  $('domain-nav').classList.toggle('hidden', view !== 'records');
   document.querySelectorAll('.domain-nav button').forEach((button) => {
-    const isActive = button.dataset.view
-      ? button.dataset.view === view
-      : view === 'records' && button.dataset.domain === activeDomain;
-    button.classList.toggle('active', isActive);
+    button.classList.toggle('active', view === 'records' && button.dataset.domain === activeDomain);
   });
   if (view === 'wellness') void refreshWellness();
 }

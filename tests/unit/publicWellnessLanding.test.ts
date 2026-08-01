@@ -52,12 +52,40 @@ describe('wellness spider-graph landing page', () => {
     expect(indexSource).toContain('id="view-status"');
     expect(indexSource).toContain('title="Open pod connection status"');
     expect(appSource).toContain("$('connection').addEventListener('click', () => showView('status'))");
-    expect(appSource).toContain("status.innerHTML = '<span class=\"nav-icon\">◈</span>Pod status'");
     // Status content that previously occupied the landing page must still exist.
     expect(indexSource).toContain('id="pod-management-panel"');
     expect(indexSource).toContain('id="pod-activity-list"');
     expect(indexSource).toContain('id="healthkit-status"');
     expect(indexSource).toContain('id="epic-panel"');
+  });
+
+  it('exposes connections as a primary tab beside wellness and records', () => {
+    // A tablist, not a trailing entry in the record-category list: on a phone
+    // the category list scrolls horizontally, so a trailing item is hidden.
+    expect(indexSource).toContain('role="tablist"');
+    for (const view of ['wellness', 'records', 'status']) {
+      expect(indexSource).toContain(`id="tab-${view}"`);
+      expect(indexSource).toContain(`aria-controls="view-${view}"`);
+    }
+    expect(indexSource).toMatch(/id="tab-status"[^>]*>.*Connections/);
+    // Wellness is the selected tab on load; the others are not.
+    expect(indexSource).toMatch(/id="tab-wellness"[^>]*aria-selected="true"/);
+    expect(indexSource).toMatch(/id="tab-records"[^>]*aria-selected="false"/);
+    expect(indexSource).toMatch(/id="tab-status"[^>]*aria-selected="false"/);
+    expect(appSource).toContain("const PRIMARY_TABS = ['wellness', 'records', 'status']");
+    expect(appSource).toContain("tab.setAttribute('aria-selected', String(selected))");
+    expect(styleSource).toContain('.primary-tabs');
+    expect(styleSource).toContain('.primary-tab.active');
+  });
+
+  it('keeps all three tabs reachable without horizontal scrolling on phones', () => {
+    // Tabs share the row evenly under the mobile breakpoint rather than
+    // inheriting the category list's overflow-x behaviour.
+    expect(styleSource).toMatch(/\.primary-tab \{[^}]*flex: 1 1 0/s);
+  });
+
+  it('treats the domain sidebar as a selector for the records tab only', () => {
+    expect(appSource).toContain("$('domain-nav').classList.toggle('hidden', view !== 'records')");
   });
 
   it('refreshes the graph dynamically after record changes', () => {

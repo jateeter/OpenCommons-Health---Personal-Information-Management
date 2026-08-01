@@ -24,6 +24,15 @@
       </div>
     </header>
 
+    <!-- Primary tabs: Wellness is the landing tab; Connections is a peer tab
+         rather than a trailing item in the record-category list, so it stays
+         one tap away on a phone instead of behind a horizontal scroll. -->
+    <div class="primary-tabs" role="tablist" aria-label="Main sections">
+      <button id="tab-wellness" class="primary-tab" role="tab" type="button" data-view="wellness" aria-controls="view-wellness" aria-selected="true" tabindex="0"><span class="tab-icon" aria-hidden="true">✳</span>Wellness</button>
+      <button id="tab-records" class="primary-tab" role="tab" type="button" data-view="records" aria-controls="view-records" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">▤</span>Records</button>
+      <button id="tab-status" class="primary-tab" role="tab" type="button" data-view="status" aria-controls="view-status" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">◈</span>Connections</button>
+    </div>
+
     <div class="shell">
       <nav id="domain-nav" class="domain-nav" aria-label="Health record categories"></nav>
       <main>
