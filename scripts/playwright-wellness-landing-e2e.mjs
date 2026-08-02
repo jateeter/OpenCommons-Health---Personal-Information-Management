@@ -97,13 +97,8 @@ try {
     // Genuinely empty pod: fall through to the empty-state check below.
   });
   const pointCount = await points.count();
-  // Axes with no data score null and are all plotted at the graph centre, so
-  // they overlap and intercept each other's pointer events. Prefer a point
-  // that carries data — that is the meaningful path anyway.
-  const withData = page.locator('.spider-point:not([aria-label*="No data"])');
-  const target = (await withData.count()) > 0 ? withData.first() : points.first();
-
   if (pointCount > 0) {
+    const target = points.first();
     const domain = await target.getAttribute('data-domain');
     await target.click();
     await page.waitForSelector('#view-records', { state: 'visible', timeout: 5000 });
@@ -111,6 +106,27 @@ try {
     // The records view must be showing *that* domain, not merely some domain.
     const activeDomain = await page.locator('.domain-nav button.active').getAttribute('data-domain');
     check('records view shows the tapped domain', activeDomain === domain, `active ${activeDomain} vs tapped ${domain}`);
+    await page.click('#tab-wellness');
+
+    // Regression for #40: an axis with no data must be tappable too. These
+    // used to stack at the graph centre and intercept each other's clicks.
+    const empty = page.locator('.spider-point[aria-label*="No data"]');
+    if ((await empty.count()) > 0) {
+      const emptyDomain = await empty.first().getAttribute('data-domain');
+      await empty.first().click();
+      await page.waitForSelector('#view-records', { state: 'visible', timeout: 5000 });
+      const active = await page.locator('.domain-nav button.active').getAttribute('data-domain');
+      check('tapping an empty axis opens its records', active === emptyDomain, `active ${active} vs tapped ${emptyDomain}`);
+      await page.click('#tab-wellness');
+    }
+
+    // The axis label is the larger touch target for the same domain.
+    const label = page.locator('.spider-label').first();
+    const labelDomain = await label.getAttribute('data-domain');
+    await label.click();
+    await page.waitForSelector('#view-records', { state: 'visible', timeout: 5000 });
+    const labelActive = await page.locator('.domain-nav button.active').getAttribute('data-domain');
+    check('tapping an axis label opens its records', labelActive === labelDomain, `active ${labelActive} vs tapped ${labelDomain}`);
     await page.click('#tab-wellness');
   } else {
     // An empty pod plots no points; the landing must still render.
