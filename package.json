@@ -1,7 +1,7 @@
 {
   "name": "opencommons-health-pim",
   "version": "0.1.0",
-  "description": "OpenCommons Health – Personal Information Management application backed by a local Solid Community Server pod",
+  "description": "OpenCommons Health \u2013 Personal Information Management application backed by a local Solid Community Server pod",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -29,7 +29,8 @@
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test:e2e:landing": "node scripts/playwright-wellness-landing-e2e.mjs"
   },
   "keywords": [
     "solid",
@@ -57,6 +58,8 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
     "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "jsdom": "^29.1.1",
     "playwright": "^1.61.1",
     "ts-jest": "^29.0.0",
     "ts-node": "^10.9.2",

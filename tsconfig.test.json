@@ -3,6 +3,10 @@
   "compilerOptions": {
     "rootDir": ".",
     "allowJs": true,
+    // DOM is for tests/dom/**, which drive public/app.js in jsdom. It is added
+    // here rather than in tsconfig.json so src/ keeps its ES2020-only lib and
+    // cannot accidentally reach for browser globals.
+    "lib": ["ES2020", "DOM"],
     "types": ["jest", "node"]
   },
   "include": ["src/**/*", "tests/**/*"]

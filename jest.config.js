@@ -9,6 +9,10 @@ module.exports = {
     '**/schemas/**/*.test.ts',
     '**/types/**/*.test.ts',
     '**/utils/**/*.test.ts',
+    // tests/dom/** load public/app.js into a real DOM and drive it. They opt
+    // into jsdom per-file with an @jest-environment docblock, so the suite
+    // default stays 'node' for everything else.
+    '**/dom/**/*.test.ts',
   ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],

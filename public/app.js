@@ -408,6 +408,10 @@ function createSpiderGraph(axes) {
       fill: STATUS_COLORS[axis.status] || STATUS_COLORS.empty,
       stroke: '#fffdf7', 'stroke-width': 2,
       class: 'spider-point', tabindex: '0', role: 'button',
+      // Addressable by domain so a point can be identified without parsing
+      // its label — used by the browser E2E to prove the tapped vector opens
+      // that same domain's records.
+      'data-domain': axis.domain,
       'aria-label': `${axis.label}: ${STATUS_LABELS[axis.status]}${axis.score === null ? '' : `, score ${axis.score}`}. ${axis.summary}`,
     });
     const tip = node('title', {});
