@@ -88,11 +88,24 @@ try {
   await page.waitForSelector('#view-wellness', { state: 'visible' });
 
   // ── Tapping a vector opens that domain's records ─────────────────────────
+  // The graph is populated by an async summary fetch, so wait for the first
+  // point rather than sampling immediately. Without this the check silently
+  // took the empty-pod branch even on a pod with records — measured 0 points
+  // on load versus 6 a few seconds later — and the tap assertion never ran.
   const points = page.locator('.spider-point');
+  await points.first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => {
+    // Genuinely empty pod: fall through to the empty-state check below.
+  });
   const pointCount = await points.count();
+  // Axes with no data score null and are all plotted at the graph centre, so
+  // they overlap and intercept each other's pointer events. Prefer a point
+  // that carries data — that is the meaningful path anyway.
+  const withData = page.locator('.spider-point:not([aria-label*="No data"])');
+  const target = (await withData.count()) > 0 ? withData.first() : points.first();
+
   if (pointCount > 0) {
-    const domain = await points.first().getAttribute('data-domain');
-    await points.first().click();
+    const domain = await target.getAttribute('data-domain');
+    await target.click();
     await page.waitForSelector('#view-records', { state: 'visible', timeout: 5000 });
     check('tapping a data point opens the records view', await page.isVisible('#view-records'), `domain ${domain ?? 'n/a'}`);
     // The records view must be showing *that* domain, not merely some domain.
