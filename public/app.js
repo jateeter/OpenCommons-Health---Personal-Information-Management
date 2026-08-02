@@ -394,8 +394,26 @@ function createSpiderGraph(axes) {
     svg.append(node('polygon', { points: outline, class: 'spider-ring' }));
   }
 
-  const plotted = axes.map((axis, index) => point(index, Math.max((axis.score ?? 0) / 100, 0.04)));
-  svg.append(node('polygon', { points: plotted.map((pair) => pair.join(',')).join(' '), class: 'spider-area' }));
+  // Two different radii per axis, deliberately:
+  //
+  //  - the shaded area uses the *true* value, so a domain with no data (or a
+  //    zero score) does not get drawn as though it scored something;
+  //  - the marker uses a floor, because markers are the tap targets and at a
+  //    small radius they collide. Adjacent points on an n-axis chart are
+  //    2·r·sin(π/n) apart, so the floor is whatever radius keeps that gap
+  //    wider than a marker. Previously the floor was a flat 0.04 — about 4.6px
+  //    of separation for 14px markers — so every empty axis stacked at the
+  //    centre and only the topmost could be tapped (issue #40).
+  const markerRadius = 7;
+  const minGap = markerRadius * 2 + 3;
+  const minMarkerFraction = Math.min(0.5, minGap / (2 * Math.sin(Math.PI / axes.length) * radius));
+
+  const valueFraction = (axis) => Math.max((axis.score ?? 0) / 100, 0);
+  const markerFraction = (axis) => Math.max(valueFraction(axis), minMarkerFraction);
+
+  const area = axes.map((axis, index) => point(index, valueFraction(axis)));
+  const plotted = axes.map((axis, index) => point(index, markerFraction(axis)));
+  svg.append(node('polygon', { points: area.map((pair) => pair.join(',')).join(' '), class: 'spider-area' }));
 
   axes.forEach((axis, index) => {
     const [ax, ay] = point(index, 1);
@@ -423,14 +441,22 @@ function createSpiderGraph(axes) {
     });
     svg.append(marker);
 
+    // The label is the second tap target for the same axis, and a far larger
+    // one than a 7px circle. It is positioned at the axis tip, so labels never
+    // collide with each other the way centre-clustered markers do.
     const [lx, ly] = point(index, 1.2);
     const label = node('text', {
       x: lx, y: ly, fill: color, class: 'spider-label',
       'text-anchor': lx > center + 4 ? 'start' : lx < center - 4 ? 'end' : 'middle',
       'dominant-baseline': ly > center ? 'hanging' : ly < center ? 'auto' : 'middle',
+      tabindex: '0', role: 'button', 'data-domain': axis.domain,
+      'aria-label': `${axis.label}: ${STATUS_LABELS[axis.status]}. Open ${axis.label} records.`,
     });
     label.textContent = axis.label;
     label.addEventListener('click', () => selectDomain(axis.domain));
+    label.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectDomain(axis.domain); }
+    });
     svg.append(label);
   });
 

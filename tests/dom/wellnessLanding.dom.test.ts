@@ -149,6 +149,73 @@ describe('wellness landing behaviour', () => {
     expect(fills).toContain('#a9b6b1'); // empty
   });
 
+  it('separates empty axes so each is individually tappable', async () => {
+    // Regression for #40: every null-score axis used to be plotted at the
+    // graph centre, where the markers overlapped and only the topmost could
+    // receive a click.
+    const allEmpty = summary({
+      axes: [
+        { domain: 'vital-signs', label: 'Vitals', score: null, status: 'empty', summary: 'None', recordCount: 0 },
+        { domain: 'lab-results', label: 'Labs', score: null, status: 'empty', summary: 'None', recordCount: 0 },
+        { domain: 'medications', label: 'Meds', score: null, status: 'empty', summary: 'None', recordCount: 0 },
+        { domain: 'conditions', label: 'Conditions', score: null, status: 'empty', summary: 'None', recordCount: 0 },
+        { domain: 'allergies', label: 'Allergies', score: null, status: 'empty', summary: 'None', recordCount: 0 },
+        { domain: 'immunizations', label: 'Immunisations', score: null, status: 'empty', summary: 'None', recordCount: 0 },
+      ],
+    });
+    boot({ wellness: allEmpty });
+    await flush();
+
+    const points = Array.from(document.querySelectorAll('.spider-point')).map((p) => ({
+      domain: p.getAttribute('data-domain'),
+      cx: Number(p.getAttribute('cx')),
+      cy: Number(p.getAttribute('cy')),
+    }));
+    expect(points).toHaveLength(6);
+
+    // No two markers share a position, and every pair clears the marker
+    // diameter (r=7, so 14px) with a little room.
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        const distance = Math.hypot(points[i].cx - points[j].cx, points[i].cy - points[j].cy);
+        expect(distance).toBeGreaterThanOrEqual(14);
+      }
+    }
+  });
+
+  it('does not inflate the shaded area for axes with no data', async () => {
+    // The markers are pushed off-centre for tappability, but the area must
+    // still tell the truth: no data means no area.
+    const allEmpty = summary({
+      axes: summary().axes.map((axis) => ({ ...axis, score: null, status: 'empty', recordCount: 0 })),
+    });
+    boot({ wellness: allEmpty });
+    await flush();
+
+    const area = document.querySelector('.spider-area') as SVGPolygonElement | null;
+    expect(area).toBeTruthy();
+    const coords = (area?.getAttribute('points') ?? '').split(' ').filter(Boolean)
+      .map((pair) => pair.split(',').map(Number));
+    // Every vertex collapses to the centre of the 320x320 viewBox.
+    for (const [x, y] of coords) {
+      expect(x).toBeCloseTo(160, 5);
+      expect(y).toBeCloseTo(160, 5);
+    }
+  });
+
+  it('offers the axis label as a second, larger tap target', async () => {
+    boot();
+    await flush();
+    const labels = document.querySelectorAll('.spider-label');
+    expect(labels.length).toBe(6);
+    const label = labels[0] as SVGTextElement;
+    expect(label.getAttribute('role')).toBe('button');
+    expect(label.getAttribute('tabindex')).toBe('0');
+    expect(label.getAttribute('data-domain')).toBeTruthy();
+    label.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(visible('view-records')).toBe(true);
+  });
+
   it('opens the domain records view when a data point is activated', async () => {
     boot();
     await flush();
