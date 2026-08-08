@@ -73,6 +73,13 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain("'code.system': LOINC_SYSTEM");
     expect(appSource).toContain("'code.code': option.code");
     expect(appSource).toContain("'code.display': option.display");
+    expect(appSource).toContain('const cvxVaccineOptions = [');
+    expect(appSource).toContain("name: 'vaccineCode.cvxChoice'");
+    expect(appSource).toContain('options: cvxVaccineOptions');
+    expect(appSource).toContain("valueFrom: 'vaccineCode.code'");
+    expect(appSource).toContain("'vaccineCode.system': CVX_SYSTEM");
+    expect(appSource).toContain("'vaccineCode.code': option.code");
+    expect(appSource).toContain("'vaccineCode.display': option.display");
     expect(appSource).toContain('function applyCodedSelect');
     expect(appSource).toContain('input.dataset.codedSelect');
     expect(appSource).toContain('field.transient');
