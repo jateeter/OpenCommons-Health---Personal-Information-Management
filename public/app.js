@@ -64,6 +64,38 @@ const loincVitalPresets = [
 
 const sortTerms = (options) => [...options].sort((a, b) => a.display.localeCompare(b.display) || a.code.localeCompare(b.code));
 
+const snomedConditionOptions = [
+  { value: '', display: 'Choose SNOMED CT condition…', source: 'SNOMED CT', system: SNOMED_CT_SYSTEM },
+  ...sortTerms(snomedConditionPresets).map((option) => ({
+    value: option.code,
+    code: option.code,
+    display: option.display,
+    source: 'SNOMED CT',
+    system: SNOMED_CT_SYSTEM,
+    apply: {
+      'code.system': SNOMED_CT_SYSTEM,
+      'code.code': option.code,
+      'code.display': option.display,
+    },
+  })),
+];
+
+const snomedAllergyOptions = [
+  { value: '', display: 'Choose SNOMED CT allergy/substance…', source: 'SNOMED CT', system: SNOMED_CT_SYSTEM },
+  ...sortTerms(snomedAllergyPresets).map((option) => ({
+    value: option.code,
+    code: option.code,
+    display: option.display,
+    source: 'SNOMED CT',
+    system: SNOMED_CT_SYSTEM,
+    apply: {
+      'substance.system': SNOMED_CT_SYSTEM,
+      'substance.code': option.code,
+      'substance.display': option.display,
+    },
+  })),
+];
+
 const vitalMeasurementOptions = [
   { value: '', display: 'Choose LOINC vital sign…', source: 'LOINC', system: LOINC_SYSTEM },
   ...sortTerms(loincVitalPresets).map((option) => ({
@@ -140,6 +172,22 @@ const snomedWorkflowPresets = [
   { code: '183452005', display: 'Review of medication' },
   { code: '409073007', display: 'Education' },
   { code: '410223002', display: 'Follow-up encounter' },
+];
+
+const snomedWorkflowOptions = [
+  { value: '', display: 'Choose SNOMED CT workflow task…', source: 'SNOMED CT', system: SNOMED_CT_SYSTEM },
+  ...sortTerms(snomedWorkflowPresets).map((option) => ({
+    value: option.code,
+    code: option.code,
+    display: option.display,
+    source: 'SNOMED CT',
+    system: SNOMED_CT_SYSTEM,
+    apply: {
+      'taskType.system': SNOMED_CT_SYSTEM,
+      'taskType.code': option.code,
+      'taskType.display': option.display,
+    },
+  })),
 ];
 
 const cvxVaccinePresets = [
@@ -247,7 +295,7 @@ const domains = {
   conditions: {
     label: 'Condition', plural: 'Conditions', icon: '◇',
     description: 'Diagnoses, ongoing conditions, and resolved health concerns.',
-    fields: [terminologySearch('SNOMED CT condition search', 'code', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedConditionPresets)), ...coding('SNOMED CT'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'], required: true }, { name: 'severity', label: 'Severity', type: 'select', options: ['', 'mild', 'moderate', 'severe'] }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'abatementDate', label: 'Resolved date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [{ name: 'code.snomedChoice', label: 'SNOMED CT condition', type: 'select', options: snomedConditionOptions, source: 'SNOMED CT', system: SNOMED_CT_SYSTEM, valueFrom: 'code.code', transient: true, required: true, help: 'Choose a SNOMED CT clinical finding or disorder concept. Selection pre-fills the FHIR Coding fields saved to your pod.' }, terminologySearch('SNOMED CT condition search', 'code', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedConditionPresets)), ...coding('SNOMED CT'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'], required: true }, { name: 'severity', label: 'Severity', type: 'select', options: ['', 'mild', 'moderate', 'severe'] }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'abatementDate', label: 'Resolved date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.code?.display || x.code?.code || 'Condition',
     detail: (x) => [x.status, x.severity, x.onsetDate].filter(Boolean).join(' · '),
   },
@@ -261,7 +309,7 @@ const domains = {
   allergies: {
     label: 'Allergy', plural: 'Allergies', icon: '△',
     description: 'Allergies and intolerances that matter to your care.',
-    fields: [terminologySearch('SNOMED CT allergy/substance search', 'substance', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedAllergyPresets)), ...coding('SNOMED CT', 'substance'), { name: 'category', label: 'Category', type: 'select', options: ['food', 'medication', 'environment', 'biologic'], required: true }, { name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'resolved'], required: true }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [{ name: 'substance.snomedChoice', label: 'SNOMED CT allergy/substance', type: 'select', options: snomedAllergyOptions, source: 'SNOMED CT', system: SNOMED_CT_SYSTEM, valueFrom: 'substance.code', transient: true, required: true, help: 'Choose a SNOMED CT allergy or substance concept. Selection pre-fills the FHIR Coding fields saved to your pod.' }, terminologySearch('SNOMED CT allergy/substance search', 'substance', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedAllergyPresets)), ...coding('SNOMED CT', 'substance'), { name: 'category', label: 'Category', type: 'select', options: ['food', 'medication', 'environment', 'biologic'], required: true }, { name: 'status', label: 'Status', type: 'select', options: ['active', 'inactive', 'resolved'], required: true }, { name: 'onsetDate', label: 'Onset date', type: 'date' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.substance?.display || x.substance?.code || 'Allergy',
     detail: (x) => [x.category, x.status, x.onsetDate].filter(Boolean).join(' · '),
   },
@@ -324,6 +372,7 @@ const domains = {
     label: 'Workflow task', plural: 'Workflow tasks', icon: '☑',
     description: 'Care tasks, follow-ups, and review steps the pod owner can track without sending outbound messages.',
     fields: [
+      { name: 'taskType.snomedChoice', label: 'SNOMED CT workflow task', type: 'select', options: snomedWorkflowOptions, source: 'SNOMED CT', system: SNOMED_CT_SYSTEM, valueFrom: 'taskType.code', transient: true, required: true, help: 'Choose a SNOMED CT procedure or activity concept for this owner-tracked workflow task. Selection pre-fills the FHIR Coding fields saved to your pod.' },
       terminologySearch('SNOMED CT workflow task search', 'taskType', 'SNOMED CT', withSystem(SNOMED_CT_SYSTEM, 'SNOMED CT', snomedWorkflowPresets)),
       ...coding('SNOMED CT workflow', 'taskType'),
       { name: 'status', label: 'Status', type: 'select', options: ['draft', 'requested', 'received', 'accepted', 'in-progress', 'completed', 'cancelled'], required: true },

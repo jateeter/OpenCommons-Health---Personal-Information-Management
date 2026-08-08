@@ -59,8 +59,27 @@ describe('browser terminology manual-entry support', () => {
   });
 
   it('prefills coding fields from coded dropdown selections', () => {
+    expect(appSource).toContain("const SNOMED_CT_SYSTEM = 'http://snomed.info/sct'");
     expect(appSource).toContain("const CVX_SYSTEM = 'http://hl7.org/fhir/sid/cvx'");
     expect(appSource).toContain("const ADMINISTRATIVE_GENDER_SYSTEM = 'http://hl7.org/fhir/administrative-gender'");
+    expect(appSource).toContain('const snomedConditionOptions = [');
+    expect(appSource).toContain("name: 'code.snomedChoice'");
+    expect(appSource).toContain('options: snomedConditionOptions');
+    expect(appSource).toContain("'code.system': SNOMED_CT_SYSTEM");
+    expect(appSource).toContain("'code.code': option.code");
+    expect(appSource).toContain("'code.display': option.display");
+    expect(appSource).toContain('const snomedAllergyOptions = [');
+    expect(appSource).toContain("name: 'substance.snomedChoice'");
+    expect(appSource).toContain('options: snomedAllergyOptions');
+    expect(appSource).toContain("'substance.system': SNOMED_CT_SYSTEM");
+    expect(appSource).toContain("'substance.code': option.code");
+    expect(appSource).toContain("'substance.display': option.display");
+    expect(appSource).toContain('const snomedWorkflowOptions = [');
+    expect(appSource).toContain("name: 'taskType.snomedChoice'");
+    expect(appSource).toContain('options: snomedWorkflowOptions');
+    expect(appSource).toContain("'taskType.system': SNOMED_CT_SYSTEM");
+    expect(appSource).toContain("'taskType.code': option.code");
+    expect(appSource).toContain("'taskType.display': option.display");
     expect(appSource).toContain('const vitalMeasurementOptions = [');
     expect(appSource).toContain("'loincCode.system': LOINC_SYSTEM");
     expect(appSource).toContain("'loincCode.code': option.code");
