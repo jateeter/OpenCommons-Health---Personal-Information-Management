@@ -61,11 +61,18 @@ describe('browser terminology manual-entry support', () => {
   it('prefills coding fields from coded dropdown selections', () => {
     expect(appSource).toContain("const CVX_SYSTEM = 'http://hl7.org/fhir/sid/cvx'");
     expect(appSource).toContain("const ADMINISTRATIVE_GENDER_SYSTEM = 'http://hl7.org/fhir/administrative-gender'");
-    expect(appSource).toContain('const vitalMeasurementOptions = loincVitalPresets.map');
+    expect(appSource).toContain('const vitalMeasurementOptions = [');
     expect(appSource).toContain("'loincCode.system': LOINC_SYSTEM");
     expect(appSource).toContain("'loincCode.code': option.code");
     expect(appSource).toContain("'loincCode.display': option.display");
     expect(appSource).toContain('unit: option.unit');
+    expect(appSource).toContain('const loincLabResultOptions = [');
+    expect(appSource).toContain("name: 'code.loincChoice'");
+    expect(appSource).toContain('options: loincLabResultOptions');
+    expect(appSource).toContain("valueFrom: 'code.code'");
+    expect(appSource).toContain("'code.system': LOINC_SYSTEM");
+    expect(appSource).toContain("'code.code': option.code");
+    expect(appSource).toContain("'code.display': option.display");
     expect(appSource).toContain('function applyCodedSelect');
     expect(appSource).toContain('input.dataset.codedSelect');
     expect(appSource).toContain('field.transient');
