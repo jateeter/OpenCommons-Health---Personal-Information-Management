@@ -27,6 +27,7 @@
     "test:e2e:playwright": "node scripts/playwright-medicare-wellness-e2e.mjs",
     "test:e2e:responsive-layout": "node scripts/playwright-responsive-layout-e2e.mjs",
     "test:e2e:terminology-modal": "node scripts/playwright-terminology-modal-e2e.mjs",
+    "test:e2e:modal-close": "node scripts/playwright-modal-close-e2e.mjs",
     "test:all": "npm run test && npm run test:integration",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
