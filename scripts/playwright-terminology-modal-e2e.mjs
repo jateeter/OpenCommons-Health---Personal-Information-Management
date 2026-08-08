@@ -43,6 +43,42 @@ try {
   await page.click('#tab-records');
   await page.waitForSelector('#view-records:not(.hidden)', { timeout: 10000 });
 
+  await page.click('.domain-nav button[data-domain="conditions"]');
+  await page.click('#add-button');
+  await page.waitForSelector('#record-dialog[open]', { timeout: 10000 });
+  check(
+    'condition modal exposes SNOMED CT system link',
+    await page.locator('.system-reference a[href="http://snomed.info/sct"]').count() > 0,
+  );
+  check(
+    'condition dropdown includes SNOMED CT code/name',
+    await page.locator('#field-code\\.snomedChoice').evaluate((select) => [...select.options].some((option) => option.textContent.includes('38341003 [SNOMED CT]'))),
+  );
+  await page.locator('#field-code\\.snomedChoice').selectOption('38341003');
+  check('condition selection sets SNOMED CT system', await fieldValue(page, 'field-code.system') === 'http://snomed.info/sct');
+  check('condition selection sets SNOMED CT code', await fieldValue(page, 'field-code.code') === '38341003');
+  check('condition selection sets SNOMED CT display', await fieldValue(page, 'field-code.display') === 'Hypertensive disorder, systemic arterial');
+  await page.screenshot({ path: `${outputDir}/terminology-condition-${timestamp}.png`, fullPage: false });
+  await discardOpenModal();
+
+  await page.click('.domain-nav button[data-domain="allergies"]');
+  await page.click('#add-button');
+  await page.waitForSelector('#record-dialog[open]', { timeout: 10000 });
+  check(
+    'allergy modal exposes SNOMED CT system link',
+    await page.locator('.system-reference a[href="http://snomed.info/sct"]').count() > 0,
+  );
+  check(
+    'allergy dropdown includes SNOMED CT code/name',
+    await page.locator('#field-substance\\.snomedChoice').evaluate((select) => [...select.options].some((option) => option.textContent.includes('294954005 [SNOMED CT]'))),
+  );
+  await page.locator('#field-substance\\.snomedChoice').selectOption('294954005');
+  check('allergy selection sets SNOMED CT system', await fieldValue(page, 'field-substance.system') === 'http://snomed.info/sct');
+  check('allergy selection sets SNOMED CT code', await fieldValue(page, 'field-substance.code') === '294954005');
+  check('allergy selection sets SNOMED CT display', await fieldValue(page, 'field-substance.display') === 'Allergy to penicillin');
+  await page.screenshot({ path: `${outputDir}/terminology-allergy-${timestamp}.png`, fullPage: false });
+  await discardOpenModal();
+
   await page.click('.domain-nav button[data-domain="vital-signs"]');
   await page.click('#add-button');
   await page.waitForSelector('#record-dialog[open]', { timeout: 10000 });
@@ -115,6 +151,24 @@ try {
   check('CVX selection sets vaccine code', await fieldValue(page, 'field-vaccineCode.code') === '158');
   check('CVX selection sets vaccine display', await fieldValue(page, 'field-vaccineCode.display') === 'Influenza, injectable, quadrivalent');
   await page.screenshot({ path: `${outputDir}/terminology-immunization-${timestamp}.png`, fullPage: false });
+  await discardOpenModal();
+
+  await page.click('.domain-nav button[data-domain="workflow-tasks"]');
+  await page.click('#add-button');
+  await page.waitForSelector('#record-dialog[open]', { timeout: 10000 });
+  check(
+    'workflow task modal exposes SNOMED CT system link',
+    await page.locator('.system-reference a[href="http://snomed.info/sct"]').count() > 0,
+  );
+  check(
+    'workflow task dropdown includes SNOMED CT code/name',
+    await page.locator('#field-taskType\\.snomedChoice').evaluate((select) => [...select.options].some((option) => option.textContent.includes('386053000 [SNOMED CT]'))),
+  );
+  await page.locator('#field-taskType\\.snomedChoice').selectOption('386053000');
+  check('workflow task selection sets SNOMED CT system', await fieldValue(page, 'field-taskType.system') === 'http://snomed.info/sct');
+  check('workflow task selection sets SNOMED CT code', await fieldValue(page, 'field-taskType.code') === '386053000');
+  check('workflow task selection sets SNOMED CT display', await fieldValue(page, 'field-taskType.display') === 'Evaluation procedure');
+  await page.screenshot({ path: `${outputDir}/terminology-workflow-task-${timestamp}.png`, fullPage: false });
 
   if (failures.length > 0) throw new Error(`Terminology modal E2E failed: ${failures.join('; ')}`);
   console.log(`Terminology modal E2E passed against ${appUrl}`);
