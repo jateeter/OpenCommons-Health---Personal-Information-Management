@@ -106,8 +106,11 @@ try {
     'immunization modal exposes CVX system link',
     await page.locator('.system-reference a[href="http://hl7.org/fhir/sid/cvx"]').count() > 0,
   );
-  await page.locator('#field-vaccineCode\\.terminologySearch').fill('Influenza, injectable, quadrivalent — 158 [CVX]');
-  await page.locator('#field-vaccineCode\\.terminologySearch').dispatchEvent('input');
+  check(
+    'immunization dropdown includes approved CVX code/name',
+    await page.locator('#field-vaccineCode\\.cvxChoice').evaluate((select) => [...select.options].some((option) => option.textContent.includes('158 [CVX]'))),
+  );
+  await page.locator('#field-vaccineCode\\.cvxChoice').selectOption('158');
   check('CVX selection sets vaccine system', await fieldValue(page, 'field-vaccineCode.system') === 'http://hl7.org/fhir/sid/cvx');
   check('CVX selection sets vaccine code', await fieldValue(page, 'field-vaccineCode.code') === '158');
   check('CVX selection sets vaccine display', await fieldValue(page, 'field-vaccineCode.display') === 'Influenza, injectable, quadrivalent');

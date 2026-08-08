@@ -155,6 +155,22 @@ const cvxVaccinePresets = [
   { code: '21', display: 'Varicella virus vaccine' },
 ];
 
+const cvxVaccineOptions = [
+  { value: '', display: 'Choose CVX vaccine…', source: 'CVX', system: CVX_SYSTEM },
+  ...sortTerms(cvxVaccinePresets).map((option) => ({
+    value: option.code,
+    code: option.code,
+    display: option.display,
+    source: 'CVX',
+    system: CVX_SYSTEM,
+    apply: {
+      'vaccineCode.system': CVX_SYSTEM,
+      'vaccineCode.code': option.code,
+      'vaccineCode.display': option.display,
+    },
+  })),
+];
+
 const administrativeGenderOptions = [
   { value: 'female', code: 'female', display: 'Female', source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
   { value: 'male', code: 'male', display: 'Male', source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
@@ -252,7 +268,7 @@ const domains = {
   immunizations: {
     label: 'Immunization', plural: 'Immunizations', icon: '✦',
     description: 'Vaccinations, dose history, and administration details.',
-    fields: [terminologySearch('CVX vaccine search', 'vaccineCode', 'CVX', withSystem(CVX_SYSTEM, 'CVX', cvxVaccinePresets)), ...coding('CVX', 'vaccineCode'), { name: 'status', label: 'Status', type: 'select', options: ['completed', 'not-done', 'entered-in-error'], required: true }, { name: 'occurrenceDate', label: 'Date', type: 'date', required: true }, { name: 'doseNumber', label: 'Dose number', type: 'number' }, { name: 'lotNumber', label: 'Lot number' }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [{ name: 'vaccineCode.cvxChoice', label: 'CVX vaccine', type: 'select', options: cvxVaccineOptions, source: 'CVX', system: CVX_SYSTEM, valueFrom: 'vaccineCode.code', transient: true, required: true, help: 'Choose an approved CVX vaccine administered code. Selection pre-fills the FHIR Coding display/name fields saved to your pod.' }, terminologySearch('CVX vaccine search', 'vaccineCode', 'CVX', withSystem(CVX_SYSTEM, 'CVX', cvxVaccinePresets)), ...coding('CVX', 'vaccineCode'), { name: 'status', label: 'Status', type: 'select', options: ['completed', 'not-done', 'entered-in-error'], required: true }, { name: 'occurrenceDate', label: 'Date', type: 'date', required: true }, { name: 'doseNumber', label: 'Dose number', type: 'number' }, { name: 'lotNumber', label: 'Lot number' }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.vaccineCode?.display || x.vaccineCode?.code || 'Immunization',
     detail: (x) => [x.status, x.occurrenceDate, x.doseNumber ? `Dose ${x.doseNumber}` : ''].filter(Boolean).join(' · '),
   },
