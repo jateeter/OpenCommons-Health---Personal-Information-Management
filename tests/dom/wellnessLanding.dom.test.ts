@@ -129,10 +129,16 @@ describe('wellness landing behaviour', () => {
 
   it('shows the domain sidebar only on the records tab', () => {
     boot();
+    expect(document.querySelector('.shell')?.classList.contains('full-layout')).toBe(true);
+    expect(document.querySelector('.shell')?.classList.contains('records-layout')).toBe(false);
     expect(visible('domain-nav')).toBe(false);
     $('tab-records').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(document.querySelector('.shell')?.classList.contains('records-layout')).toBe(true);
+    expect(document.querySelector('.shell')?.classList.contains('full-layout')).toBe(false);
     expect(visible('domain-nav')).toBe(true);
     $('tab-status').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(document.querySelector('.shell')?.classList.contains('full-layout')).toBe(true);
+    expect(document.querySelector('.shell')?.classList.contains('records-layout')).toBe(false);
     expect(visible('domain-nav')).toBe(false);
   });
 

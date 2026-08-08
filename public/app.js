@@ -315,6 +315,9 @@ function initializeNavigation() {
 /** Switches the single-page view. 'wellness' is the landing view. */
 function showView(view) {
   activeView = view;
+  const recordsLayout = view === 'records';
+  document.querySelector('.shell')?.classList.toggle('records-layout', recordsLayout);
+  document.querySelector('.shell')?.classList.toggle('full-layout', !recordsLayout);
   for (const name of PRIMARY_TABS) {
     $(`view-${name}`).classList.toggle('hidden', name !== view);
     const tab = $(`tab-${name}`);
@@ -325,9 +328,9 @@ function showView(view) {
     tab.tabIndex = selected ? 0 : -1;
   }
   // The domain sidebar is a selector for the Records tab only.
-  $('domain-nav').classList.toggle('hidden', view !== 'records');
+  $('domain-nav').classList.toggle('hidden', !recordsLayout);
   document.querySelectorAll('.domain-nav button').forEach((button) => {
-    button.classList.toggle('active', view === 'records' && button.dataset.domain === activeDomain);
+    button.classList.toggle('active', recordsLayout && button.dataset.domain === activeDomain);
   });
   if (view === 'wellness') void refreshWellness();
 }
