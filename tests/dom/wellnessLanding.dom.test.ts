@@ -43,6 +43,10 @@ function summary(overrides: Record<string, unknown> = {}) {
 /** Boots the page with a stubbed fetch and returns handles for assertions. */
 function boot(options: { wellness?: unknown; wellnessStatus?: number; podReady?: boolean } = {}) {
   document.documentElement.innerHTML = html.replace(/<!DOCTYPE html>/i, '');
+  if (window.HTMLDialogElement) {
+    window.HTMLDialogElement.prototype.showModal ??= function showModal() { this.setAttribute('open', ''); };
+    window.HTMLDialogElement.prototype.close ??= function close() { this.removeAttribute('open'); };
+  }
 
   const calls: string[] = [];
   const fetchStub = jest.fn(async (input: unknown) => {
@@ -140,6 +144,46 @@ describe('wellness landing behaviour', () => {
     expect(document.querySelector('.shell')?.classList.contains('full-layout')).toBe(true);
     expect(document.querySelector('.shell')?.classList.contains('records-layout')).toBe(false);
     expect(visible('domain-nav')).toBe(false);
+  });
+
+  it('prefills LOINC coding fields from the vital sign measurement dropdown', async () => {
+    boot();
+    await flush();
+    $('tab-records').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    document.querySelector<HTMLButtonElement>('.domain-nav button[data-domain="vital-signs"]')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+
+    $('add-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    const measurement = $('field-code') as HTMLSelectElement;
+    expect(Array.from(measurement.options).some((option) => option.textContent?.includes('8867-4 [LOINC]'))).toBe(true);
+    expect(document.querySelector<HTMLAnchorElement>('.system-reference a[href="http://loinc.org"]')?.textContent).toContain('LOINC');
+
+    measurement.value = 'heart-rate';
+    measurement.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(($('field-loincCode.system') as HTMLInputElement).value).toBe('http://loinc.org');
+    expect(($('field-loincCode.code') as HTMLInputElement).value).toBe('8867-4');
+    expect(($('field-loincCode.display') as HTMLInputElement).value).toBe('Heart rate');
+    expect(($('field-unit') as HTMLInputElement).value).toBe('beats/min');
+  });
+
+  it('prefills CVX vaccine coding fields from the immunization terminology dropdown', async () => {
+    boot();
+    await flush();
+    $('tab-records').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    document.querySelector<HTMLButtonElement>('.domain-nav button[data-domain="immunizations"]')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+
+    $('add-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(document.querySelector<HTMLAnchorElement>('.system-reference a[href="http://hl7.org/fhir/sid/cvx"]')?.textContent).toContain('CVX');
+
+    const search = $('field-vaccineCode.terminologySearch') as HTMLInputElement;
+    search.value = 'Influenza, injectable, quadrivalent — 158 [CVX]';
+    search.dispatchEvent(new window.Event('input', { bubbles: true }));
+    expect(($('field-vaccineCode.system') as HTMLInputElement).value).toBe('http://hl7.org/fhir/sid/cvx');
+    expect(($('field-vaccineCode.code') as HTMLInputElement).value).toBe('158');
+    expect(($('field-vaccineCode.display') as HTMLInputElement).value).toBe('Influenza, injectable, quadrivalent');
   });
 
   it('plots one point per wellness axis, coloured by status', async () => {

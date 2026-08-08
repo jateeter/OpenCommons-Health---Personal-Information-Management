@@ -3,6 +3,8 @@ const LOINC_SYSTEM = 'http://loinc.org';
 const RXNORM_SYSTEM = 'http://www.nlm.nih.gov/research/umls/rxnorm';
 const RXTERMS_SYSTEM = 'https://www.nlm.nih.gov/research/umls/rxnorm/rxterms';
 const MEDRT_SYSTEM = 'https://www.nlm.nih.gov/research/umls/sourcereleasedocs/current/MED-RT';
+const CVX_SYSTEM = 'http://hl7.org/fhir/sid/cvx';
+const ADMINISTRATIVE_GENDER_SYSTEM = 'http://hl7.org/fhir/administrative-gender';
 
 const TERMINOLOGY_HELP = {
   'SNOMED CT': 'SNOMED CT is designated by NLM as a standard for electronic exchange of clinical health information. Pick a common code/name or enter another SNOMED CT concept manually.',
@@ -10,9 +12,21 @@ const TERMINOLOGY_HELP = {
   RxNorm: 'RxNorm provides normalized clinical drug names and links across drug vocabularies. Required FHIR Coding parameters are system and code; display/name is recommended.',
   RxTerms: 'RxTerms is an NLM drug interface terminology derived from RxNorm for easier medication name selection.',
   'MED-RT': 'MED-RT provides medication reference terminology such as therapeutic class and mechanism concepts. Use when a class-level medication concept is more appropriate than a product code.',
+  CVX: 'CVX identifies vaccines for HL7/FHIR immunization exchange. Required FHIR Coding parameters are system and code; display/name is recommended.',
+  AdministrativeGender: 'HL7 FHIR AdministrativeGender codes represent administrative sex/gender values used by Patient-style records.',
 };
 
 const REQUIRED_CODING_HELP = 'Required FHIR Coding parameters: terminology system URI and code. Display/name is stored when supplied for review and interoperability.';
+
+const TERMINOLOGY_SYSTEMS = {
+  'SNOMED CT': { source: 'SNOMED CT', system: SNOMED_CT_SYSTEM },
+  LOINC: { source: 'LOINC', system: LOINC_SYSTEM },
+  RxNorm: { source: 'RxNorm', system: RXNORM_SYSTEM },
+  RxTerms: { source: 'RxTerms', system: RXTERMS_SYSTEM },
+  'MED-RT': { source: 'MED-RT', system: MEDRT_SYSTEM },
+  CVX: { source: 'CVX', system: CVX_SYSTEM },
+  AdministrativeGender: { source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
+};
 
 const snomedConditionPresets = [
   { code: '38341003', display: 'Hypertensive disorder, systemic arterial' },
@@ -47,6 +61,20 @@ const loincVitalPresets = [
   { code: '59408-5', display: 'Oxygen saturation in arterial blood by pulse oximetry', domainCode: 'oxygen-saturation', unit: '%' },
   { code: '2339-0', display: 'Glucose mass/volume in blood', domainCode: 'blood-glucose', unit: 'mg/dL' },
 ];
+
+const vitalMeasurementOptions = loincVitalPresets.map((option) => ({
+  value: option.domainCode,
+  code: option.code,
+  display: option.display,
+  source: 'LOINC',
+  system: LOINC_SYSTEM,
+  apply: {
+    'loincCode.system': LOINC_SYSTEM,
+    'loincCode.code': option.code,
+    'loincCode.display': option.display,
+    unit: option.unit,
+  },
+}));
 
 const loincLabPresets = [
   { code: '4548-4', display: 'Hemoglobin A1c/Hemoglobin.total in Blood' },
@@ -90,6 +118,26 @@ const snomedWorkflowPresets = [
   { code: '410223002', display: 'Follow-up encounter' },
 ];
 
+const cvxVaccinePresets = [
+  { code: '158', display: 'Influenza, injectable, quadrivalent' },
+  { code: '140', display: 'Influenza, seasonal, injectable, preservative free' },
+  { code: '207', display: 'COVID-19, mRNA, LNP-S, PF, 100 mcg or 50 mcg dose' },
+  { code: '208', display: 'COVID-19, mRNA, LNP-S, PF, 30 mcg dose' },
+  { code: '115', display: 'Tdap' },
+  { code: '133', display: 'Pneumococcal conjugate PCV 13' },
+  { code: '121', display: 'Zoster vaccine, live' },
+  { code: '03', display: 'Measles, mumps and rubella virus vaccine' },
+  { code: '10', display: 'Poliovirus vaccine, inactivated' },
+  { code: '21', display: 'Varicella virus vaccine' },
+];
+
+const administrativeGenderOptions = [
+  { value: 'female', code: 'female', display: 'Female', source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
+  { value: 'male', code: 'male', display: 'Male', source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
+  { value: 'other', code: 'other', display: 'Other', source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
+  { value: 'unknown', code: 'unknown', display: 'Unknown', source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
+];
+
 const medicationTerminologyPresets = [
   { source: 'RxNorm', system: RXNORM_SYSTEM, code: '860975', display: 'Metformin hydrochloride 500 MG Oral Tablet' },
   { source: 'RxNorm', system: RXNORM_SYSTEM, code: '617314', display: 'Atorvastatin 20 MG Oral Tablet' },
@@ -106,6 +154,7 @@ const medicationTerminologyPresets = [
 
 const withSystem = (system, source, options) => options.map((option) => ({ ...option, system, source }));
 const sortTerms = (options) => [...options].sort((a, b) => a.display.localeCompare(b.display) || a.code.localeCompare(b.code));
+const codingSystemForLabel = (label) => Object.values(TERMINOLOGY_SYSTEMS).find(({ source }) => label.includes(source));
 
 const terminologySearch = (label, prefix, source, options, extra = {}) => ({
   name: `${prefix}.terminologySearch`,
@@ -126,7 +175,7 @@ const codingHelp = (label, part) => {
 };
 
 const coding = (label, prefix = 'code', options = {}) => [
-  { name: `${prefix}.system`, label: `${label} system`, required: options.required !== false, placeholder: 'https://…', help: codingHelp(label, 'system') },
+  { name: `${prefix}.system`, label: `${label} system`, required: options.required !== false, placeholder: options.placeholder || codingSystemForLabel(label)?.system || 'https://…', help: codingHelp(label, 'system'), system: codingSystemForLabel(label)?.system, source: codingSystemForLabel(label)?.source },
   { name: `${prefix}.code`, label: `${label} code`, required: options.required !== false, help: codingHelp(label, 'code') },
   { name: `${prefix}.display`, label: `${label} name`, help: codingHelp(label, 'display') },
 ];
@@ -139,7 +188,7 @@ const domains = {
       { name: 'name.family', label: 'Family name', required: true },
       { name: 'name.given', label: 'Given names', required: true, list: true },
       { name: 'birthDate', label: 'Birth date', type: 'date', required: true },
-      { name: 'biologicalSex', label: 'Biological sex', type: 'select', options: ['female', 'male', 'other', 'unknown'], required: true },
+      { name: 'biologicalSex', label: 'Biological sex', type: 'select', options: administrativeGenderOptions, source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM, required: true, help: TERMINOLOGY_HELP.AdministrativeGender },
       { name: 'photo', label: 'Photo URL' },
     ],
     title: (x) => [...(x.name?.given || []), x.name?.family].filter(Boolean).join(' ') || 'Profile',
@@ -169,14 +218,14 @@ const domains = {
   immunizations: {
     label: 'Immunization', plural: 'Immunizations', icon: '✦',
     description: 'Vaccinations, dose history, and administration details.',
-    fields: [...coding('CVX', 'vaccineCode'), { name: 'status', label: 'Status', type: 'select', options: ['completed', 'not-done', 'entered-in-error'], required: true }, { name: 'occurrenceDate', label: 'Date', type: 'date', required: true }, { name: 'doseNumber', label: 'Dose number', type: 'number' }, { name: 'lotNumber', label: 'Lot number' }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [terminologySearch('CVX vaccine search', 'vaccineCode', 'CVX', withSystem(CVX_SYSTEM, 'CVX', cvxVaccinePresets)), ...coding('CVX', 'vaccineCode'), { name: 'status', label: 'Status', type: 'select', options: ['completed', 'not-done', 'entered-in-error'], required: true }, { name: 'occurrenceDate', label: 'Date', type: 'date', required: true }, { name: 'doseNumber', label: 'Dose number', type: 'number' }, { name: 'lotNumber', label: 'Lot number' }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.vaccineCode?.display || x.vaccineCode?.code || 'Immunization',
     detail: (x) => [x.status, x.occurrenceDate, x.doseNumber ? `Dose ${x.doseNumber}` : ''].filter(Boolean).join(' · '),
   },
   'vital-signs': {
     label: 'Vital sign', plural: 'Vital signs', icon: '⌁',
     description: 'Measurements and observations that track your health over time.',
-    fields: [terminologySearch('LOINC vital sign search', 'loincCode', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincVitalPresets), { apply: { code: 'domainCode', unit: 'unit' } }), { name: 'code', label: 'Measurement', type: 'select', options: ['body-weight', 'body-height', 'bmi', 'blood-pressure', 'heart-rate', 'respiratory-rate', 'body-temperature', 'oxygen-saturation', 'blood-glucose'], required: true }, ...coding('LOINC', 'loincCode', { required: false }), { name: 'value', label: 'Value', type: 'number', required: true }, { name: 'unit', label: 'Unit', required: true }, { name: 'effectiveDateTime', label: 'Measured at', type: 'datetime-local', required: true }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [terminologySearch('LOINC vital sign search', 'loincCode', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincVitalPresets), { apply: { code: 'domainCode', unit: 'unit' } }), { name: 'code', label: 'Measurement', type: 'select', options: vitalMeasurementOptions, source: 'LOINC', system: LOINC_SYSTEM, required: true, help: 'Choose a LOINC-backed vital measurement; selection pre-fills the LOINC Coding and suggested UCUM-style unit.' }, ...coding('LOINC', 'loincCode', { required: false }), { name: 'value', label: 'Value', type: 'number', required: true }, { name: 'unit', label: 'Unit', required: true }, { name: 'effectiveDateTime', label: 'Measured at', type: 'datetime-local', required: true }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => String(x.code || 'Vital sign').replaceAll('-', ' '),
     detail: (x) => `${typeof x.value === 'object' ? JSON.stringify(x.value) : x.value} ${x.unit || ''} · ${formatDate(x.effectiveDateTime)}`,
   },
@@ -816,6 +865,7 @@ function openForm(record = null) {
   const fields = $('form-fields');
   fields.replaceChildren();
   for (const field of config.fields) fields.append(createField(field, record));
+  if (!record) document.querySelectorAll('#form-fields select[data-coded-select="true"]').forEach((input) => applyCodedSelect(input._fieldConfig, input));
   $('record-dialog').showModal();
 }
 
@@ -835,10 +885,16 @@ function createField(field, record) {
   } else if (field.type === 'select') {
     input = document.createElement('select');
     for (const option of field.options) {
+      const normalized = normalizeSelectOption(option);
       const element = document.createElement('option');
-      element.value = option;
-      element.textContent = option ? option.replaceAll('-', ' ') : 'Not specified';
+      element.value = normalized.value;
+      element.textContent = selectOptionLabel(normalized);
       input.append(element);
+    }
+    if (field.options.some((option) => typeof option === 'object')) {
+      input.dataset.codedSelect = 'true';
+      input._fieldConfig = field;
+      input.addEventListener('change', () => applyCodedSelect(field, input));
     }
   } else if (field.type === 'textarea') {
     input = document.createElement('textarea');
@@ -857,6 +913,8 @@ function createField(field, record) {
   }
   wrapper.append(label, input);
   if (input._terminologyList) wrapper.append(input._terminologyList);
+  const systemReference = createSystemReference(field);
+  if (systemReference) wrapper.append(systemReference);
   if (field.help) {
     const help = document.createElement('small');
     help.className = 'field-help';
@@ -864,6 +922,36 @@ function createField(field, record) {
     wrapper.append(help);
   }
   return wrapper;
+}
+
+function normalizeSelectOption(option) {
+  if (typeof option === 'string') {
+    return { value: option, display: option ? option.replaceAll('-', ' ') : 'Not specified' };
+  }
+  return {
+    value: option.value ?? option.code ?? option.display ?? '',
+    display: option.display ?? option.value ?? option.code ?? '',
+    code: option.code,
+    source: option.source,
+    system: option.system,
+    apply: option.apply,
+  };
+}
+
+function selectOptionLabel(option) {
+  if (!option.value && !option.code) return option.display || 'Not specified';
+  if (option.code && option.source) return `${option.display} — ${option.code} [${option.source}]`;
+  if (option.code) return `${option.display} — ${option.code}`;
+  return option.display;
+}
+
+function applyCodedSelect(field, input) {
+  if (!field) return;
+  const selected = field.options.map(normalizeSelectOption).find((option) => option.value === input.value);
+  if (!selected?.apply) return;
+  for (const [fieldName, value] of Object.entries(selected.apply)) {
+    setInputValue(fieldName, value);
+  }
 }
 
 function createTerminologySearch(field, record) {
@@ -890,6 +978,30 @@ function createTerminologySearch(field, record) {
   input.addEventListener('change', () => applyTerminologySearch(field, input));
   input._terminologyList = list;
   return input;
+}
+
+function createSystemReference(field) {
+  const systems = [];
+  if (field.system) systems.push({ source: field.source, system: field.system });
+  for (const option of field.options || []) {
+    if (typeof option === 'object' && option.system) systems.push({ source: option.source, system: option.system });
+  }
+  const unique = [...new Map(systems.map((entry) => [entry.system, entry])).values()];
+  if (unique.length === 0) return null;
+
+  const reference = document.createElement('small');
+  reference.className = 'system-reference';
+  reference.append(`${unique.length === 1 ? 'Coding system' : 'Coding systems'}: `);
+  unique.forEach((entry, index) => {
+    if (index > 0) reference.append(' · ');
+    const link = document.createElement('a');
+    link.href = entry.system;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = `${entry.source || 'System'} ${entry.system}`;
+    reference.append(link);
+  });
+  return reference;
 }
 
 function terminologyOptionValue(option) {

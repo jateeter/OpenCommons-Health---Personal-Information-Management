@@ -469,6 +469,16 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
 .field input, .field select, .field textarea { width: 100%; border: 1px solid #ccd7d1; background: white; border-radius: 9px; padding: 9px 10px; color: var(--ink); }
 .field textarea { min-height: 82px; resize: vertical; }
 .field-help { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.system-reference {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.system-reference a {
+  color: var(--teal-dark);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
 .tooltip {
   display: inline-grid;
   width: 16px;
