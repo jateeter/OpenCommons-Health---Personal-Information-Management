@@ -325,6 +325,7 @@ let epicStatus = { enabled: false, status: 'disabled' };
 let epicDiagnostics = null;
 let epicPreview = null;
 let epicSelectedDomains = new Set();
+let recordFormSnapshot = '';
 const $ = (id) => document.getElementById(id);
 
 const PRIMARY_TABS = ['wellness', 'records', 'status'];
@@ -866,6 +867,7 @@ function openForm(record = null) {
   fields.replaceChildren();
   for (const field of config.fields) fields.append(createField(field, record));
   if (!record) document.querySelectorAll('#form-fields select[data-coded-select="true"]').forEach((input) => applyCodedSelect(input._fieldConfig, input));
+  recordFormSnapshot = serializeRecordForm();
   $('record-dialog').showModal();
 }
 
@@ -1050,6 +1052,7 @@ async function saveRecord(event) {
     });
     const payload = response.status === 204 ? {} : await response.json();
     if (!response.ok) throw new Error(formatApiError(payload));
+    recordFormSnapshot = serializeRecordForm();
     $('record-dialog').close();
     await loadRecords();
     await refreshWellness();
@@ -1057,6 +1060,27 @@ async function saveRecord(event) {
     $('form-error').textContent = error.message;
     $('form-error').classList.remove('hidden');
   }
+}
+
+function serializeRecordForm() {
+  const data = {};
+  for (const element of $('record-form').elements) {
+    if (!element.name || element.type === 'submit' || element.type === 'button') continue;
+    data[element.name] = element.value;
+  }
+  return JSON.stringify(data);
+}
+
+function isRecordFormDirty() {
+  return $('record-dialog').open && serializeRecordForm() !== recordFormSnapshot;
+}
+
+function requestCloseRecordDialog() {
+  if (isRecordFormDirty() && !confirm('Discard unsaved changes to this health record?')) return false;
+  $('form-error').classList.add('hidden');
+  $('record-dialog').close();
+  recordFormSnapshot = '';
+  return true;
 }
 
 async function deleteRecord(record) {
@@ -1348,6 +1372,15 @@ function formatApiError(payload) {
 
 $('add-button').addEventListener('click', () => openForm());
 $('record-form').addEventListener('submit', saveRecord);
+$('record-close').addEventListener('click', requestCloseRecordDialog);
+$('record-cancel').addEventListener('click', requestCloseRecordDialog);
+$('record-dialog').addEventListener('cancel', (event) => {
+  event.preventDefault();
+  requestCloseRecordDialog();
+});
+$('record-dialog').addEventListener('click', (event) => {
+  if (event.target === $('record-dialog')) requestCloseRecordDialog();
+});
 $('search').addEventListener('input', renderRecords);
 $('epic-connect').addEventListener('click', connectEpic);
 $('epic-diagnostics').addEventListener('click', () => refreshEpicDiagnostics(applicationReady, true, epicStatus));

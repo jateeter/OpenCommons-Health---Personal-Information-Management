@@ -186,6 +186,57 @@ describe('wellness landing behaviour', () => {
     expect(($('field-vaccineCode.display') as HTMLInputElement).value).toBe('Influenza, injectable, quadrivalent');
   });
 
+  it('closes a clean record modal from Cancel without a discard prompt', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm');
+    boot();
+    await flush();
+    $('tab-records').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+
+    $('add-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect($('record-dialog').hasAttribute('open')).toBe(true);
+    $('record-cancel').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect($('record-dialog').hasAttribute('open')).toBe(false);
+  });
+
+  it('warns before discarding dirty record modal changes from the close button', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    boot();
+    await flush();
+    $('tab-records').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+
+    $('add-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    ($('field-code.code') as HTMLInputElement).value = '44054006';
+    $('field-code.code').dispatchEvent(new window.Event('input', { bubbles: true }));
+
+    $('record-close').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(confirmSpy).toHaveBeenCalledWith('Discard unsaved changes to this health record?');
+    expect($('record-dialog').hasAttribute('open')).toBe(true);
+
+    $('record-close').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect($('record-dialog').hasAttribute('open')).toBe(false);
+  });
+
+  it('routes Escape through the same dirty-modal discard guard', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    boot();
+    await flush();
+    $('tab-records').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+
+    $('add-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    ($('field-code.display') as HTMLInputElement).value = 'Type 2 diabetes mellitus';
+    const cancelEvent = new window.Event('cancel', { bubbles: true, cancelable: true });
+    $('record-dialog').dispatchEvent(cancelEvent);
+
+    expect(confirmSpy).toHaveBeenCalledWith('Discard unsaved changes to this health record?');
+    expect(cancelEvent.defaultPrevented).toBe(true);
+    expect($('record-dialog').hasAttribute('open')).toBe(true);
+  });
+
   it('plots one point per wellness axis, coloured by status', async () => {
     boot();
     await flush();
