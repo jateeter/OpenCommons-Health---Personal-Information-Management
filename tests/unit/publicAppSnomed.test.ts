@@ -9,7 +9,7 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain("type: 'terminology-search'");
     expect(appSource).toContain('SNOMED CT condition search');
     expect(appSource).toContain('SNOMED CT allergy/substance search');
-    expect(appSource).toContain('RxNorm / RxTerms / MED-RT medication search');
+    expect(appSource).toContain('RxNorm medication search');
     expect(appSource).toContain('LOINC vital sign search');
     expect(appSource).toContain('LOINC lab result search');
     expect(appSource).toContain('CVX vaccine search');
@@ -37,10 +37,10 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain("'410223002', display: 'Follow-up encounter'");
     expect(appSource).toContain("'158', display: 'Influenza, injectable, quadrivalent'");
     expect(appSource).toContain("'115', display: 'Tdap'");
-    expect(appSource).toContain("'860975', display: 'Metformin hydrochloride 500 MG Oral Tablet'");
-    expect(appSource).toContain("'617314', display: 'Atorvastatin 20 MG Oral Tablet'");
-    expect(appSource).toContain("source: 'RxTerms'");
-    expect(appSource).toContain("source: 'MED-RT'");
+    expect(appSource).toContain("'861007', display: 'Metformin hydrochloride 500 MG Oral Tablet'");
+    expect(appSource).toContain("'860975', display: '24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet'");
+    expect(appSource).toContain("'617310', display: 'Atorvastatin 20 MG Oral Tablet'");
+    expect(appSource).toContain("'314076', display: 'Lisinopril 10 MG Oral Tablet'");
   });
 
   it('keeps standards-oriented tooltip help visible in the manual-entry UI', () => {
@@ -68,8 +68,15 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain('unit: option.unit');
     expect(appSource).toContain('function applyCodedSelect');
     expect(appSource).toContain('input.dataset.codedSelect');
+    expect(appSource).toContain('field.transient');
+    expect(appSource).toContain('field.valueFrom || field.name');
     expect(appSource).toContain('function createSystemReference');
     expect(appSource).toContain("terminologySearch('CVX vaccine search', 'vaccineCode', 'CVX'");
+    expect(appSource).toContain("name: 'medicationCode.rxnormChoice'");
+    expect(appSource).toContain('options: rxnormMedicationOptions');
+    expect(appSource).toContain("'medicationCode.system': RXNORM_SYSTEM");
+    expect(appSource).toContain("'medicationCode.code': option.code");
+    expect(appSource).toContain("'medicationCode.display': option.display");
     expect(appSource).toContain("options: administrativeGenderOptions");
   });
 
