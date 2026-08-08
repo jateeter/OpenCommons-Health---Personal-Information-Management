@@ -1,0 +1,296 @@
+{
+  "version": "2026-08-08",
+  "name": "OpenCommons Health PIM nine wellness pillar seed bundle",
+  "description": "Synthetic, non-PHI seed values for exercising every current Add/Edit modal field in the nine core wellness pillars.",
+  "privacy": {
+    "syntheticOnly": true,
+    "containsRealPhi": false,
+    "containsSecrets": false,
+    "note": "These records use example.test names, organizations, URLs, and identifiers. They are safe for local demos and tests, not clinical care."
+  },
+  "codingSystems": {
+    "schemaOrg": "https://schema.org",
+    "administrativeGender": "http://hl7.org/fhir/administrative-gender",
+    "snomedCt": "http://snomed.info/sct",
+    "rxNorm": "http://www.nlm.nih.gov/research/umls/rxnorm",
+    "cvx": "http://hl7.org/fhir/sid/cvx",
+    "loinc": "http://loinc.org"
+  },
+  "pillars": [
+    {
+      "pillar": 1,
+      "domain": "profiles",
+      "label": "Personal Profile",
+      "repository": "ProfileRepository",
+      "schema": "src/schemas/profile.shex",
+      "codingSystem": "schema.org with HL7 FHIR AdministrativeGender",
+      "modalSeeds": {
+        "name.family": "Rivers",
+        "name.given": "Jordan, Avery",
+        "birthDate": "1975-04-18",
+        "biologicalSex": "unknown",
+        "photo": "https://example.test/opencommons/avatar/jordan-rivers.png"
+      },
+      "record": {
+        "name": {
+          "family": "Rivers",
+          "given": ["Jordan", "Avery"]
+        },
+        "birthDate": "1975-04-18",
+        "biologicalSex": "unknown",
+        "photo": "https://example.test/opencommons/avatar/jordan-rivers.png"
+      }
+    },
+    {
+      "pillar": 2,
+      "domain": "conditions",
+      "label": "Medical Conditions",
+      "repository": "ConditionRepository",
+      "schema": "src/schemas/condition.shex",
+      "codingSystem": "SNOMED CT",
+      "modalSeeds": {
+        "code.snomedChoice": "38341003",
+        "code.terminologySearch": "Hypertensive disorder, systemic arterial — 38341003 [SNOMED CT]",
+        "code.system": "http://snomed.info/sct",
+        "code.code": "38341003",
+        "code.display": "Hypertensive disorder, systemic arterial",
+        "status": "active",
+        "severity": "mild",
+        "onsetDate": "2024-03-12",
+        "abatementDate": "",
+        "notes": "Synthetic wellness seed: monitor blood pressure trends and annual review status."
+      },
+      "record": {
+        "code": {
+          "system": "http://snomed.info/sct",
+          "code": "38341003",
+          "display": "Hypertensive disorder, systemic arterial"
+        },
+        "status": "active",
+        "severity": "mild",
+        "onsetDate": "2024-03-12",
+        "notes": "Synthetic wellness seed: monitor blood pressure trends and annual review status."
+      }
+    },
+    {
+      "pillar": 3,
+      "domain": "medications",
+      "label": "Medications",
+      "repository": "MedicationRepository",
+      "schema": "src/schemas/medication.shex",
+      "codingSystem": "RxNorm",
+      "modalSeeds": {
+        "medicationCode.rxnormChoice": "617310",
+        "medicationCode.terminologySearch": "Atorvastatin 20 MG Oral Tablet — 617310 [RxNorm]",
+        "medicationCode.system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "medicationCode.code": "617310",
+        "medicationCode.display": "Atorvastatin 20 MG Oral Tablet",
+        "status": "active",
+        "dosage.text": "Take one 20 mg tablet by mouth each evening.",
+        "startDate": "2024-04-01",
+        "endDate": "",
+        "prescriber": "OpenCommons Demo Clinician",
+        "reason": "Synthetic lipid management seed.",
+        "notes": "Medication seed demonstrates RxNorm coding and owner-editable dosage instructions."
+      },
+      "record": {
+        "medicationCode": {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "617310",
+          "display": "Atorvastatin 20 MG Oral Tablet"
+        },
+        "status": "active",
+        "dosage": {
+          "text": "Take one 20 mg tablet by mouth each evening."
+        },
+        "startDate": "2024-04-01",
+        "prescriber": "OpenCommons Demo Clinician",
+        "reason": "Synthetic lipid management seed.",
+        "notes": "Medication seed demonstrates RxNorm coding and owner-editable dosage instructions."
+      }
+    },
+    {
+      "pillar": 4,
+      "domain": "allergies",
+      "label": "Allergies & Intolerances",
+      "repository": "AllergyRepository",
+      "schema": "src/schemas/allergy.shex",
+      "codingSystem": "SNOMED CT",
+      "modalSeeds": {
+        "substance.snomedChoice": "294954005",
+        "substance.terminologySearch": "Allergy to penicillin — 294954005 [SNOMED CT]",
+        "substance.system": "http://snomed.info/sct",
+        "substance.code": "294954005",
+        "substance.display": "Allergy to penicillin",
+        "category": "medication",
+        "status": "active",
+        "onsetDate": "2012-06-10",
+        "notes": "Synthetic allergy seed: verify medication reconciliation warning during review."
+      },
+      "record": {
+        "substance": {
+          "system": "http://snomed.info/sct",
+          "code": "294954005",
+          "display": "Allergy to penicillin"
+        },
+        "category": "medication",
+        "status": "active",
+        "onsetDate": "2012-06-10",
+        "notes": "Synthetic allergy seed: verify medication reconciliation warning during review."
+      }
+    },
+    {
+      "pillar": 5,
+      "domain": "immunizations",
+      "label": "Immunizations",
+      "repository": "ImmunizationRepository",
+      "schema": "src/schemas/immunization.shex",
+      "codingSystem": "CVX",
+      "modalSeeds": {
+        "vaccineCode.cvxChoice": "158",
+        "vaccineCode.terminologySearch": "Influenza, injectable, quadrivalent — 158 [CVX]",
+        "vaccineCode.system": "http://hl7.org/fhir/sid/cvx",
+        "vaccineCode.code": "158",
+        "vaccineCode.display": "Influenza, injectable, quadrivalent",
+        "status": "completed",
+        "occurrenceDate": "2025-10-15",
+        "doseNumber": "1",
+        "lotNumber": "SYN-FLU-2025-01",
+        "performer": "OpenCommons Demo Pharmacy",
+        "notes": "Synthetic immunization seed for annual wellness vaccine review."
+      },
+      "record": {
+        "vaccineCode": {
+          "system": "http://hl7.org/fhir/sid/cvx",
+          "code": "158",
+          "display": "Influenza, injectable, quadrivalent"
+        },
+        "status": "completed",
+        "occurrenceDate": "2025-10-15",
+        "doseNumber": 1,
+        "lotNumber": "SYN-FLU-2025-01",
+        "performer": "OpenCommons Demo Pharmacy",
+        "notes": "Synthetic immunization seed for annual wellness vaccine review."
+      }
+    },
+    {
+      "pillar": 6,
+      "domain": "vital-signs",
+      "label": "Vital Signs",
+      "repository": "VitalSignsRepository",
+      "schema": "src/schemas/vitalSigns.shex",
+      "codingSystem": "LOINC",
+      "modalSeeds": {
+        "code": "heart-rate",
+        "loincCode.terminologySearch": "Heart rate — 8867-4 [LOINC]",
+        "loincCode.system": "http://loinc.org",
+        "loincCode.code": "8867-4",
+        "loincCode.display": "Heart rate",
+        "value": "72",
+        "unit": "beats/min",
+        "effectiveDateTime": "2026-08-08T09:00",
+        "notes": "Synthetic HealthKit-style seed mapped to the vital signs pillar."
+      },
+      "record": {
+        "code": "heart-rate",
+        "loincCode": {
+          "system": "http://loinc.org",
+          "code": "8867-4",
+          "display": "Heart rate"
+        },
+        "value": 72,
+        "unit": "beats/min",
+        "effectiveDateTime": "2026-08-08T16:00:00.000Z",
+        "notes": "Synthetic HealthKit-style seed mapped to the vital signs pillar."
+      }
+    },
+    {
+      "pillar": 7,
+      "domain": "providers",
+      "label": "Healthcare Providers",
+      "repository": "ProviderRepository",
+      "schema": "src/schemas/provider.shex",
+      "codingSystem": "schema.org",
+      "modalSeeds": {
+        "name": "OpenCommons Demo Primary Care",
+        "role": "primary-care",
+        "specialty": "Family Medicine",
+        "npi": "0000000000",
+        "organization": "OpenCommons Health Demo Network",
+        "notes": "Synthetic provider directory seed; NPI value is intentionally non-real."
+      },
+      "record": {
+        "name": "OpenCommons Demo Primary Care",
+        "role": "primary-care",
+        "specialty": "Family Medicine",
+        "npi": "0000000000",
+        "organization": "OpenCommons Health Demo Network",
+        "notes": "Synthetic provider directory seed; NPI value is intentionally non-real."
+      }
+    },
+    {
+      "pillar": 8,
+      "domain": "lab-results",
+      "label": "Laboratory Results",
+      "repository": "LabResultRepository",
+      "schema": "src/schemas/labResult.shex",
+      "codingSystem": "LOINC",
+      "modalSeeds": {
+        "code.loincChoice": "4548-4",
+        "code.terminologySearch": "Hemoglobin A1c/Hemoglobin.total in Blood — 4548-4 [LOINC]",
+        "code.system": "http://loinc.org",
+        "code.code": "4548-4",
+        "code.display": "Hemoglobin A1c/Hemoglobin.total in Blood",
+        "value": "5.6",
+        "unit": "%",
+        "interpretation": "normal",
+        "effectiveDateTime": "2026-08-07T08:30",
+        "performer": "OpenCommons Demo Laboratory",
+        "notes": "Synthetic annual wellness laboratory seed."
+      },
+      "record": {
+        "code": {
+          "system": "http://loinc.org",
+          "code": "4548-4",
+          "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+        },
+        "value": "5.6",
+        "unit": "%",
+        "interpretation": "normal",
+        "effectiveDateTime": "2026-08-07T15:30:00.000Z",
+        "performer": "OpenCommons Demo Laboratory",
+        "notes": "Synthetic annual wellness laboratory seed."
+      }
+    },
+    {
+      "pillar": 9,
+      "domain": "insurance-policies",
+      "label": "Insurance Policies",
+      "repository": "InsuranceRepository",
+      "schema": "src/schemas/insurance.shex",
+      "codingSystem": "OpenCommons local coverage-type values",
+      "modalSeeds": {
+        "type": "medical",
+        "insurerName": "OpenCommons Demo Health Plan",
+        "planName": "Synthetic Wellness PPO",
+        "memberId": "DEMO-MEMBER-0001",
+        "groupNumber": "DEMO-GROUP-0001",
+        "effectiveDate": "2026-01-01",
+        "expirationDate": "2026-12-31",
+        "policyHolder": "Jordan Rivers",
+        "notes": "Synthetic coverage seed for local-only insurance workflow review."
+      },
+      "record": {
+        "type": "medical",
+        "insurerName": "OpenCommons Demo Health Plan",
+        "planName": "Synthetic Wellness PPO",
+        "memberId": "DEMO-MEMBER-0001",
+        "groupNumber": "DEMO-GROUP-0001",
+        "effectiveDate": "2026-01-01",
+        "expirationDate": "2026-12-31",
+        "policyHolder": "Jordan Rivers",
+        "notes": "Synthetic coverage seed for local-only insurance workflow review."
+      }
+    }
+  ]
+}

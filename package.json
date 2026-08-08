@@ -18,6 +18,7 @@
     "epic:diagnostics": "node scripts/epic-diagnostics-check.mjs",
     "validate:openapi": "node scripts/validate-openapi.mjs",
     "validate:localhost-mvp": "node scripts/validate-localhost-mvp.mjs",
+    "validate:wellness-seeds": "node scripts/validate-wellness-pillar-seeds.mjs",
     "dev": "ts-node src/index.ts",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
