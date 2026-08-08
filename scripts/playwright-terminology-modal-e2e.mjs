@@ -62,6 +62,25 @@ try {
   await page.screenshot({ path: `${outputDir}/terminology-vitals-${timestamp}.png`, fullPage: false });
   await discardOpenModal();
 
+  await page.click('.domain-nav button[data-domain="lab-results"]');
+  await page.click('#add-button');
+  await page.waitForSelector('#record-dialog[open]', { timeout: 10000 });
+  check(
+    'lab result modal exposes LOINC system link',
+    await page.locator('.system-reference a[href="http://loinc.org"]').count() > 0,
+  );
+  check(
+    'lab result dropdown includes LOINC code/name',
+    await page.locator('#field-code\\.loincChoice').evaluate((select) => [...select.options].some((option) => option.textContent.includes('4548-4 [LOINC]'))),
+  );
+  await page.locator('#field-code\\.loincChoice').selectOption('4548-4');
+  check('lab selection sets LOINC system', await fieldValue(page, 'field-code.system') === 'http://loinc.org');
+  check('lab selection sets LOINC code', await fieldValue(page, 'field-code.code') === '4548-4');
+  check('lab selection sets LOINC display', await fieldValue(page, 'field-code.display') === 'Hemoglobin A1c/Hemoglobin.total in Blood');
+  check('lab selection sets suggested unit', await fieldValue(page, 'field-unit') === '%');
+  await page.screenshot({ path: `${outputDir}/terminology-labs-${timestamp}.png`, fullPage: false });
+  await discardOpenModal();
+
   await page.click('.domain-nav button[data-domain="medications"]');
   await page.click('#add-button');
   await page.waitForSelector('#record-dialog[open]', { timeout: 10000 });

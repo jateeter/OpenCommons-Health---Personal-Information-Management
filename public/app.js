@@ -62,33 +62,57 @@ const loincVitalPresets = [
   { code: '2339-0', display: 'Glucose mass/volume in blood', domainCode: 'blood-glucose', unit: 'mg/dL' },
 ];
 
-const vitalMeasurementOptions = loincVitalPresets.map((option) => ({
-  value: option.domainCode,
-  code: option.code,
-  display: option.display,
-  source: 'LOINC',
-  system: LOINC_SYSTEM,
-  apply: {
-    'loincCode.system': LOINC_SYSTEM,
-    'loincCode.code': option.code,
-    'loincCode.display': option.display,
-    unit: option.unit,
-  },
-}));
+const sortTerms = (options) => [...options].sort((a, b) => a.display.localeCompare(b.display) || a.code.localeCompare(b.code));
+
+const vitalMeasurementOptions = [
+  { value: '', display: 'Choose LOINC vital sign…', source: 'LOINC', system: LOINC_SYSTEM },
+  ...sortTerms(loincVitalPresets).map((option) => ({
+    value: option.domainCode,
+    code: option.code,
+    display: option.display,
+    source: 'LOINC',
+    system: LOINC_SYSTEM,
+    apply: {
+      'loincCode.system': LOINC_SYSTEM,
+      'loincCode.code': option.code,
+      'loincCode.display': option.display,
+      unit: option.unit,
+    },
+  })),
+];
 
 const loincLabPresets = [
-  { code: '4548-4', display: 'Hemoglobin A1c/Hemoglobin.total in Blood' },
-  { code: '718-7', display: 'Hemoglobin mass/volume in Blood' },
-  { code: '6690-2', display: 'Leukocytes number/volume in Blood' },
-  { code: '777-3', display: 'Platelets number/volume in Blood' },
-  { code: '2951-2', display: 'Sodium moles/volume in Serum or Plasma' },
-  { code: '2823-3', display: 'Potassium moles/volume in Serum or Plasma' },
-  { code: '2160-0', display: 'Creatinine mass/volume in Serum or Plasma' },
-  { code: '2345-7', display: 'Glucose mass/volume in Serum or Plasma' },
-  { code: '2093-3', display: 'Cholesterol mass/volume in Serum or Plasma' },
-  { code: '2085-9', display: 'Cholesterol in HDL mass/volume in Serum or Plasma' },
-  { code: '2089-1', display: 'Cholesterol in LDL mass/volume in Serum or Plasma' },
-  { code: '2571-8', display: 'Triglyceride mass/volume in Serum or Plasma' },
+  { code: '1742-6', display: 'Alanine aminotransferase enzyme activity/volume in Serum or Plasma', unit: 'U/L' },
+  { code: '1920-8', display: 'Aspartate aminotransferase enzyme activity/volume in Serum or Plasma', unit: 'U/L' },
+  { code: '4548-4', display: 'Hemoglobin A1c/Hemoglobin.total in Blood', unit: '%' },
+  { code: '718-7', display: 'Hemoglobin mass/volume in Blood', unit: 'g/dL' },
+  { code: '6690-2', display: 'Leukocytes number/volume in Blood', unit: '10*3/uL' },
+  { code: '777-3', display: 'Platelets number/volume in Blood', unit: '10*3/uL' },
+  { code: '2951-2', display: 'Sodium moles/volume in Serum or Plasma', unit: 'mmol/L' },
+  { code: '2823-3', display: 'Potassium moles/volume in Serum or Plasma', unit: 'mmol/L' },
+  { code: '2160-0', display: 'Creatinine mass/volume in Serum or Plasma', unit: 'mg/dL' },
+  { code: '2345-7', display: 'Glucose mass/volume in Serum or Plasma', unit: 'mg/dL' },
+  { code: '2093-3', display: 'Cholesterol mass/volume in Serum or Plasma', unit: 'mg/dL' },
+  { code: '2085-9', display: 'Cholesterol in HDL mass/volume in Serum or Plasma', unit: 'mg/dL' },
+  { code: '2089-1', display: 'Cholesterol in LDL mass/volume in Serum or Plasma', unit: 'mg/dL' },
+  { code: '2571-8', display: 'Triglyceride mass/volume in Serum or Plasma', unit: 'mg/dL' },
+];
+
+const loincLabResultOptions = [
+  { value: '', display: 'Choose LOINC lab result…', source: 'LOINC', system: LOINC_SYSTEM },
+  ...sortTerms(loincLabPresets).map((option) => ({
+    value: option.code,
+    code: option.code,
+    display: option.display,
+    source: 'LOINC',
+    system: LOINC_SYSTEM,
+    apply: {
+      'code.system': LOINC_SYSTEM,
+      'code.code': option.code,
+      'code.display': option.display,
+      unit: option.unit,
+    },
+  })),
 ];
 
 const loincDocumentPresets = [
@@ -164,7 +188,6 @@ const rxnormMedicationOptions = [
 ];
 
 const withSystem = (system, source, options) => options.map((option) => ({ ...option, system, source }));
-const sortTerms = (options) => [...options].sort((a, b) => a.display.localeCompare(b.display) || a.code.localeCompare(b.code));
 const codingSystemForLabel = (label) => Object.values(TERMINOLOGY_SYSTEMS).find(({ source }) => label.includes(source));
 
 const terminologySearch = (label, prefix, source, options, extra = {}) => ({
@@ -236,7 +259,7 @@ const domains = {
   'vital-signs': {
     label: 'Vital sign', plural: 'Vital signs', icon: '⌁',
     description: 'Measurements and observations that track your health over time.',
-    fields: [terminologySearch('LOINC vital sign search', 'loincCode', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincVitalPresets), { apply: { code: 'domainCode', unit: 'unit' } }), { name: 'code', label: 'Measurement', type: 'select', options: vitalMeasurementOptions, source: 'LOINC', system: LOINC_SYSTEM, required: true, help: 'Choose a LOINC-backed vital measurement; selection pre-fills the LOINC Coding and suggested UCUM-style unit.' }, ...coding('LOINC', 'loincCode', { required: false }), { name: 'value', label: 'Value', type: 'number', required: true }, { name: 'unit', label: 'Unit', required: true }, { name: 'effectiveDateTime', label: 'Measured at', type: 'datetime-local', required: true }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [{ name: 'code', label: 'LOINC vital sign', type: 'select', options: vitalMeasurementOptions, source: 'LOINC', system: LOINC_SYSTEM, required: true, help: 'Choose an approved LOINC vital-sign measurement. Selection pre-fills the FHIR Coding fields and suggested UCUM-style unit saved to your pod.' }, terminologySearch('LOINC vital sign search', 'loincCode', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincVitalPresets), { apply: { code: 'domainCode', unit: 'unit' } }), ...coding('LOINC', 'loincCode', { required: false }), { name: 'value', label: 'Value', type: 'number', required: true }, { name: 'unit', label: 'Unit', required: true }, { name: 'effectiveDateTime', label: 'Measured at', type: 'datetime-local', required: true }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => String(x.code || 'Vital sign').replaceAll('-', ' '),
     detail: (x) => `${typeof x.value === 'object' ? JSON.stringify(x.value) : x.value} ${x.unit || ''} · ${formatDate(x.effectiveDateTime)}`,
   },
@@ -250,7 +273,7 @@ const domains = {
   'lab-results': {
     label: 'Lab result', plural: 'Lab results', icon: '◉',
     description: 'Laboratory observations, values, and reference ranges.',
-    fields: [terminologySearch('LOINC lab result search', 'code', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincLabPresets)), ...coding('LOINC'), { name: 'value', label: 'Result', required: true }, { name: 'unit', label: 'Unit' }, { name: 'interpretation', label: 'Interpretation', type: 'select', options: ['', 'normal', 'high', 'low', 'critical-high', 'critical-low', 'abnormal'] }, { name: 'effectiveDateTime', label: 'Observed at', type: 'datetime-local', required: true }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [{ name: 'code.loincChoice', label: 'LOINC lab result', type: 'select', options: loincLabResultOptions, source: 'LOINC', system: LOINC_SYSTEM, valueFrom: 'code.code', transient: true, required: true, help: 'Choose an approved LOINC laboratory observation. Selection pre-fills the FHIR Coding fields and suggested UCUM-style unit saved to your pod.' }, terminologySearch('LOINC lab result search', 'code', 'LOINC', withSystem(LOINC_SYSTEM, 'LOINC', loincLabPresets)), ...coding('LOINC'), { name: 'value', label: 'Result', required: true }, { name: 'unit', label: 'Unit' }, { name: 'interpretation', label: 'Interpretation', type: 'select', options: ['', 'normal', 'high', 'low', 'critical-high', 'critical-low', 'abnormal'] }, { name: 'effectiveDateTime', label: 'Observed at', type: 'datetime-local', required: true }, { name: 'performer', label: 'Performer' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.code?.display || x.code?.code || 'Lab result',
     detail: (x) => [x.value !== undefined ? `${x.value} ${x.unit || ''}` : '', x.interpretation, formatDate(x.effectiveDateTime)].filter(Boolean).join(' · '),
   },
