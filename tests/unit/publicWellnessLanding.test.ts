@@ -85,7 +85,15 @@ describe('wellness spider-graph landing page', () => {
   });
 
   it('treats the domain sidebar as a selector for the records tab only', () => {
-    expect(appSource).toContain("$('domain-nav').classList.toggle('hidden', view !== 'records')");
+    expect(indexSource).toContain('<div class="shell full-layout">');
+    expect(appSource).toContain("const recordsLayout = view === 'records'");
+    expect(appSource).toContain("document.querySelector('.shell')?.classList.toggle('records-layout', recordsLayout)");
+    expect(appSource).toContain("document.querySelector('.shell')?.classList.toggle('full-layout', !recordsLayout)");
+    expect(appSource).toContain("$('domain-nav').classList.toggle('hidden', !recordsLayout)");
+    expect(styleSource).toContain('.shell.records-layout { grid-template-columns: 230px minmax(0, 1fr); }');
+    expect(styleSource).toContain('.shell.full-layout .domain-nav { display: none; }');
+    expect(styleSource).toContain('main { grid-column: 1 / -1;');
+    expect(styleSource).toContain('.shell.records-layout main { grid-column: auto; }');
   });
 
   it('refreshes the graph dynamically after record changes', () => {
@@ -115,7 +123,17 @@ describe('wellness spider-graph landing page', () => {
 
   it('sizes the graph for iPhone-class viewports', () => {
     expect(styleSource).toContain('@media (max-width: 480px)');
-    expect(styleSource).toMatch(/\.spider \{[^}]*width: min\(100%, 400px\)/);
+    expect(styleSource).toMatch(/\.spider \{[^}]*width: min\(100%, clamp\(300px, 42vw, 430px\)\)/);
+  });
+
+  it('uses overflow-safe responsive primitives for data views and edit forms', () => {
+    expect(styleSource).toContain('--content-gutter: clamp(28px, 5vw, 72px)');
+    expect(styleSource).toContain('.view { min-width: 0; }');
+    expect(styleSource).toContain('.record { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto;');
+    expect(styleSource).toContain('.record-copy h3, .record-copy p, .record-copy small { overflow-wrap: anywhere; }');
+    expect(styleSource).toContain('grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) auto;');
+    expect(styleSource).toContain('max-height: min(720px, calc(100dvh - 32px));');
+    expect(styleSource).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));');
   });
 
   it('exposes accessible labels for the graph and its data points', () => {
