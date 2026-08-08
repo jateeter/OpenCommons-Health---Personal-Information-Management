@@ -12,6 +12,7 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain('RxNorm / RxTerms / MED-RT medication search');
     expect(appSource).toContain('LOINC vital sign search');
     expect(appSource).toContain('LOINC lab result search');
+    expect(appSource).toContain('CVX vaccine search');
     expect(appSource).toContain('LOINC document type search');
     expect(appSource).toContain('LOINC document category search');
     expect(appSource).toContain('SNOMED CT workflow task search');
@@ -34,6 +35,8 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain("'81218-0', display: 'Care plan'");
     expect(appSource).toContain("'386053000', display: 'Evaluation procedure'");
     expect(appSource).toContain("'410223002', display: 'Follow-up encounter'");
+    expect(appSource).toContain("'158', display: 'Influenza, injectable, quadrivalent'");
+    expect(appSource).toContain("'115', display: 'Tdap'");
     expect(appSource).toContain("'860975', display: 'Metformin hydrochloride 500 MG Oral Tablet'");
     expect(appSource).toContain("'617314', display: 'Atorvastatin 20 MG Oral Tablet'");
     expect(appSource).toContain("source: 'RxTerms'");
@@ -45,8 +48,29 @@ describe('browser terminology manual-entry support', () => {
     expect(appSource).toContain('Required FHIR Coding parameters: terminology system URI and code.');
     expect(appSource).toContain('LOINC provides common identifiers, names, and codes');
     expect(appSource).toContain('RxNorm provides normalized clinical drug names');
+    expect(appSource).toContain('CVX identifies vaccines for HL7/FHIR immunization exchange');
+    expect(appSource).toContain('HL7 FHIR AdministrativeGender codes');
+    expect(appSource).toContain("href = entry.system");
+    expect(appSource).toContain("link.textContent = `${entry.source || 'System'} ${entry.system}`");
     expect(styleSource).toContain('.tooltip');
     expect(styleSource).toContain('cursor: help');
+    expect(styleSource).toContain('.system-reference');
+    expect(styleSource).toContain('.system-reference a');
+  });
+
+  it('prefills coding fields from coded dropdown selections', () => {
+    expect(appSource).toContain("const CVX_SYSTEM = 'http://hl7.org/fhir/sid/cvx'");
+    expect(appSource).toContain("const ADMINISTRATIVE_GENDER_SYSTEM = 'http://hl7.org/fhir/administrative-gender'");
+    expect(appSource).toContain('const vitalMeasurementOptions = loincVitalPresets.map');
+    expect(appSource).toContain("'loincCode.system': LOINC_SYSTEM");
+    expect(appSource).toContain("'loincCode.code': option.code");
+    expect(appSource).toContain("'loincCode.display': option.display");
+    expect(appSource).toContain('unit: option.unit');
+    expect(appSource).toContain('function applyCodedSelect');
+    expect(appSource).toContain('input.dataset.codedSelect');
+    expect(appSource).toContain('function createSystemReference');
+    expect(appSource).toContain("terminologySearch('CVX vaccine search', 'vaccineCode', 'CVX'");
+    expect(appSource).toContain("options: administrativeGenderOptions");
   });
 
   it('allows decimal clinical measurements in numeric fields', () => {
