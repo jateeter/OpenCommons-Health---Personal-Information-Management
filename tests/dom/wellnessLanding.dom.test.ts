@@ -186,6 +186,26 @@ describe('wellness landing behaviour', () => {
     expect(($('field-vaccineCode.display') as HTMLInputElement).value).toBe('Influenza, injectable, quadrivalent');
   });
 
+  it('prefills RxNorm medication coding fields from the medication dropdown', async () => {
+    boot();
+    await flush();
+    $('tab-records').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    document.querySelector<HTMLButtonElement>('.domain-nav button[data-domain="medications"]')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+
+    $('add-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    const medication = $('field-medicationCode.rxnormChoice') as HTMLSelectElement;
+    expect(Array.from(medication.options).some((option) => option.textContent?.includes('617310 [RxNorm]'))).toBe(true);
+    expect(document.querySelector<HTMLAnchorElement>('.system-reference a[href="http://www.nlm.nih.gov/research/umls/rxnorm"]')?.textContent).toContain('RxNorm');
+
+    medication.value = '617310';
+    medication.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(($('field-medicationCode.system') as HTMLInputElement).value).toBe('http://www.nlm.nih.gov/research/umls/rxnorm');
+    expect(($('field-medicationCode.code') as HTMLInputElement).value).toBe('617310');
+    expect(($('field-medicationCode.display') as HTMLInputElement).value).toBe('Atorvastatin 20 MG Oral Tablet');
+  });
+
   it('closes a clean record modal from Cancel without a discard prompt', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm');
     boot();

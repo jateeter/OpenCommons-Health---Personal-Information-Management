@@ -138,18 +138,29 @@ const administrativeGenderOptions = [
   { value: 'unknown', code: 'unknown', display: 'Unknown', source: 'AdministrativeGender', system: ADMINISTRATIVE_GENDER_SYSTEM },
 ];
 
-const medicationTerminologyPresets = [
-  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '860975', display: 'Metformin hydrochloride 500 MG Oral Tablet' },
-  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '617314', display: 'Atorvastatin 20 MG Oral Tablet' },
-  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '197361', display: 'Amlodipine 5 MG Oral Tablet' },
-  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '198440', display: 'Lisinopril 10 MG Oral Tablet' },
-  { source: 'RxNorm', system: RXNORM_SYSTEM, code: '313782', display: 'Acetaminophen 325 MG Oral Tablet' },
-  { source: 'RxTerms', system: RXTERMS_SYSTEM, code: '860975', display: 'metformin 500 mg tablet' },
-  { source: 'RxTerms', system: RXTERMS_SYSTEM, code: '617314', display: 'atorvastatin 20 mg tablet' },
-  { source: 'RxTerms', system: RXTERMS_SYSTEM, code: '197361', display: 'amlodipine 5 mg tablet' },
-  { source: 'MED-RT', system: MEDRT_SYSTEM, code: 'N0000175503', display: 'Antihyperglycemic agent' },
-  { source: 'MED-RT', system: MEDRT_SYSTEM, code: 'N0000175443', display: 'Antihypertensive agent' },
-  { source: 'MED-RT', system: MEDRT_SYSTEM, code: 'N0000175622', display: 'Lipid lowering agent' },
+const rxnormMedicationPresets = [
+  { code: '861007', display: 'Metformin hydrochloride 500 MG Oral Tablet' },
+  { code: '860975', display: '24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet' },
+  { code: '617310', display: 'Atorvastatin 20 MG Oral Tablet' },
+  { code: '314076', display: 'Lisinopril 10 MG Oral Tablet' },
+  { code: '197361', display: 'Amlodipine 5 MG Oral Tablet' },
+  { code: '313782', display: 'Acetaminophen 325 MG Oral Tablet' },
+];
+
+const rxnormMedicationOptions = [
+  { value: '', display: 'Choose RxNorm medication…', source: 'RxNorm', system: RXNORM_SYSTEM },
+  ...rxnormMedicationPresets.map((option) => ({
+    value: option.code,
+    code: option.code,
+    display: option.display,
+    source: 'RxNorm',
+    system: RXNORM_SYSTEM,
+    apply: {
+      'medicationCode.system': RXNORM_SYSTEM,
+      'medicationCode.code': option.code,
+      'medicationCode.display': option.display,
+    },
+  })),
 ];
 
 const withSystem = (system, source, options) => options.map((option) => ({ ...option, system, source }));
@@ -204,7 +215,7 @@ const domains = {
   medications: {
     label: 'Medication', plural: 'Medications', icon: '✣',
     description: 'Current and historical medicines, doses, and prescribers.',
-    fields: [terminologySearch('RxNorm / RxTerms / MED-RT medication search', 'medicationCode', 'RxNorm', medicationTerminologyPresets, { help: `${TERMINOLOGY_HELP.RxNorm} ${TERMINOLOGY_HELP.RxTerms} ${TERMINOLOGY_HELP['MED-RT']}` }), ...coding('RxNorm', 'medicationCode'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'completed', 'stopped', 'on-hold'], required: true }, { name: 'dosage.text', label: 'Dosage instructions' }, { name: 'startDate', label: 'Start date', type: 'date' }, { name: 'endDate', label: 'End date', type: 'date' }, { name: 'prescriber', label: 'Prescriber' }, { name: 'reason', label: 'Reason' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
+    fields: [{ name: 'medicationCode.rxnormChoice', label: 'RxNorm medication', type: 'select', options: rxnormMedicationOptions, source: 'RxNorm', system: RXNORM_SYSTEM, valueFrom: 'medicationCode.code', transient: true, required: true, help: 'Choose an RxNorm normalized medication name. Selection pre-fills the FHIR Coding fields saved to your pod.' }, terminologySearch('RxNorm medication search', 'medicationCode', 'RxNorm', withSystem(RXNORM_SYSTEM, 'RxNorm', rxnormMedicationPresets)), ...coding('RxNorm', 'medicationCode'), { name: 'status', label: 'Status', type: 'select', options: ['active', 'completed', 'stopped', 'on-hold'], required: true }, { name: 'dosage.text', label: 'Dosage instructions' }, { name: 'startDate', label: 'Start date', type: 'date' }, { name: 'endDate', label: 'End date', type: 'date' }, { name: 'prescriber', label: 'Prescriber' }, { name: 'reason', label: 'Reason' }, { name: 'notes', label: 'Notes', type: 'textarea', wide: true }],
     title: (x) => x.medicationCode?.display || x.medicationCode?.code || 'Medication',
     detail: (x) => [x.status, x.dosage?.text, x.startDate].filter(Boolean).join(' · '),
   },
@@ -909,7 +920,7 @@ function createField(field, record) {
   input.name = field.name;
   input.required = Boolean(field.required);
   input.placeholder = field.placeholder || '';
-  const current = getPath(record || {}, field.name);
+  const current = getPath(record || {}, field.valueFrom || field.name);
   if (field.type !== 'terminology-search') {
     input.value = field.list && Array.isArray(current) ? current.join(', ') : normalizeInputValue(current, field.type);
   }
@@ -1035,7 +1046,7 @@ async function saveRecord(event) {
   event.preventDefault();
   const entity = editing ? structuredClone(editing) : {};
   for (const field of domains[activeDomain].fields) {
-    if (field.type === 'terminology-search') continue;
+    if (field.type === 'terminology-search' || field.transient) continue;
     const input = event.currentTarget.elements.namedItem(field.name);
     if (!input.value && !field.required) continue;
     let value = input.value;

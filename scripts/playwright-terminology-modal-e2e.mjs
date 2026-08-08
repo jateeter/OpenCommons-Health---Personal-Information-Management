@@ -26,6 +26,12 @@ const check = (label, ok, detail = '') => {
 };
 
 const fieldValue = (page, id) => page.locator(`[id="${id}"]`).inputValue();
+const discardOpenModal = async () => {
+  if (!await page.locator('#record-dialog').evaluate((dialog) => dialog.open)) return;
+  page.once('dialog', async (dialog) => { await dialog.accept(); });
+  await page.locator('#record-close').click();
+  await page.waitForFunction(() => !document.querySelector('#record-dialog')?.open, undefined, { timeout: 5000 });
+};
 
 const browser = await chromium.launch({ headless: process.env.PLAYWRIGHT_HEADED !== 'true' });
 const page = await browser.newPage({ viewport: { width: 1024, height: 900 } });
@@ -54,7 +60,25 @@ try {
   check('vital selection sets LOINC display', await fieldValue(page, 'field-loincCode.display') === 'Heart rate');
   check('vital selection sets suggested unit', await fieldValue(page, 'field-unit') === 'beats/min');
   await page.screenshot({ path: `${outputDir}/terminology-vitals-${timestamp}.png`, fullPage: false });
-  await page.keyboard.press('Escape');
+  await discardOpenModal();
+
+  await page.click('.domain-nav button[data-domain="medications"]');
+  await page.click('#add-button');
+  await page.waitForSelector('#record-dialog[open]', { timeout: 10000 });
+  check(
+    'medication modal exposes RxNorm system link',
+    await page.locator('.system-reference a[href="http://www.nlm.nih.gov/research/umls/rxnorm"]').count() > 0,
+  );
+  check(
+    'medication dropdown includes approved RxNorm code/name',
+    await page.locator('#field-medicationCode\\.rxnormChoice').evaluate((select) => [...select.options].some((option) => option.textContent.includes('617310 [RxNorm]'))),
+  );
+  await page.locator('#field-medicationCode\\.rxnormChoice').selectOption('617310');
+  check('RxNorm selection sets medication system', await fieldValue(page, 'field-medicationCode.system') === 'http://www.nlm.nih.gov/research/umls/rxnorm');
+  check('RxNorm selection sets medication code', await fieldValue(page, 'field-medicationCode.code') === '617310');
+  check('RxNorm selection sets medication display', await fieldValue(page, 'field-medicationCode.display') === 'Atorvastatin 20 MG Oral Tablet');
+  await page.screenshot({ path: `${outputDir}/terminology-medication-${timestamp}.png`, fullPage: false });
+  await discardOpenModal();
 
   await page.click('.domain-nav button[data-domain="immunizations"]');
   await page.click('#add-button');
