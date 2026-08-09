@@ -6,9 +6,32 @@ The OpenCommons Health PIM MVP is restricted to localhost deployment on a
 personally controlled notebook or developer workstation.
 
 Native iPad, iPhone, and other mobile-app deployment work is explicitly on hold
-for a future implementation phase. Mobile planning may continue as architecture
-notes, but it is not part of the current MVP acceptance bar, build pipeline, or
-release checklist.
+**in this repository**. Mobile planning may continue as architecture notes, but
+PIM does not build, package, or ship a native client, and none of that is part
+of PIM's MVP acceptance bar, build pipeline, or release checklist.
+
+## Relationship to localHealthkitBridge (updated 2026-08-09)
+
+The integrated RealityEngine MVP includes **both** this repository and
+`localHealthkitBridge`. They are not alternatives:
+
+| Component | Owns |
+|---|---|
+| **PIM (this repo)** | the **Solid Community Server**, and the POD(s) it maintains |
+| `localHealthkitBridge` | a device-side pod, **mirrored into** the POD in the SCS |
+
+**The authoritative information repository is the POD(s) within the Solid
+Community Server.** The bridge's pod is a mirror source, not a second system of
+record; where the two disagree, the SCS POD is correct.
+
+So the native-iOS hold above is a statement about *what PIM builds*, not about
+what the MVP contains. HealthKit data reaching the owner's POD is in the MVP —
+this repository is simply not the component that collects it.
+
+The boundary is recorded once, in
+`RealityEngine_CI/docs/MVP_ROADMAP.md` (G4). It is deliberately not restated in
+detail here: two copies of a boundary drifting apart is what made this a
+question in the first place.
 
 ## MVP deployment boundary
 
@@ -57,9 +80,10 @@ The localhost MVP includes:
 
 The following are intentionally excluded from the localhost MVP:
 
-- native iPad/iPhone app packaging;
+- native iPad/iPhone app packaging **built in this repository** — the native
+  client is `localHealthkitBridge`, which is in the MVP (see above);
 - iOS entitlements, HealthKit, Spezi, ASWebAuthenticationSession, custom URL
-  scheme, or Universal Link implementation;
+  scheme, or Universal Link implementation **in this repository**;
 - embedded mobile pod storage;
 - App Store, TestFlight, or mobile-device distribution;
 - outbound Epic writes, message sends, or task updates;
@@ -86,7 +110,9 @@ The next non-iPad work should stay inside the localhost contract:
    visible through `/api/pod/activity`.
 7. Keep the PIM-side HealthKitBridge observations mirror container observable
    through `/api/pod/healthkit/status`, without resuming native/iPhone
-   implementation work.
+   implementation work *in this repository*. The mirror seam itself — who
+   writes to the SCS POD, on what trigger, and how a conflict resolves in
+   favour of the SCS copy — still needs specifying jointly with the bridge.
 8. Keep document/workflow repositories in the localhost MVP acceptance path;
    planning-only Epic surfaces are insufficient for MVP completion.
 9. Keep anonymized release tests in the release gate.
