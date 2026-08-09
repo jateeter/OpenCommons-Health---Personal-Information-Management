@@ -147,6 +147,22 @@ export interface EpicFhirResource {
   [key: string]: unknown;
 }
 
+export interface EpicSourceDiagnostic {
+  resourceType: string;
+  operation: 'read' | 'search';
+  status: 'mapped' | 'empty' | 'skipped' | 'attention';
+  httpStatus?: number;
+  fhirResourceType?: string;
+  entryCount: number;
+  mappableCount: number;
+  detail: string;
+}
+
+export interface EpicPatientResourceFetch {
+  resources: EpicFhirResource[];
+  sourceDiagnostics: EpicSourceDiagnostic[];
+}
+
 export interface EpicImportProvenance {
   sourceSystem: 'epic';
   sourceFhirBaseUrl: string;
@@ -204,6 +220,7 @@ export interface EpicImportPreview {
   source: 'mock' | 'epic';
   generatedAt: string;
   patientId: string;
+  sourceDiagnostics: EpicSourceDiagnostic[];
   changes: EpicImportCandidate[];
   reconciliationSummary: ReconciliationSummary;
 }

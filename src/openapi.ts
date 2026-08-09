@@ -510,11 +510,24 @@ export const OPENAPI_DOCUMENT = {
           }),
         },
       }),
-      EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'patientId', 'changes', 'reconciliationSummary'], {
+      EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'patientId', 'sourceDiagnostics', 'changes', 'reconciliationSummary'], {
         importJobId: string('Import job id'),
         source: enumSchema(['mock', 'epic']),
         generatedAt: dateTime(),
         patientId: string('Epic patient id'),
+        sourceDiagnostics: {
+          type: 'array',
+          items: objectSchema(['resourceType', 'operation', 'status', 'entryCount', 'mappableCount', 'detail'], {
+            resourceType: string('FHIR resource family queried from Epic'),
+            operation: enumSchema(['read', 'search']),
+            status: enumSchema(['mapped', 'empty', 'skipped', 'attention']),
+            httpStatus: { type: 'integer', minimum: 100, maximum: 599 },
+            fhirResourceType: string('FHIR response resourceType such as Bundle or OperationOutcome'),
+            entryCount: { type: 'integer', minimum: 0 },
+            mappableCount: { type: 'integer', minimum: 0 },
+            detail: string('PHI-safe source diagnostic summary'),
+          }),
+        },
         changes: {
           type: 'array',
           items: objectSchema(['domain', 'action', 'display', 'entity', 'provenance'], {

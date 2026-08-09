@@ -113,13 +113,27 @@ button { cursor: pointer; }
 .spider { width: min(100%, clamp(300px, 42vw, 430px)); max-width: 100%; height: auto; overflow: visible; }
 .spider-ring { fill: none; stroke: rgba(25, 53, 47, .12); stroke-width: 1; }
 .spider-area { fill: rgba(23, 108, 92, .13); stroke: var(--teal); stroke-width: 2; }
-.spider-point { cursor: pointer; transition: r .12s ease; }
-.spider-point:hover, .spider-point:focus-visible { r: 9; outline: none; }
+.spider-point-halo {
+  pointer-events: none;
+  opacity: .72;
+  vector-effect: non-scaling-stroke;
+}
+.spider-point {
+  cursor: pointer;
+  transition: r .12s ease, filter .12s ease;
+  filter: drop-shadow(0 2px 4px rgba(25, 53, 47, .24));
+}
+.spider-point:hover, .spider-point:focus-visible {
+  r: 10;
+  outline: none;
+  filter: drop-shadow(0 4px 8px rgba(25, 53, 47, .3));
+}
 .spider-label { font-size: 12px; font-weight: 800; cursor: pointer; }
+.spider-label:hover, .spider-label:focus-visible { text-decoration: underline; outline: none; }
 
 .browse-nav {
-  display: flex; gap: 10px; margin-top: 22px; padding-bottom: 6px;
-  overflow-x: auto; scrollbar-width: thin;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;
+  width: min(100%, 640px); margin: 22px auto 0; padding-bottom: 6px;
 }
 .browse-tile {
   flex: 0 0 auto; min-width: 96px;
@@ -319,6 +333,57 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 }
 .epic-preview-list { padding: 14px 22px 20px; border-top: 1px solid var(--line); }
 .epic-preview-list p { margin-bottom: 12px; color: var(--muted); }
+.epic-source-diagnostics {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.epic-source-tooltip {
+  position: relative;
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  background: var(--teal);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: help;
+}
+.epic-source-tooltip::before { content: "?"; }
+.epic-source-tooltip::after {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  width: min(76vw, 540px);
+  max-height: 300px;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: white;
+  box-shadow: 0 16px 36px rgba(20, 44, 39, .18);
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 6px);
+  transition: opacity .12s ease, transform .12s ease;
+  white-space: pre-line;
+}
+.epic-source-tooltip:hover::after,
+.epic-source-tooltip:focus::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 .epic-review-checklist {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));

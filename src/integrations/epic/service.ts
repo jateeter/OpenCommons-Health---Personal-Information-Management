@@ -22,6 +22,7 @@ import type {
   EpicRegistrationReadiness,
   EpicResourceSupport,
   EpicSafeDiagnosticsExport,
+  EpicSourceDiagnostic,
 } from './types';
 import { EpicConnectionPodRepository } from './podRepository';
 
@@ -312,9 +313,10 @@ export class EpicIntegrationService {
     const active = await this.ensureFreshGrant(record);
     const generatedAt = nowIso();
     const importJobId = `epic-import-${Date.now()}`;
-    const resources = this.config.mode === 'mock'
-      ? mockAnnualWellnessResources()
-      : await this.smartClient.fetchPatientResources(active.grant, record.patientId as string);
+    const fetchResult = this.config.mode === 'mock'
+      ? mockPatientResourceFetch()
+      : await this.smartClient.fetchPatientResourcePreview(active.grant, record.patientId as string);
+    const resources = fetchResult.resources;
     const mapped = mapEpicResourcesToPim(resources, {
       fhirBaseUrl: record.fhirBaseUrl ?? 'mock://epic-fhir',
       patientId: record.patientId as string,
@@ -327,6 +329,7 @@ export class EpicIntegrationService {
       source: this.config.mode === 'mock' ? 'mock' : 'epic',
       generatedAt,
       patientId: record.patientId as string,
+      sourceDiagnostics: fetchResult.sourceDiagnostics,
       changes,
       reconciliationSummary: summarizeReconciliation(changes),
     };
@@ -654,6 +657,28 @@ function selectedDomainSet(body: Record<string, unknown>): Set<EpicMvpDomain> | 
   const domains = body.domains;
   if (!Array.isArray(domains) || domains.length === 0) return undefined;
   return new Set(domains.filter((domain): domain is EpicMvpDomain => typeof domain === 'string') as EpicMvpDomain[]);
+}
+
+function mockPatientResourceFetch(): { resources: ReturnType<typeof mockAnnualWellnessResources>; sourceDiagnostics: EpicSourceDiagnostic[] } {
+  const resources = mockAnnualWellnessResources();
+  const sourceDiagnostics = EPIC_RESOURCE_FAMILIES
+    .filter((family) => ['Patient', 'Condition', 'MedicationRequest', 'AllergyIntolerance', 'Immunization', 'Observation', 'DiagnosticReport', 'Coverage', 'DocumentReference'].includes(family.resourceType))
+    .map((family) => {
+      const count = resources.filter((resource) => resource.resourceType === family.resourceType).length;
+      return {
+        resourceType: family.resourceType,
+        operation: family.resourceType === 'Patient' ? 'read' as const : 'search' as const,
+        status: count > 0 ? 'mapped' as const : 'empty' as const,
+        httpStatus: 200,
+        fhirResourceType: family.resourceType === 'Patient' ? 'Patient' : 'Bundle',
+        entryCount: count,
+        mappableCount: count,
+        detail: count > 0
+          ? `${family.resourceType} returned ${count} mock mappable record${count === 1 ? '' : 's'}.`
+          : `${family.resourceType} returned no mock records.`,
+      };
+    });
+  return { resources, sourceDiagnostics };
 }
 
 function reconciliationKey(domain: EpicMvpDomain, entity: Record<string, unknown>): string | undefined {

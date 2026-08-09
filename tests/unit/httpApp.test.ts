@@ -162,6 +162,63 @@ describe('OpenCommons Health HTTP application', () => {
     expect(diagnostics).toHaveBeenCalledWith({ live: true });
   });
 
+  it('serves a browser callback completion page for Epic SMART redirects without leaking connection identifiers', async () => {
+    const connectCallback = jest.fn(async () => ({
+      enabled: true,
+      mode: 'sandbox',
+      status: 'connected',
+      patientId: 'patient-id-must-not-render',
+      requestedScopes: ['openid', 'patient/Patient.r'],
+      grantedScopes: ['openid', 'patient/Patient.r', 'patient/Observation.r'],
+      connectedAt: '2026-08-09T04:22:24.735Z',
+    }));
+    context.epic = {
+      connectCallback,
+    } as never;
+
+    const response = await fetch(`${baseUrl}/api/integrations/epic/connect/callback?code=code-123&state=state-123`, {
+      headers: { accept: 'text/html' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/html');
+    const body = await response.text();
+    expect(body).toContain('Epic connected');
+    expect(body).toContain('sessionStorage.setItem');
+    expect(body).toContain("window.location.replace('/?epic=connected')");
+    expect(body).not.toContain('code-123');
+    expect(body).not.toContain('patient-id-must-not-render');
+    expect(body).not.toContain('patient/Observation.r');
+    expect(connectCallback).toHaveBeenCalledWith(expect.any(URLSearchParams));
+    expect(context.activityLog?.list().some((event) => event.kind === 'epic-connect' && event.status === 'ok')).toBe(true);
+  });
+
+  it('keeps JSON Epic callback responses available for API clients', async () => {
+    const connectCallback = jest.fn(async () => ({
+      mode: 'sandbox',
+      status: 'connected',
+      patientId: 'patient-123',
+      grantedScopes: ['openid'],
+    }));
+    context.epic = {
+      connectCallback,
+    } as never;
+
+    const response = await fetch(`${baseUrl}/api/integrations/epic/connect/callback?code=code-123&state=state-123`, {
+      headers: { accept: 'application/json' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        mode: 'sandbox',
+        status: 'connected',
+        patientId: 'patient-123',
+      },
+    });
+  });
+
   it('serves the OpenAPI contract for all domain APIs', async () => {
     const response = await fetch(`${baseUrl}/openapi.json`);
     expect(response.status).toBe(200);

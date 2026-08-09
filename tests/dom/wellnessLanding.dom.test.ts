@@ -262,6 +262,9 @@ describe('wellness landing behaviour', () => {
     await flush();
     const points = document.querySelectorAll('.spider-point');
     expect(points).toHaveLength(6);
+    const halos = document.querySelectorAll('.spider-point-halo');
+    expect(halos).toHaveLength(6);
+    expect(halos[0].getAttribute('aria-hidden')).toBe('true');
     // Red / yellow / green are all represented by the fixture.
     const fills = Array.from(points).map((p) => p.getAttribute('fill'));
     expect(fills).toContain('#2b9a73'); // green

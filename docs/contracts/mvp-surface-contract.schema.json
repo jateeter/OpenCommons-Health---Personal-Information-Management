@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opencommons.health/contracts/mvp-surface-contract.schema.json",
+  "title": "OpenCommons Health PIM localhost MVP surface contract",
+  "description": "Normative contract for the current localhost/container MVP application surface. It captures what is authoritative now, what is optional, and what remains explicitly out of MVP scope.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["application", "deployment", "ui", "domainApis", "integrations", "privacy"],
+  "properties": {
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "mvpName", "sourceOfAuthority"],
+      "properties": {
+        "name": { "const": "OpenCommons Health PIM" },
+        "mvpName": { "const": "localhost-container MVP" },
+        "sourceOfAuthority": {
+          "type": "string",
+          "enum": ["authenticated-owner-solid-pod"]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supportedModes", "requiresPublicDns", "requiresHttpsForLocalhost", "nodeMajor", "services"],
+      "properties": {
+        "supportedModes": {
+          "type": "array",
+          "items": { "enum": ["host-local", "container-local"] },
+          "contains": { "const": "container-local" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "requiresPublicDns": { "const": false },
+        "requiresHttpsForLocalhost": { "const": false },
+        "nodeMajor": {
+          "type": "array",
+          "items": { "enum": [22, 24] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "services": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pim", "solidCommunityServer"],
+          "properties": {
+            "pim": { "$ref": "#/$defs/servicePort" },
+            "solidCommunityServer": { "$ref": "#/$defs/servicePort" }
+          }
+        },
+        "healthChecks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["/livez", "/healthz", "/api/status", "/api/pod/activity", "/api/wellness/summary"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primaryViews", "domainNavigation"],
+      "properties": {
+        "primaryViews": {
+          "type": "array",
+          "items": { "enum": ["wellness", "records", "status"] },
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "domainNavigation": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/domainName" },
+          "minItems": 11,
+          "maxItems": 11,
+          "uniqueItems": true
+        },
+        "wellnessAxisDomains": {
+          "type": "array",
+          "items": { "enum": ["vital-signs", "lab-results", "medications", "conditions", "allergies", "immunizations"] },
+          "minItems": 6,
+          "maxItems": 6,
+          "uniqueItems": true
+        },
+        "browseDomains": {
+          "type": "array",
+          "items": { "enum": ["profiles", "providers", "insurance-policies", "documents", "workflow-tasks"] },
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true
+        }
+      }
+    },
+    "domainApis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domains", "operations"],
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/domainName" },
+          "minItems": 11,
+          "maxItems": 11,
+          "uniqueItems": true
+        },
+        "operations": {
+          "type": "array",
+          "items": { "enum": ["list", "create", "update", "delete"] },
+          "contains": { "const": "create" },
+          "uniqueItems": true
+        },
+        "nineWellnessPillars": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "profiles",
+              "conditions",
+              "medications",
+              "allergies",
+              "immunizations",
+              "vital-signs",
+              "providers",
+              "lab-results",
+              "insurance-policies"
+            ]
+          },
+          "minItems": 9,
+          "maxItems": 9,
+          "uniqueItems": true
+        }
+      }
+    },
+    "integrations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["epic", "healthkitBridge"],
+      "properties": {
+        "epic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabledByDefault", "supportedModes", "ownerMediated", "outboundWriteback"],
+          "properties": {
+            "enabledByDefault": { "const": false },
+            "supportedModes": {
+              "type": "array",
+              "items": { "enum": ["disabled", "mock", "sandbox", "production"] },
+              "uniqueItems": true
+            },
+            "ownerMediated": { "const": true },
+            "outboundWriteback": { "const": false },
+            "requiresRealRegistrationForLiveData": { "const": true }
+          }
+        },
+        "healthkitBridge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pimExposure", "rawSamplesExposed", "nativeBridgeContract"],
+          "properties": {
+            "pimExposure": { "const": "metadata-status-only" },
+            "rawSamplesExposed": { "const": false },
+            "nativeBridgeContract": { "const": "localHealthkitBridge/docs/INGEST_CONTRACT.md" }
+          }
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerControlsPodWrites", "anonymizedReleaseOnly", "noCredentialsInApi", "noRealPhiInRepositoryFixtures"],
+      "properties": {
+        "ownerControlsPodWrites": { "const": true },
+        "anonymizedReleaseOnly": { "const": true },
+        "noCredentialsInApi": { "const": true },
+        "noRealPhiInRepositoryFixtures": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "servicePort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultPort", "configurable"],
+      "properties": {
+        "defaultPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "configurable": { "const": true }
+      }
+    },
+    "domainName": {
+      "type": "string",
+      "enum": [
+        "profiles",
+        "conditions",
+        "medications",
+        "allergies",
+        "immunizations",
+        "vital-signs",
+        "providers",
+        "lab-results",
+        "insurance-policies",
+        "documents",
+        "workflow-tasks"
+      ]
+    }
+  }
+}
