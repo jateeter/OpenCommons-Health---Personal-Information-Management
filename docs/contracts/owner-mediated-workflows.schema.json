@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opencommons.health/contracts/owner-mediated-workflows.schema.json",
+  "title": "OpenCommons Health PIM owner-mediated workflow contract",
+  "description": "Contract for workflows that move data into, summarize, or expose state from the owner-controlled Solid Pod during the localhost/container MVP.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["workflow", "actor", "input", "ownerApproval", "output", "privacy"],
+  "properties": {
+    "workflow": {
+      "type": "string",
+      "enum": [
+        "manual-domain-record-entry",
+        "wellness-summary-read",
+        "epic-mock-preview-apply",
+        "epic-sandbox-read-preview",
+        "healthkit-bridge-status-read",
+        "pod-activity-read"
+      ]
+    },
+    "actor": {
+      "type": "string",
+      "enum": ["authenticated-pod-owner", "local-operator"]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/domainName" },
+          "uniqueItems": true
+        },
+        "source": {
+          "type": "string",
+          "enum": ["manual-ui", "local-api", "epic-mock", "epic-sandbox", "healthkit-bridge-metadata", "solid-pod"]
+        }
+      }
+    },
+    "ownerApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredBeforePodWrite"],
+      "properties": {
+        "requiredBeforePodWrite": { "type": "boolean" },
+        "reviewSurface": {
+          "type": "string",
+          "enum": ["record-modal", "epic-preview-panel", "pod-status-panel", "wellness-landing", "api-action"]
+        },
+        "selectedDomains": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/domainName" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["writesPod", "returnsPhi"],
+      "properties": {
+        "writesPod": { "type": "boolean" },
+        "returnsPhi": { "type": "boolean" },
+        "podDomainsWritten": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/domainName" },
+          "uniqueItems": true
+        },
+        "statusOnly": { "type": "boolean" },
+        "summaryOnly": { "type": "boolean" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["noCredentialsReturned", "noRawHealthKitSamplesReturned", "anonymizedReleaseOnly"],
+      "properties": {
+        "noCredentialsReturned": { "const": true },
+        "noRawHealthKitSamplesReturned": { "const": true },
+        "anonymizedReleaseOnly": { "const": true },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "workflow": { "const": "manual-domain-record-entry" } } },
+      "then": {
+        "properties": {
+          "ownerApproval": { "properties": { "requiredBeforePodWrite": { "const": true } } },
+          "output": { "properties": { "writesPod": { "const": true }, "returnsPhi": { "const": true } } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "workflow": { "const": "wellness-summary-read" } } },
+      "then": {
+        "properties": {
+          "ownerApproval": { "properties": { "requiredBeforePodWrite": { "const": false } } },
+          "output": { "properties": { "writesPod": { "const": false }, "returnsPhi": { "const": false }, "summaryOnly": { "const": true } } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "workflow": { "const": "healthkit-bridge-status-read" } } },
+      "then": {
+        "properties": {
+          "ownerApproval": { "properties": { "requiredBeforePodWrite": { "const": false } } },
+          "output": { "properties": { "writesPod": { "const": false }, "returnsPhi": { "const": false }, "statusOnly": { "const": true } } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "workflow": { "enum": ["epic-mock-preview-apply", "epic-sandbox-read-preview"] } } },
+      "then": {
+        "properties": {
+          "ownerApproval": { "properties": { "requiredBeforePodWrite": { "const": true }, "reviewSurface": { "const": "epic-preview-panel" } } },
+          "output": { "properties": { "writesPod": { "type": "boolean" }, "returnsPhi": { "const": true } } }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "domainName": {
+      "type": "string",
+      "enum": [
+        "profiles",
+        "conditions",
+        "medications",
+        "allergies",
+        "immunizations",
+        "vital-signs",
+        "providers",
+        "lab-results",
+        "insurance-policies",
+        "documents",
+        "workflow-tasks"
+      ]
+    }
+  }
+}

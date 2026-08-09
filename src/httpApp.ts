@@ -328,6 +328,7 @@ async function handleEpicIntegrationRequest(
   if (requestUrl.pathname === '/api/integrations/epic/connect/callback' && req.method === 'GET') {
     const data = await epic.connectCallback(requestUrl.searchParams);
     await recordActivity(context, { kind: 'epic-connect', status: 'ok', summary: 'Epic SMART connection callback completed', source: 'epic' });
+    if (!prefersJson(req, requestUrl)) return sendEpicCallbackPage(res, data);
     return sendJson(res, 200, { data });
   }
   if (requestUrl.pathname === '/api/integrations/epic/disconnect' && req.method === 'POST') {
@@ -559,6 +560,12 @@ function headerValue(req: IncomingMessage, name: string): string | undefined {
   return value?.trim();
 }
 
+function prefersJson(req: IncomingMessage, requestUrl: URL): boolean {
+  if (requestUrl.searchParams.get('format') === 'json') return true;
+  const accept = headerValue(req, 'accept')?.toLowerCase() ?? '';
+  return accept.includes('application/json') && !accept.includes('text/html');
+}
+
 function assertPodResourceUrl(resourceUrl: string, podBaseUrl: string): void {
   let normalizedResource: URL;
   let normalizedPod: URL;
@@ -637,4 +644,84 @@ function sendError(res: ServerResponse, error: unknown): void {
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(body));
+}
+
+function sendHtml(res: ServerResponse, status: number, html: string): void {
+  res.writeHead(status, {
+    'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
+  });
+  res.end(html);
+}
+
+function sendEpicCallbackPage(res: ServerResponse, data: unknown): void {
+  const status = sanitizeEpicCallbackStatus(data);
+  const payload = safeScriptJson(status);
+  const connected = status.status === 'connected';
+  const title = connected ? 'Epic connected' : 'Epic connection updated';
+  const detail = connected
+    ? `Connected in ${status.mode || 'Epic'} mode with ${status.grantedScopeCount} granted scope${status.grantedScopeCount === 1 ? '' : 's'}.`
+    : `Epic connection status is ${status.status || 'updated'}.`;
+  sendHtml(res, 200, `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} · OpenCommons Health</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3faf8; color: #12332d; }
+    main { width: min(92vw, 34rem); padding: 2rem; border-radius: 1.5rem; background: #fff; box-shadow: 0 1.5rem 4rem rgb(23 108 92 / 18%); }
+    h1 { margin: 0 0 .75rem; font-size: clamp(1.6rem, 4vw, 2.3rem); }
+    p { line-height: 1.5; }
+    a { color: #176c5c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(detail)}</p>
+    <p>Returning to the OpenCommons Health app so it can refresh the Pod-owned connection status and enable owner-reviewed Epic import.</p>
+    <p><a href="/?epic=connected">Continue to OpenCommons Health</a></p>
+  </main>
+  <script>
+    (() => {
+      const status = ${payload};
+      try {
+        sessionStorage.setItem('opencommons.epic.callback', JSON.stringify(status));
+      } catch {}
+      window.location.replace('/?epic=connected');
+    })();
+  </script>
+</body>
+</html>`);
+}
+
+function sanitizeEpicCallbackStatus(data: unknown): {
+  status?: string;
+  mode?: string;
+  connectedAt?: string;
+  grantedScopeCount: number;
+  requestedScopeCount: number;
+} {
+  const value = data && typeof data === 'object' ? data as Record<string, unknown> : {};
+  return {
+    status: typeof value.status === 'string' ? value.status : undefined,
+    mode: typeof value.mode === 'string' ? value.mode : undefined,
+    connectedAt: typeof value.connectedAt === 'string' ? value.connectedAt : undefined,
+    grantedScopeCount: Array.isArray(value.grantedScopes) ? value.grantedScopes.length : 0,
+    requestedScopeCount: Array.isArray(value.requestedScopes) ? value.requestedScopes.length : 0,
+  };
+}
+
+function safeScriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

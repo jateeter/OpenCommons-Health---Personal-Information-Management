@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { EpicRuntimeConfig } from '../../runtimeConfig';
-import type { EpicFhirResource, EpicGrant } from './types';
+import type { EpicFhirResource, EpicGrant, EpicPatientResourceFetch, EpicSourceDiagnostic } from './types';
 
 export interface SmartConfiguration {
   authorization_endpoint: string;
@@ -31,6 +31,19 @@ export interface SmartAuthorizationStart {
 }
 
 type FetchLike = typeof fetch;
+
+const PATIENT_RESOURCE_REQUESTS = [
+  { resourceType: 'Patient', operation: 'read' as const, path: (patientId: string) => `Patient/${patientId}` },
+  { resourceType: 'Condition', operation: 'search' as const, path: (patientId: string) => `Condition?patient=${patientId}` },
+  { resourceType: 'MedicationRequest', operation: 'search' as const, path: (patientId: string) => `MedicationRequest?patient=${patientId}` },
+  { resourceType: 'MedicationStatement', operation: 'search' as const, path: (patientId: string) => `MedicationStatement?patient=${patientId}` },
+  { resourceType: 'AllergyIntolerance', operation: 'search' as const, path: (patientId: string) => `AllergyIntolerance?patient=${patientId}` },
+  { resourceType: 'Immunization', operation: 'search' as const, path: (patientId: string) => `Immunization?patient=${patientId}` },
+  { resourceType: 'Observation', operation: 'search' as const, path: (patientId: string) => `Observation?patient=${patientId}` },
+  { resourceType: 'DiagnosticReport', operation: 'search' as const, path: (patientId: string) => `DiagnosticReport?patient=${patientId}` },
+  { resourceType: 'Coverage', operation: 'search' as const, path: (patientId: string) => `Coverage?patient=${patientId}` },
+  { resourceType: 'DocumentReference', operation: 'search' as const, path: (patientId: string) => `DocumentReference?patient=${patientId}` },
+];
 
 export class EpicSmartClient {
   constructor(
@@ -67,11 +80,11 @@ export class EpicSmartClient {
       grant_type: 'authorization_code',
       code,
       redirect_uri: this.requireRedirectUri(),
-      client_id: this.requireClientId(),
       code_verifier: codeVerifier,
     });
-    if (this.config.clientSecret) params.set('client_secret', this.config.clientSecret);
-    return this.tokenRequest(configuration.token_endpoint, params);
+    const headers = this.clientAuthenticationHeaders();
+    if (!this.config.clientSecret) params.set('client_id', this.requireClientId());
+    return this.tokenRequest(configuration.token_endpoint, params, headers);
   }
 
   async refreshGrant(grant: EpicGrant): Promise<EpicGrant> {
@@ -80,10 +93,10 @@ export class EpicSmartClient {
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: grant.refreshToken,
-      client_id: this.requireClientId(),
     });
-    if (this.config.clientSecret) params.set('client_secret', this.config.clientSecret);
-    const refreshed = await this.tokenRequest(configuration.token_endpoint, params);
+    const headers = this.clientAuthenticationHeaders();
+    if (!this.config.clientSecret) params.set('client_id', this.requireClientId());
+    const refreshed = await this.tokenRequest(configuration.token_endpoint, params, headers);
     return {
       ...grant,
       ...refreshed,
@@ -94,24 +107,34 @@ export class EpicSmartClient {
   }
 
   async fetchPatientResources(grant: EpicGrant, patientId: string): Promise<EpicFhirResource[]> {
+    return (await this.fetchPatientResourcePreview(grant, patientId)).resources;
+  }
+
+  async fetchPatientResourcePreview(grant: EpicGrant, patientId: string): Promise<EpicPatientResourceFetch> {
     const accessToken = grant.accessToken;
     if (!accessToken) throw new Error('Epic access token is missing; reconnect is required.');
     const resources: EpicFhirResource[] = [];
-    resources.push(await this.fhirRead(`Patient/${encodeURIComponent(patientId)}`, accessToken));
-    for (const path of [
-      `Condition?patient=${encodeURIComponent(patientId)}`,
-      `MedicationRequest?patient=${encodeURIComponent(patientId)}`,
-      `MedicationStatement?patient=${encodeURIComponent(patientId)}`,
-      `AllergyIntolerance?patient=${encodeURIComponent(patientId)}`,
-      `Immunization?patient=${encodeURIComponent(patientId)}`,
-      `Observation?patient=${encodeURIComponent(patientId)}`,
-      `DiagnosticReport?patient=${encodeURIComponent(patientId)}`,
-      `Coverage?patient=${encodeURIComponent(patientId)}`,
-      `DocumentReference?patient=${encodeURIComponent(patientId)}`,
-    ]) {
-      resources.push(...await this.fhirSearch(path, accessToken));
+    const encodedPatientId = encodeURIComponent(patientId);
+    const sourceDiagnostics: EpicSourceDiagnostic[] = [];
+    for (const request of PATIENT_RESOURCE_REQUESTS) {
+      if (!resourceReadAllowed(grant.scope, request.resourceType)) {
+        sourceDiagnostics.push({
+          resourceType: request.resourceType,
+          operation: request.operation,
+          status: 'skipped',
+          entryCount: 0,
+          mappableCount: 0,
+          detail: `${request.resourceType} was not requested from Epic because no patient read scope was granted.`,
+        });
+        continue;
+      }
+      const result = request.operation === 'read'
+        ? await this.fhirReadPreview(request.resourceType, request.path(encodedPatientId), accessToken)
+        : await this.fhirSearchPreview(request.resourceType, request.path(encodedPatientId), accessToken);
+      resources.push(...result.resources);
+      sourceDiagnostics.push(result.diagnostic);
     }
-    return resources;
+    return { resources, sourceDiagnostics };
   }
 
   async discover(): Promise<SmartConfiguration> {
@@ -143,12 +166,17 @@ export class EpicSmartClient {
     return body as FhirCapabilityStatement;
   }
 
-  private async tokenRequest(tokenEndpoint: string, params: URLSearchParams): Promise<EpicGrant> {
+  private async tokenRequest(
+    tokenEndpoint: string,
+    params: URLSearchParams,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<EpicGrant> {
     const response = await this.httpFetch(tokenEndpoint, {
       method: 'POST',
       headers: {
         accept: 'application/json',
         'content-type': 'application/x-www-form-urlencoded',
+        ...extraHeaders,
       },
       body: params.toString(),
     });
@@ -184,6 +212,38 @@ export class EpicSmartClient {
     return body;
   }
 
+  private async fhirReadOptional(path: string, accessToken: string): Promise<EpicFhirResource | undefined> {
+    try {
+      return await this.fhirRead(path, accessToken);
+    } catch (error) {
+      if (isDeniedOrMissingFhirRead(error)) return undefined;
+      throw error;
+    }
+  }
+
+  private async fhirReadPreview(
+    resourceType: string,
+    path: string,
+    accessToken: string,
+  ): Promise<{ resources: EpicFhirResource[]; diagnostic: EpicSourceDiagnostic }> {
+    const response = await this.httpFetch(this.fhirUrl(path), { headers: fhirHeaders(accessToken) });
+    const body = await response.json().catch(() => ({})) as EpicFhirResource;
+    if (!response.ok) {
+      if (response.status === 403 || response.status === 404) {
+        return {
+          resources: [],
+          diagnostic: sourceDiagnostic(resourceType, 'read', response.status, body.resourceType, 0, 0),
+        };
+      }
+      throw new Error(`Epic FHIR read ${path} failed with HTTP ${response.status}.`);
+    }
+    const resources = body.resourceType === resourceType ? [body] : [];
+    return {
+      resources,
+      diagnostic: sourceDiagnostic(resourceType, 'read', response.status, body.resourceType, 1, resources.length),
+    };
+  }
+
   private async fhirSearch(path: string, accessToken: string): Promise<EpicFhirResource[]> {
     const results: EpicFhirResource[] = [];
     let next: string | undefined = this.fhirUrl(path);
@@ -195,7 +255,7 @@ export class EpicSmartClient {
         link?: Array<{ relation?: string; url?: string }>;
       };
       if (!response.ok) {
-        if (response.status === 403 || response.status === 404) return results;
+        if (response.status === 400 || response.status === 403 || response.status === 404) return results;
         throw new Error(`Epic FHIR search ${path} failed with HTTP ${response.status}.`);
       }
       if (body.resourceType !== 'Bundle') return results;
@@ -205,6 +265,50 @@ export class EpicSmartClient {
       next = body.link?.find((link) => link.relation === 'next')?.url;
     }
     return results;
+  }
+
+  private async fhirSearchPreview(
+    resourceType: string,
+    path: string,
+    accessToken: string,
+  ): Promise<{ resources: EpicFhirResource[]; diagnostic: EpicSourceDiagnostic }> {
+    const resources: EpicFhirResource[] = [];
+    let entryCount = 0;
+    let firstFhirType: string | undefined;
+    let next: string | undefined = this.fhirUrl(path);
+    while (next) {
+      const response = await this.httpFetch(next, { headers: fhirHeaders(accessToken) });
+      const body = await response.json().catch(() => ({})) as {
+        resourceType?: string;
+        entry?: Array<{ resource?: EpicFhirResource }>;
+        link?: Array<{ relation?: string; url?: string }>;
+      };
+      firstFhirType ??= body.resourceType;
+      if (!response.ok) {
+        if (response.status === 400 || response.status === 403 || response.status === 404) {
+          return {
+            resources,
+            diagnostic: sourceDiagnostic(resourceType, 'search', response.status, body.resourceType, entryCount, resources.length),
+          };
+        }
+        throw new Error(`Epic FHIR search ${path} failed with HTTP ${response.status}.`);
+      }
+      if (body.resourceType !== 'Bundle') {
+        return {
+          resources,
+          diagnostic: sourceDiagnostic(resourceType, 'search', response.status, body.resourceType, entryCount, resources.length),
+        };
+      }
+      for (const entry of body.entry ?? []) {
+        entryCount += 1;
+        if (entry.resource?.resourceType === resourceType) resources.push(entry.resource);
+      }
+      next = body.link?.find((link) => link.relation === 'next')?.url;
+    }
+    return {
+      resources,
+      diagnostic: sourceDiagnostic(resourceType, 'search', 200, firstFhirType, entryCount, resources.length),
+    };
   }
 
   private fhirUrl(path: string): string {
@@ -224,6 +328,12 @@ export class EpicSmartClient {
   private requireRedirectUri(): string {
     if (!this.config.redirectUri) throw new Error('EPIC_REDIRECT_URI is required for live Epic access.');
     return this.config.redirectUri;
+  }
+
+  private clientAuthenticationHeaders(): Record<string, string> {
+    if (!this.config.clientSecret) return {};
+    const credentials = `${formEncode(this.requireClientId())}:${formEncode(this.config.clientSecret)}`;
+    return { authorization: `Basic ${Buffer.from(credentials, 'utf8').toString('base64')}` };
   }
 }
 
@@ -247,10 +357,60 @@ function randomUrlSafe(bytes: number): string {
   return randomBytes(bytes).toString('base64url');
 }
 
+function formEncode(value: string): string {
+  return new URLSearchParams({ value }).toString().slice('value='.length);
+}
+
 function sha256Base64Url(value: string): string {
   return createHash('sha256').update(value).digest('base64url');
 }
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function isDeniedOrMissingFhirRead(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /failed with HTTP (403|404)\b/.test(message);
+}
+
+function sourceDiagnostic(
+  resourceType: string,
+  operation: 'read' | 'search',
+  httpStatus: number,
+  fhirResourceType: string | undefined,
+  entryCount: number,
+  mappableCount: number,
+): EpicSourceDiagnostic {
+  const status: EpicSourceDiagnostic['status'] = mappableCount > 0
+    ? 'mapped'
+    : httpStatus === 200 ? 'empty' : 'attention';
+  const detail = status === 'mapped'
+    ? `${resourceType} returned ${mappableCount} mappable record${mappableCount === 1 ? '' : 's'}.`
+    : httpStatus === 200
+      ? `${resourceType} returned no mappable records${entryCount > 0 ? ` (${entryCount} non-domain entr${entryCount === 1 ? 'y' : 'ies'} such as OperationOutcome).` : '.'}`
+      : `${resourceType} ${operation} returned HTTP ${httpStatus}${fhirResourceType ? ` (${fhirResourceType})` : ''}; preview skipped this family.`;
+  return {
+    resourceType,
+    operation,
+    status,
+    httpStatus,
+    fhirResourceType,
+    entryCount,
+    mappableCount,
+    detail,
+  };
+}
+
+function resourceReadAllowed(scope: string | undefined, resourceType: string): boolean {
+  if (!scope?.trim()) return true;
+  const resource = resourceType.toLowerCase();
+  return scope.split(/\s+/).some((rawScope) => {
+    const normalized = rawScope.split('?')[0]?.toLowerCase();
+    if (!normalized?.startsWith('patient/')) return false;
+    const [, permission = ''] = normalized.split('/');
+    const [scopeResource = '', operations = ''] = permission.split('.');
+    if (scopeResource !== '*' && scopeResource !== resource) return false;
+    return operations === '*' || operations === 'read' || operations.includes('r');
+  });
 }

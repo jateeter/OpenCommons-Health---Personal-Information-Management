@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opencommons.health/contracts/domain-records.schema.json",
+  "title": "OpenCommons Health PIM domain record contract",
+  "description": "JSON Schema for owner-approved domain records written through the current MVP domain APIs. The API path determines the domain; the wrapper form below is provided for fixtures, docs, and tests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["domain", "record"],
+  "properties": {
+    "domain": { "$ref": "#/$defs/domainName" },
+    "record": {
+      "oneOf": [
+        { "$ref": "#/$defs/profile" },
+        { "$ref": "#/$defs/condition" },
+        { "$ref": "#/$defs/medication" },
+        { "$ref": "#/$defs/allergy" },
+        { "$ref": "#/$defs/immunization" },
+        { "$ref": "#/$defs/vitalSign" },
+        { "$ref": "#/$defs/provider" },
+        { "$ref": "#/$defs/labResult" },
+        { "$ref": "#/$defs/insurancePolicy" },
+        { "$ref": "#/$defs/document" },
+        { "$ref": "#/$defs/workflowTask" }
+      ]
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "domain": { "const": "profiles" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/profile" } } } },
+    { "if": { "properties": { "domain": { "const": "conditions" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/condition" } } } },
+    { "if": { "properties": { "domain": { "const": "medications" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/medication" } } } },
+    { "if": { "properties": { "domain": { "const": "allergies" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/allergy" } } } },
+    { "if": { "properties": { "domain": { "const": "immunizations" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/immunization" } } } },
+    { "if": { "properties": { "domain": { "const": "vital-signs" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/vitalSign" } } } },
+    { "if": { "properties": { "domain": { "const": "providers" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/provider" } } } },
+    { "if": { "properties": { "domain": { "const": "lab-results" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/labResult" } } } },
+    { "if": { "properties": { "domain": { "const": "insurance-policies" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/insurancePolicy" } } } },
+    { "if": { "properties": { "domain": { "const": "documents" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/document" } } } },
+    { "if": { "properties": { "domain": { "const": "workflow-tasks" } } }, "then": { "properties": { "record": { "$ref": "#/$defs/workflowTask" } } } }
+  ],
+  "$defs": {
+    "domainName": {
+      "type": "string",
+      "enum": [
+        "profiles",
+        "conditions",
+        "medications",
+        "allergies",
+        "immunizations",
+        "vital-signs",
+        "providers",
+        "lab-results",
+        "insurance-policies",
+        "documents",
+        "workflow-tasks"
+      ]
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "uri": {
+      "type": "string",
+      "format": "uri"
+    },
+    "coding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "code"],
+      "properties": {
+        "system": { "type": "string", "minLength": 1 },
+        "code": { "type": "string", "minLength": 1 },
+        "display": { "type": "string" }
+      }
+    },
+    "snomedCoding": {
+      "allOf": [
+        { "$ref": "#/$defs/coding" },
+        { "properties": { "system": { "const": "http://snomed.info/sct" } } }
+      ]
+    },
+    "rxNormCoding": {
+      "allOf": [
+        { "$ref": "#/$defs/coding" },
+        { "properties": { "system": { "const": "http://www.nlm.nih.gov/research/umls/rxnorm" } } }
+      ]
+    },
+    "cvxCoding": {
+      "allOf": [
+        { "$ref": "#/$defs/coding" },
+        { "properties": { "system": { "const": "http://hl7.org/fhir/sid/cvx" } } }
+      ]
+    },
+    "loincCoding": {
+      "allOf": [
+        { "$ref": "#/$defs/coding" },
+        { "properties": { "system": { "const": "http://loinc.org" } } }
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["name", "birthDate", "biologicalSex"],
+      "properties": {
+        "url": { "$ref": "#/$defs/uri" },
+        "name": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["family", "given"],
+          "properties": {
+            "family": { "type": "string", "minLength": 1 },
+            "given": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+            "prefix": { "type": "string" },
+            "suffix": { "type": "string" }
+          }
+        },
+        "birthDate": { "$ref": "#/$defs/date" },
+        "biologicalSex": { "enum": ["male", "female", "other", "unknown"] },
+        "photo": { "$ref": "#/$defs/uri" }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["code", "status"],
+      "properties": {
+        "code": { "$ref": "#/$defs/snomedCoding" },
+        "status": { "enum": ["active", "recurrence", "relapse", "inactive", "remission", "resolved"] },
+        "severity": { "enum": ["", "mild", "moderate", "severe"] },
+        "onsetDate": { "$ref": "#/$defs/date" },
+        "abatementDate": { "$ref": "#/$defs/date" },
+        "notes": { "type": "string" }
+      }
+    },
+    "medication": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["medicationCode", "status"],
+      "properties": {
+        "medicationCode": { "$ref": "#/$defs/rxNormCoding" },
+        "status": { "enum": ["active", "completed", "stopped", "on-hold"] },
+        "dosage": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "text": { "type": "string" }
+          }
+        },
+        "startDate": { "$ref": "#/$defs/date" },
+        "endDate": { "$ref": "#/$defs/date" },
+        "prescriber": { "type": "string" },
+        "reason": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "allergy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["substance", "category", "status"],
+      "properties": {
+        "substance": { "$ref": "#/$defs/snomedCoding" },
+        "category": { "enum": ["food", "medication", "environment", "biologic"] },
+        "status": { "enum": ["active", "inactive", "resolved"] },
+        "onsetDate": { "$ref": "#/$defs/date" },
+        "notes": { "type": "string" }
+      }
+    },
+    "immunization": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["vaccineCode", "status", "occurrenceDate"],
+      "properties": {
+        "vaccineCode": { "$ref": "#/$defs/cvxCoding" },
+        "status": { "enum": ["completed", "not-done", "entered-in-error"] },
+        "occurrenceDate": { "$ref": "#/$defs/date" },
+        "doseNumber": { "type": "integer", "minimum": 1 },
+        "lotNumber": { "type": "string" },
+        "performer": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "vitalSign": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["code", "value", "unit", "effectiveDateTime"],
+      "properties": {
+        "code": {
+          "enum": [
+            "body-weight",
+            "body-height",
+            "bmi",
+            "blood-pressure",
+            "heart-rate",
+            "respiratory-rate",
+            "body-temperature",
+            "oxygen-saturation",
+            "blood-glucose"
+          ]
+        },
+        "loincCode": { "$ref": "#/$defs/loincCoding" },
+        "value": {
+          "oneOf": [
+            { "type": "number" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["systolic", "diastolic"],
+              "properties": {
+                "systolic": { "type": "number" },
+                "diastolic": { "type": "number" }
+              }
+            }
+          ]
+        },
+        "unit": { "type": "string", "minLength": 1 },
+        "effectiveDateTime": { "$ref": "#/$defs/dateTime" },
+        "notes": { "type": "string" }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["name", "role"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "role": { "enum": ["primary-care", "specialist", "emergency", "pharmacy", "lab", "hospital", "other"] },
+        "specialty": { "type": "string" },
+        "npi": { "type": "string" },
+        "organization": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "labResult": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["code", "effectiveDateTime"],
+      "properties": {
+        "code": { "$ref": "#/$defs/loincCoding" },
+        "value": { "oneOf": [{ "type": "number" }, { "type": "string" }] },
+        "unit": { "type": "string" },
+        "interpretation": { "enum": ["", "normal", "high", "low", "critical-high", "critical-low", "abnormal"] },
+        "effectiveDateTime": { "$ref": "#/$defs/dateTime" },
+        "performer": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "insurancePolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "insurerName", "memberId", "effectiveDate"],
+      "properties": {
+        "type": { "enum": ["medical", "dental", "vision", "pharmacy", "other"] },
+        "insurerName": { "type": "string", "minLength": 1 },
+        "planName": { "type": "string" },
+        "memberId": { "type": "string", "minLength": 1 },
+        "groupNumber": { "type": "string" },
+        "effectiveDate": { "$ref": "#/$defs/date" },
+        "expirationDate": { "$ref": "#/$defs/date" },
+        "policyHolder": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["documentType", "status", "title"],
+      "properties": {
+        "documentType": { "$ref": "#/$defs/loincCoding" },
+        "status": { "enum": ["current", "superseded", "entered-in-error"] },
+        "title": { "type": "string", "minLength": 1 },
+        "category": { "$ref": "#/$defs/loincCoding" },
+        "authoredDate": { "$ref": "#/$defs/dateTime" },
+        "sourceSystem": { "type": "string" },
+        "sourceDocumentUrl": { "$ref": "#/$defs/uri" },
+        "binaryUrl": { "$ref": "#/$defs/uri" },
+        "custodian": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "workflowTask": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["taskType", "status", "intent", "description"],
+      "properties": {
+        "taskType": { "$ref": "#/$defs/snomedCoding" },
+        "status": { "enum": ["draft", "requested", "received", "accepted", "in-progress", "completed", "cancelled"] },
+        "intent": { "enum": ["proposal", "plan", "order", "option"] },
+        "description": { "type": "string", "minLength": 1 },
+        "authoredDate": { "$ref": "#/$defs/dateTime" },
+        "dueDate": { "$ref": "#/$defs/date" },
+        "requester": { "type": "string" },
+        "owner": { "type": "string" },
+        "relatedDocumentUrl": { "$ref": "#/$defs/uri" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

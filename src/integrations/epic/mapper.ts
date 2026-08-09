@@ -128,6 +128,10 @@ export function mapEpicResourcesToPim(
         return mapObservation(resource, provenance);
       case 'DocumentReference': {
         const code = firstCoding(resource, 'type');
+        const sourceDocumentUrl = absoluteFhirReference(
+          firstString(resource, ['content', 0, 'attachment', 'url']),
+          context.fhirBaseUrl,
+        );
         return [{
           domain: 'documents',
           action: 'create',
@@ -140,7 +144,7 @@ export function mapEpicResourcesToPim(
             category: firstCoding(resource, 'category'),
             authoredDate: firstString(resource, ['date']) || firstString(resource, ['content', 0, 'attachment', 'creation']),
             sourceSystem: 'epic',
-            sourceDocumentUrl: firstString(resource, ['content', 0, 'attachment', 'url']),
+            sourceDocumentUrl,
             custodian: firstString(resource, ['custodian', 'display']),
             notes: provenanceNote(provenance),
           },
@@ -282,6 +286,19 @@ function firstUnknown(resource: unknown, path: Array<string | number>): unknown 
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === 'string');
+}
+
+function absoluteFhirReference(value: string | undefined, fhirBaseUrl: string): string | undefined {
+  if (!value?.trim()) return undefined;
+  try {
+    return new URL(value, ensureTrailingSlash(fhirBaseUrl)).href;
+  } catch {
+    return undefined;
+  }
+}
+
+function ensureTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value : `${value}/`;
 }
 
 function normalizeGender(value: string | undefined): 'male' | 'female' | 'other' | 'unknown' {

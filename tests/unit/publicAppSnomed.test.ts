@@ -58,6 +58,17 @@ describe('browser terminology manual-entry support', () => {
     expect(styleSource).toContain('.system-reference a');
   });
 
+  it('shows PHI-safe Epic FHIR source diagnostics as a preview tooltip', () => {
+    expect(appSource).toContain('FHIR source diagnostics');
+    expect(appSource).toContain('renderEpicSourceDiagnostics');
+    expect(appSource).toContain('formatEpicSourceDiagnostics');
+    expect(appSource).toContain('sourceDiagnostics');
+    expect(appSource).toContain('data-tooltip');
+    expect(styleSource).toContain('.epic-source-tooltip');
+    expect(styleSource).toContain('.epic-source-tooltip:hover::after');
+    expect(styleSource).toContain('.epic-source-tooltip:focus::after');
+  });
+
   it('prefills coding fields from coded dropdown selections', () => {
     expect(appSource).toContain("const SNOMED_CT_SYSTEM = 'http://snomed.info/sct'");
     expect(appSource).toContain("const CVX_SYSTEM = 'http://hl7.org/fhir/sid/cvx'");

@@ -48,6 +48,23 @@ describe('wellness spider-graph landing page', () => {
     expect(styleSource).toContain('.browse-nav');
   });
 
+  it('centers the browse buttons beneath the spider graph at every width', () => {
+    expect(styleSource).toMatch(/\.browse-nav \{[^}]*justify-content: center/s);
+    expect(styleSource).toMatch(/\.browse-nav \{[^}]*flex-wrap: wrap/s);
+    expect(styleSource).toMatch(/\.browse-nav \{[^}]*width: min\(100%, 640px\)/s);
+    expect(styleSource).toMatch(/\.browse-nav \{[^}]*margin: 22px auto 0/s);
+  });
+
+  it('visually marks spider graph nodes as clickable points of departure', () => {
+    expect(appSource).toContain("class: 'spider-point-halo'");
+    expect(appSource).toContain("'aria-hidden': 'true'");
+    expect(styleSource).toContain('.spider-point-halo');
+    expect(styleSource).toMatch(/\.spider-point \{[^}]*cursor: pointer/s);
+    expect(styleSource).toMatch(/\.spider-point \{[^}]*drop-shadow/s);
+    expect(styleSource).toContain('.spider-point:hover, .spider-point:focus-visible');
+    expect(styleSource).toContain('.spider-label:hover, .spider-label:focus-visible');
+  });
+
   it('keeps the pod connection status page reachable from the landing view', () => {
     expect(indexSource).toContain('id="view-status"');
     expect(indexSource).toContain('title="Open pod connection status"');

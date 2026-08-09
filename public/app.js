@@ -573,6 +573,16 @@ function createSpiderGraph(axes) {
     svg.append(node('line', { x1: center, y1: center, x2: ax, y2: ay, stroke: color, 'stroke-width': 2, 'stroke-opacity': .55 }));
 
     const [px, py] = plotted[index];
+    const halo = node('circle', {
+      cx: px, cy: py, r: 12,
+      fill: 'none',
+      stroke: color,
+      'stroke-width': 1.8,
+      'stroke-dasharray': '3 3',
+      class: 'spider-point-halo',
+      'aria-hidden': 'true',
+    });
+    svg.append(halo);
     const marker = node('circle', {
       cx: px, cy: py, r: 7,
       fill: STATUS_COLORS[axis.status] || STATUS_COLORS.empty,
@@ -893,6 +903,44 @@ function renderEpicReadiness(diagnostics) {
   const exportNote = document.createElement('small');
   exportNote.textContent = 'Safe diagnostics export is available from /api/integrations/epic/diagnostics and omits secrets, tokens, authorization codes, patient identifiers, raw PHI, and document URLs.';
   target.append(summary, checklist, support, exportNote);
+}
+
+function readEpicCallbackStatus() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('epic') !== 'connected') return null;
+  let stored = null;
+  try {
+    stored = JSON.parse(sessionStorage.getItem('opencommons.epic.callback') || 'null');
+    sessionStorage.removeItem('opencommons.epic.callback');
+  } catch {
+    stored = null;
+  }
+  const cleanUrl = `${window.location.pathname}${window.location.hash || ''}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+  return stored || { status: 'connected' };
+}
+
+function renderEpicCallbackNotice(callbackStatus) {
+  const target = $('epic-readiness');
+  if (!target || !callbackStatus) return;
+  const notice = document.createElement('article');
+  notice.className = 'epic-readiness-card epic-readiness-ready';
+  const status = callbackStatus.status || epicStatus.status || 'connected';
+  const scopeCount = Number.isInteger(callbackStatus.grantedScopeCount) ? callbackStatus.grantedScopeCount : undefined;
+  const connectedAt = callbackStatus.connectedAt ? ` Connected ${formatDate(callbackStatus.connectedAt)}.` : '';
+  notice.innerHTML = `<strong>Epic connection ${status}</strong><span>The app received the SMART callback, refreshed Pod-owned connection status, and is ready for owner-reviewed import.${connectedAt}</span><small>${scopeCount === undefined ? 'Granted scopes are available in the live status summary.' : `${scopeCount} granted scope${scopeCount === 1 ? '' : 's'} recorded without exposing tokens or raw authorization codes.`}</small>`;
+  target.prepend(notice);
+}
+
+async function handleEpicCallbackCompletion() {
+  const callbackStatus = readEpicCallbackStatus();
+  if (!callbackStatus) return;
+  showView('status');
+  await checkStatus();
+  epicPreview = null;
+  epicSelectedDomains = new Set();
+  renderEpicPreview();
+  renderEpicCallbackNotice(callbackStatus);
 }
 
 async function selectDomain(key) {
@@ -1257,6 +1305,7 @@ async function applyEpicImport() {
     await checkStatus();
     await loadRecords();
   } catch (error) {
+    renderEpicPreview({ error: error.message });
     alert(error.message);
   }
 }
@@ -1267,7 +1316,9 @@ function renderEpicPreview(applyResult = null) {
   if (applyResult) {
     list.classList.remove('hidden');
     const message = document.createElement('p');
-    message.textContent = `Applied ${applyResult.resources.length} records to the Solid pod from import ${applyResult.importJobId}.`;
+    message.textContent = applyResult.error
+      ? `Epic import was not applied: ${applyResult.error}`
+      : `Applied ${applyResult.resources.length} records to the Solid pod from import ${applyResult.importJobId}.`;
     list.append(message);
     return;
   }
@@ -1280,6 +1331,7 @@ function renderEpicPreview(applyResult = null) {
   const grouped = groupEpicChangesByDomain(epicPreview.changes);
   summary.textContent = `${epicPreview.changes.length} mapped FHIR resources are ready for owner review before pod write. ${formatEpicActionCounts(epicPreview.changes)} Review each section and choose what to apply.`;
   list.append(summary);
+  list.append(renderEpicSourceDiagnostics(epicPreview.sourceDiagnostics || []));
   list.append(renderReconciliationReview(epicPreview));
 
   const checklist = document.createElement('div');
@@ -1339,6 +1391,36 @@ function groupEpicChangesByDomain(changes) {
     grouped.set(change.domain, [...(grouped.get(change.domain) || []), change]);
   }
   return [...grouped.entries()].sort(([a], [b]) => (domains[a]?.plural || a).localeCompare(domains[b]?.plural || b));
+}
+
+function renderEpicSourceDiagnostics(sourceDiagnostics) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'epic-source-diagnostics';
+  const mapped = sourceDiagnostics.filter((item) => item.mappableCount > 0).length;
+  const attention = sourceDiagnostics.filter((item) => item.status === 'attention').length;
+  const skipped = sourceDiagnostics.filter((item) => item.status === 'skipped').length;
+  const summary = document.createElement('span');
+  summary.textContent = `FHIR source diagnostics: ${mapped} mapped, ${attention} attention, ${skipped} skipped`;
+  const tooltip = document.createElement('span');
+  tooltip.className = 'epic-source-tooltip';
+  tooltip.tabIndex = 0;
+  tooltip.setAttribute('role', 'note');
+  tooltip.setAttribute('aria-label', `FHIR source diagnostics. ${formatEpicSourceDiagnostics(sourceDiagnostics)}`);
+  tooltip.title = formatEpicSourceDiagnostics(sourceDiagnostics);
+  tooltip.setAttribute('data-tooltip', formatEpicSourceDiagnostics(sourceDiagnostics));
+  wrapper.append(summary, tooltip);
+  return wrapper;
+}
+
+function formatEpicSourceDiagnostics(sourceDiagnostics) {
+  if (!sourceDiagnostics?.length) return 'No live FHIR source diagnostics were returned with this preview.';
+  return sourceDiagnostics
+    .map((item) => {
+      const http = item.httpStatus ? `HTTP ${item.httpStatus}` : item.status;
+      const fhirType = item.fhirResourceType ? ` · ${item.fhirResourceType}` : '';
+      return `${item.resourceType}: ${http}${fhirType}; entries ${item.entryCount || 0}; mapped ${item.mappableCount || 0}. ${item.detail || ''}`.trim();
+    })
+    .join('\n');
 }
 
 function renderReconciliationReview(preview) {
@@ -1492,4 +1574,7 @@ document.querySelector('.brand').addEventListener('click', (event) => {
 });
 initializeNavigation();
 showView('wellness');
-checkStatus();
+void (async () => {
+  await checkStatus();
+  await handleEpicCallbackCompletion();
+})();
