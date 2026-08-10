@@ -122,6 +122,8 @@ export class EpicIntegrationService {
 
     add('epic-enabled', 'ok', 'Epic integration is enabled for this localhost deployment.');
     add('mode', 'ok', `Epic mode is ${this.config.mode}.`);
+    add('connect-flow', 'ok', `Epic connect flow is ${this.config.connectFlow}.`);
+    add('client-auth-method', 'ok', `Epic token client authentication method is ${this.config.clientAuthMethod}.`);
     add('grant-encryption-key', this.config.encryptionKey ? 'ok' : 'failed', this.config.encryptionKey
       ? 'Grant encryption key is configured; value is not reported.'
       : 'EPIC_GRANT_ENCRYPTION_KEY is required when Epic is enabled.');
@@ -149,6 +151,16 @@ export class EpicIntegrationService {
     add('redirect-uri', this.config.redirectUri ? 'ok' : 'failed', this.config.redirectUri
       ? 'Epic SMART redirect URI is configured.'
       : 'EPIC_REDIRECT_URI is required for sandbox/production mode.');
+    if (this.config.connectFlow === 'dynamic_jwt_bearer') {
+      add('dynamic-client-id', this.config.dynamicClientId ? 'ok' : 'failed', this.config.dynamicClientId
+        ? 'Epic dynamic client id is configured; value is not reported.'
+        : 'EPIC_DYNAMIC_CLIENT_ID is required for dynamic JWT bearer connection.');
+    }
+    if (this.config.connectFlow === 'dynamic_jwt_bearer' || this.config.clientAuthMethod === 'private_key_jwt') {
+      add('client-assertion-key', this.config.clientAssertionPrivateKey ? 'ok' : 'failed', this.config.clientAssertionPrivateKey
+        ? `Epic JWT signing key is configured for ${this.config.clientAssertionAlgorithm}; key material is not reported.`
+        : 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE or EPIC_CLIENT_ASSERTION_PRIVATE_KEY is required for JWT bearer/private_key_jwt authentication.');
+    }
 
     if (!live) {
       add('smart-discovery', 'skipped', 'Live SMART discovery was not requested; use ?live=true for a network diagnostic.');
@@ -214,6 +226,35 @@ export class EpicIntegrationService {
     const state = randomUUID();
     const now = nowIso();
     const fhirBaseUrl = this.config.fhirBaseUrl ?? 'https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4';
+    if (this.config.mode !== 'mock' && this.config.connectFlow === 'dynamic_jwt_bearer') {
+      const grant = await this.smartClient.exchangeJwtBearerGrant();
+      if (!grant.patient) {
+        throw new ValidationError('Epic JWT bearer token response did not include patient context.', [
+          { field: 'patient', reason: 'dynamic client must be bound to an Epic patient context for personal data import' },
+        ]);
+      }
+      const record = this.withAudit({
+        status: 'connected',
+        mode: this.config.mode,
+        fhirBaseUrl,
+        issuer: fhirBaseUrl,
+        patientId: grant.patient,
+        requestedScopes: this.config.scopes,
+        grantedScopes: grant.scope?.split(/\s+/).filter(Boolean) ?? this.config.scopes,
+        connectedAt: now,
+        encryptedGrant: encryptJson(grant, this.config.encryptionKey as string),
+        audit: [],
+      }, 'connect-start', 'ok', 'Epic dynamic client JWT bearer grant completed and encrypted grant stored in the owner pod.');
+      await this.connectionRepository?.save(record);
+      return {
+        mode: this.config.mode,
+        connectFlow: this.config.connectFlow,
+        connected: true,
+        status: record.status,
+        scopes: this.config.scopes,
+        startedAt: now,
+      };
+    }
     const smartStart = this.config.mode === 'mock'
       ? undefined
       : await this.smartClient.startAuthorization(state);
@@ -243,6 +284,7 @@ export class EpicIntegrationService {
 
     return {
       mode: this.config.mode,
+      connectFlow: this.config.connectFlow,
       authorizationUrl,
       state,
       scopes: this.config.scopes,
@@ -560,7 +602,13 @@ export class EpicIntegrationService {
         fhirBaseUrl: Boolean(this.config.fhirBaseUrl),
         fhirBaseUrlHost: fhirBase?.host,
         clientId: Boolean(this.config.clientId),
+        dynamicClientId: Boolean(this.config.dynamicClientId),
         clientSecret: Boolean(this.config.clientSecret),
+        clientAssertionPrivateKey: Boolean(this.config.clientAssertionPrivateKey),
+        clientAssertionKeyId: Boolean(this.config.clientAssertionKeyId),
+        clientAssertionAlgorithm: this.config.clientAssertionAlgorithm,
+        connectFlow: this.config.connectFlow,
+        clientAuthMethod: this.config.clientAuthMethod,
         redirectUri: Boolean(this.config.redirectUri),
         redirectUriHost: redirect?.host,
         redirectUriPath: redirect?.pathname,

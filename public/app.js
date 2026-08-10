@@ -1247,7 +1247,15 @@ async function connectEpic() {
     const startResponse = await fetch('/api/integrations/epic/connect/start', { method: 'POST' });
     const startPayload = await startResponse.json();
     if (!startResponse.ok) throw new Error(formatApiError(startPayload));
+    if (startPayload.data.connected) {
+      await loadRecords();
+      epicPreview = null;
+      epicSelectedDomains = new Set();
+      renderEpicPreview();
+      return;
+    }
     const authorizationUrl = startPayload.data.authorizationUrl;
+    if (!authorizationUrl) throw new Error('Epic connect did not return an authorization URL or connected status.');
     if (epicStatus.mode === 'mock' || authorizationUrl.startsWith('/')) {
       const callbackResponse = await fetch(authorizationUrl);
       const callbackPayload = await callbackResponse.json();

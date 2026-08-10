@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'node:crypto';
 import { EpicSmartClient, grantNeedsRefresh } from '../../../src/integrations/epic';
 import type { EpicRuntimeConfig } from '../../../src/runtimeConfig';
 
@@ -5,8 +6,11 @@ describe('EpicSmartClient', () => {
   const config: EpicRuntimeConfig = {
     enabled: true,
     mode: 'sandbox',
+    connectFlow: 'authorization_code',
+    clientAuthMethod: 'auto',
     fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
     clientId: 'smart-client-id',
+    clientAssertionAlgorithm: 'RS384',
     redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
     scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
     encryptionKey: 'unit-test-key',
@@ -159,6 +163,92 @@ describe('EpicSmartClient', () => {
     });
   });
 
+  it('uses private_key_jwt client authentication for authorization-code token exchange', async () => {
+    const jwtConfig: EpicRuntimeConfig = {
+      ...config,
+      clientAuthMethod: 'private_key_jwt',
+      dynamicClientId: 'dynamic-client-id',
+      clientAssertionPrivateKey: testPrivateKey(),
+      clientAssertionKeyId: 'kid-123',
+      clientAssertionAlgorithm: 'RS384',
+    };
+    const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/.well-known/smart-configuration')) {
+        return jsonResponse({
+          authorization_endpoint: 'https://epic.example.test/oauth2/authorize',
+          token_endpoint: 'https://epic.example.test/oauth2/token',
+        });
+      }
+      expect((init?.headers as Record<string, string>).authorization).toBeUndefined();
+      const body = new URLSearchParams(String(init?.body));
+      expect(body.get('grant_type')).toBe('authorization_code');
+      expect(body.has('client_id')).toBe(false);
+      expect(body.get('client_assertion_type')).toBe('urn:ietf:params:oauth:client-assertion-type:jwt-bearer');
+      const assertion = decodeJwt(body.get('client_assertion') as string);
+      expect(assertion.header).toMatchObject({ alg: 'RS384', typ: 'JWT', kid: 'kid-123' });
+      expect(assertion.payload).toMatchObject({
+        iss: 'dynamic-client-id',
+        sub: 'dynamic-client-id',
+        aud: 'https://epic.example.test/oauth2/token',
+      });
+      expect(assertion.payload.jti).toBeTruthy();
+      return jsonResponse({
+        access_token: 'access-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'openid fhirUser patient/Patient.rs',
+        patient: 'patient-123',
+      });
+    });
+    const client = new EpicSmartClient(jwtConfig, fetchMock as never);
+
+    const grant = await client.exchangeCode('code-123', 'verifier-123');
+
+    expect(grant.patient).toBe('patient-123');
+  });
+
+  it('uses the Epic dynamic JWT bearer grant flow when selected', async () => {
+    const jwtConfig: EpicRuntimeConfig = {
+      ...config,
+      connectFlow: 'dynamic_jwt_bearer',
+      dynamicClientId: 'dynamic-client-id',
+      clientAssertionPrivateKey: testPrivateKey(),
+      clientAssertionKeyId: 'kid-123',
+      clientAssertionAlgorithm: 'RS384',
+    };
+    const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/.well-known/smart-configuration')) {
+        return jsonResponse({
+          authorization_endpoint: 'https://epic.example.test/oauth2/authorize',
+          token_endpoint: 'https://epic.example.test/oauth2/token',
+        });
+      }
+      const body = new URLSearchParams(String(init?.body));
+      expect(body.get('grant_type')).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
+      expect(body.get('client_id')).toBe('dynamic-client-id');
+      expect(body.has('client_assertion')).toBe(false);
+      const assertion = decodeJwt(body.get('assertion') as string);
+      expect(assertion.header).toMatchObject({ alg: 'RS384', typ: 'JWT', kid: 'kid-123' });
+      expect(assertion.payload).toMatchObject({
+        iss: 'dynamic-client-id',
+        sub: 'dynamic-client-id',
+        aud: 'https://epic.example.test/FHIR/R4/',
+      });
+      return jsonResponse({
+        access_token: 'access-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'openid fhirUser patient/Patient.rs',
+        patient: 'patient-123',
+      });
+    });
+    const client = new EpicSmartClient(jwtConfig, fetchMock as never);
+
+    const grant = await client.exchangeJwtBearerGrant();
+
+    expect(grant.patient).toBe('patient-123');
+  });
+
   it('reads patient-scoped FHIR resources using the bearer token', async () => {
     const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
       expect((init?.headers as Record<string, string>).authorization).toBe('Bearer access-123');
@@ -210,6 +300,8 @@ describe('EpicSmartClient', () => {
     expect(resources.map((resource) => resource.resourceType)).toEqual(['Condition', 'Observation']);
     expect(requestedUrls.some((url) => url.includes('/Patient/'))).toBe(false);
     expect(requestedUrls.some((url) => url.includes('/MedicationRequest?'))).toBe(false);
+    expect(requestedUrls.some((url) => url.includes('/Observation?') && url.includes('category=vital-signs'))).toBe(true);
+    expect(requestedUrls.some((url) => url.includes('/Observation?') && url.includes('category=laboratory'))).toBe(true);
   });
 
   it('reports PHI-safe source diagnostics for previewed Epic resource families', async () => {
@@ -257,6 +349,42 @@ describe('EpicSmartClient', () => {
       }),
     ]));
     expect(JSON.stringify(result.sourceDiagnostics)).not.toContain('patient-123');
+  });
+
+  it('captures sanitized OperationOutcome issue codes in preview diagnostics', async () => {
+    const fetchMock = jest.fn(async (url: string) => {
+      if (url.includes('/Observation?')) {
+        return jsonResponse({
+          resourceType: 'OperationOutcome',
+          issue: [{
+            severity: 'fatal',
+            code: 'required',
+            diagnostics: 'Must have either code or category for Patient/patient-123 and token abcdefghijklmnop.',
+          }],
+        }, 400);
+      }
+      return jsonResponse({ resourceType: 'Bundle', entry: [] });
+    });
+    const client = new EpicSmartClient(config, fetchMock as never);
+
+    const result = await client.fetchPatientResourcePreview({
+      accessToken: 'access-123',
+      scope: 'patient/Observation.r',
+    }, 'patient-123');
+
+    const observation = result.sourceDiagnostics.find((diagnostic) => diagnostic.resourceType === 'Observation');
+    expect(observation).toMatchObject({
+      status: 'attention',
+      httpStatus: 400,
+      outcomeIssues: [expect.objectContaining({
+        severity: 'fatal',
+        code: 'required',
+        diagnosticsClass: 'Must have either code or category for Patient/[redacted] and token [redacted-id].',
+      })],
+    });
+    expect(observation?.detail).toContain('OperationOutcome fatal/required');
+    expect(JSON.stringify(observation)).not.toContain('patient-123');
+    expect(JSON.stringify(observation)).not.toContain('abcdefghijklmnop');
   });
 
   it('treats denied Patient reads as optional when Epic omits scope detail from the token', async () => {
@@ -312,4 +440,20 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     json: async () => body,
   } as Response;
+}
+
+function testPrivateKey(): string {
+  return generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  }).privateKey;
+}
+
+function decodeJwt(jwt: string): { header: Record<string, unknown>; payload: Record<string, unknown> } {
+  const [header, payload] = jwt.split('.');
+  return {
+    header: JSON.parse(Buffer.from(header, 'base64url').toString('utf8')) as Record<string, unknown>,
+    payload: JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Record<string, unknown>,
+  };
 }

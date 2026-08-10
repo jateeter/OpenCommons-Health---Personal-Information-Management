@@ -111,6 +111,12 @@ registration values still come from deployment configuration.
 | `EPIC_MODE` | Yes | `mock`, `sandbox`, or `production`. |
 | `EPIC_FHIR_BASE_URL` | Sandbox/production | Customer or sandbox FHIR base URL. |
 | `EPIC_CLIENT_ID` | Sandbox/production | Epic app client ID. |
+| `EPIC_CONNECT_FLOW` | No | `authorization_code` preserves the existing SMART redirect/callback flow; `dynamic_jwt_bearer` uses an Epic dynamic client id and signed JWT bearer grant. |
+| `EPIC_CLIENT_AUTH_METHOD` | No | `auto`, `none`, `client_secret_basic`, or `private_key_jwt` for authorization-code/refresh token calls. |
+| `EPIC_DYNAMIC_CLIENT_ID` | Dynamic JWT bearer | Dynamic client id returned by Epic Dynamic Client Registration. |
+| `EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE` | Dynamic/private key auth | Local untracked private key used to sign JWT assertions. In Docker use `/run/opencommons-secrets/epic-dynamic-client/private-key.pem`. |
+| `EPIC_CLIENT_ASSERTION_KID` | Dynamic/private key auth | Key id matching the registered public JWKS. |
+| `EPIC_CLIENT_ASSERTION_ALG` | Dynamic/private key auth | `RS384` default, or `RS256` when that is the registered key algorithm. |
 | `EPIC_CLIENT_SECRET` | Conditional | Optional confidential-client secret. Prefer file-based secrets. |
 | `EPIC_CLIENT_SECRET_FILE` | Conditional | Optional path to an untracked confidential-client secret file. |
 | `EPIC_REDIRECT_URI` | Sandbox/production | Callback URL registered with Epic. |

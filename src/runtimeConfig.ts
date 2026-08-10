@@ -16,13 +16,22 @@ export interface SolidRuntimeConfig {
 }
 
 export type EpicIntegrationMode = 'mock' | 'sandbox' | 'production';
+export type EpicConnectFlow = 'authorization_code' | 'dynamic_jwt_bearer';
+export type EpicClientAuthMethod = 'auto' | 'none' | 'client_secret_basic' | 'private_key_jwt';
+export type EpicClientAssertionAlgorithm = 'RS256' | 'RS384';
 
 export interface EpicRuntimeConfig {
   enabled: boolean;
   mode: EpicIntegrationMode;
+  connectFlow: EpicConnectFlow;
+  clientAuthMethod: EpicClientAuthMethod;
   fhirBaseUrl?: string;
   clientId?: string;
+  dynamicClientId?: string;
   clientSecret?: string;
+  clientAssertionPrivateKey?: string;
+  clientAssertionKeyId?: string;
+  clientAssertionAlgorithm: EpicClientAssertionAlgorithm;
   redirectUri?: string;
   scopes: string[];
   encryptionKey?: string;
@@ -88,9 +97,15 @@ export function loadEpicRuntimeConfig(env: Environment = process.env): EpicRunti
   const config: EpicRuntimeConfig = {
     enabled,
     mode,
+    connectFlow: parseEpicConnectFlow(env.EPIC_CONNECT_FLOW),
+    clientAuthMethod: parseEpicClientAuthMethod(env.EPIC_CLIENT_AUTH_METHOD),
     fhirBaseUrl: optionalHttpUrl(env, 'EPIC_FHIR_BASE_URL'),
     clientId: env.EPIC_CLIENT_ID?.trim() || undefined,
+    dynamicClientId: env.EPIC_DYNAMIC_CLIENT_ID?.trim() || undefined,
     clientSecret: loadOptionalSecret(env, 'EPIC_CLIENT_SECRET', 'EPIC_CLIENT_SECRET_FILE'),
+    clientAssertionPrivateKey: loadOptionalSecret(env, 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY', 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE'),
+    clientAssertionKeyId: env.EPIC_CLIENT_ASSERTION_KID?.trim() || undefined,
+    clientAssertionAlgorithm: parseEpicClientAssertionAlgorithm(env.EPIC_CLIENT_ASSERTION_ALG),
     redirectUri: optionalHttpUrl(env, 'EPIC_REDIRECT_URI'),
     scopes,
     encryptionKey: env.EPIC_GRANT_ENCRYPTION_KEY?.trim() || undefined,
@@ -106,6 +121,12 @@ export function loadEpicRuntimeConfig(env: Environment = process.env): EpicRunti
     if (!config.fhirBaseUrl) throw new Error('EPIC_FHIR_BASE_URL is required when Epic is enabled outside mock mode.');
     if (!config.clientId) throw new Error('EPIC_CLIENT_ID is required when Epic is enabled outside mock mode.');
     if (!config.redirectUri) throw new Error('EPIC_REDIRECT_URI is required when Epic is enabled outside mock mode.');
+    if (config.connectFlow === 'dynamic_jwt_bearer' && !config.dynamicClientId) {
+      throw new Error('EPIC_DYNAMIC_CLIENT_ID is required when EPIC_CONNECT_FLOW=dynamic_jwt_bearer.');
+    }
+    if ((config.connectFlow === 'dynamic_jwt_bearer' || config.clientAuthMethod === 'private_key_jwt') && !config.clientAssertionPrivateKey) {
+      throw new Error('EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE or EPIC_CLIENT_ASSERTION_PRIVATE_KEY is required for Epic private_key_jwt/JWT bearer authentication.');
+    }
   }
 
   return config;
@@ -199,6 +220,24 @@ function parseEpicMode(value: string | undefined): EpicIntegrationMode {
   const mode = value?.trim() || 'mock';
   if (mode === 'mock' || mode === 'sandbox' || mode === 'production') return mode;
   throw new Error(`EPIC_MODE must be one of mock, sandbox, or production; received: ${mode}`);
+}
+
+function parseEpicConnectFlow(value: string | undefined): EpicConnectFlow {
+  const flow = value?.trim() || 'authorization_code';
+  if (flow === 'authorization_code' || flow === 'dynamic_jwt_bearer') return flow;
+  throw new Error(`EPIC_CONNECT_FLOW must be one of authorization_code or dynamic_jwt_bearer; received: ${flow}`);
+}
+
+function parseEpicClientAuthMethod(value: string | undefined): EpicClientAuthMethod {
+  const method = value?.trim() || 'auto';
+  if (method === 'auto' || method === 'none' || method === 'client_secret_basic' || method === 'private_key_jwt') return method;
+  throw new Error(`EPIC_CLIENT_AUTH_METHOD must be one of auto, none, client_secret_basic, or private_key_jwt; received: ${method}`);
+}
+
+function parseEpicClientAssertionAlgorithm(value: string | undefined): EpicClientAssertionAlgorithm {
+  const algorithm = value?.trim() || 'RS384';
+  if (algorithm === 'RS256' || algorithm === 'RS384') return algorithm;
+  throw new Error(`EPIC_CLIENT_ASSERTION_ALG must be one of RS256 or RS384; received: ${algorithm}`);
 }
 
 function splitScopes(value: string | undefined): string[] {
