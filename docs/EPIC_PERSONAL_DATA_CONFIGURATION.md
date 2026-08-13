@@ -54,6 +54,12 @@ EPIC_ENABLED=true
 EPIC_MODE=sandbox
 EPIC_FHIR_BASE_URL=<epic-fhir-r4-base-url-from-your-provider-or-epic-app-registration>
 EPIC_CLIENT_ID=<epic-smart-client-id>
+EPIC_CONNECT_FLOW=authorization_code
+EPIC_CLIENT_AUTH_METHOD=auto
+EPIC_DYNAMIC_CLIENT_ID=
+EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=
+EPIC_CLIENT_ASSERTION_KID=
+EPIC_CLIENT_ASSERTION_ALG=RS384
 # Optional: only when your Epic app registration requires a confidential client
 # secret. Prefer EPIC_CLIENT_SECRET_FILE over an inline value.
 EPIC_CLIENT_SECRET_FILE=<path-to-local-untracked-client-secret-file>
@@ -69,6 +75,25 @@ EPIC_SYNC_ON_STARTUP=false
 # Minimum read-only MVP scope set.
 EPIC_SCOPES="openid fhirUser launch/patient offline_access patient/Patient.rs patient/Condition.rs patient/MedicationRequest.rs patient/MedicationStatement.rs patient/AllergyIntolerance.rs patient/Immunization.rs patient/Observation.rs patient/DiagnosticReport.rs patient/Coverage.rs patient/DocumentReference.rs"
 ```
+
+After Epic Dynamic Client Registration returns a dynamic client id, the PIM can
+use the JWT bearer grant instead of the redirect/callback connect flow:
+
+```dotenv
+EPIC_CONNECT_FLOW=dynamic_jwt_bearer
+EPIC_DYNAMIC_CLIENT_ID=<dynamic-client-id-returned-by-Epic>
+EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=.secrets/epic-dynamic-client/private-key.pem
+EPIC_CLIENT_ASSERTION_KID=<kid-from-registered-jwks>
+EPIC_CLIENT_ASSERTION_ALG=RS384
+```
+
+For Docker deployment, use the mounted secret path:
+
+```dotenv
+EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=/run/opencommons-secrets/epic-dynamic-client/private-key.pem
+```
+
+See `docs/EPIC_DYNAMIC_CLIENT_JWT_BEARER.md` for the full switch contract.
 
 For local MVP testing without personal Epic data, keep:
 

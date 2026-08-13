@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'node:crypto';
 import { decryptJson, EpicIntegrationService, type EpicConnectionRecord } from '../../../src/integrations/epic';
 import type { DomainRepository } from '../../../src/httpApp';
 
@@ -18,6 +19,9 @@ describe('Epic MVP integration service', () => {
   const config = {
     enabled: true,
     mode: 'mock' as const,
+    connectFlow: 'authorization_code' as const,
+    clientAuthMethod: 'auto' as const,
+    clientAssertionAlgorithm: 'RS384' as const,
     scopes: ['openid', 'fhirUser', 'launch/patient', 'offline_access', 'patient/Condition.rs'],
     encryptionKey: 'unit-test-epic-grant-key',
     syncOnStartup: false,
@@ -254,8 +258,11 @@ describe('Epic MVP integration service', () => {
     const sandboxConfig = {
       enabled: true,
       mode: 'sandbox' as const,
+      connectFlow: 'authorization_code' as const,
+      clientAuthMethod: 'auto' as const,
       fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
       clientId: 'smart-client-id',
+      clientAssertionAlgorithm: 'RS384' as const,
       redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
       scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
       encryptionKey: 'unit-test-epic-grant-key',
@@ -300,12 +307,72 @@ describe('Epic MVP integration service', () => {
     expect(repository.record?.encryptedGrant).toBeDefined();
   });
 
+  it('connects directly with the Epic dynamic JWT bearer grant flow when selected', async () => {
+    const sandboxConfig = {
+      enabled: true,
+      mode: 'sandbox' as const,
+      connectFlow: 'dynamic_jwt_bearer' as const,
+      clientAuthMethod: 'auto' as const,
+      fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
+      clientId: 'software-client-id',
+      dynamicClientId: 'dynamic-client-id',
+      clientAssertionPrivateKey: testPrivateKey(),
+      clientAssertionKeyId: 'kid-123',
+      clientAssertionAlgorithm: 'RS384' as const,
+      redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
+      scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
+      encryptionKey: 'unit-test-epic-grant-key',
+      syncOnStartup: false,
+    };
+    const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/.well-known/smart-configuration')) {
+        return jsonResponse({
+          authorization_endpoint: 'https://epic.example.test/oauth2/authorize',
+          token_endpoint: 'https://epic.example.test/oauth2/token',
+        });
+      }
+      if (url === 'https://epic.example.test/oauth2/token') {
+        const body = new URLSearchParams(String(init?.body));
+        expect(body.get('grant_type')).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
+        expect(body.get('client_id')).toBe('dynamic-client-id');
+        expect(body.get('assertion')).toBeTruthy();
+        return jsonResponse({
+          access_token: 'dynamic-access-token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+          scope: 'openid fhirUser patient/Patient.rs',
+          patient: 'dynamic-patient-id',
+        });
+      }
+      throw new Error(`Unexpected URL ${url}`);
+    });
+    const repository = new FakeEpicRepository();
+    const service = new EpicIntegrationService(sandboxConfig, repository as never, {}, fetchMock as never);
+
+    const start = await service.connectStart();
+
+    expect(start).toMatchObject({
+      connectFlow: 'dynamic_jwt_bearer',
+      connected: true,
+      status: 'connected',
+    });
+    expect(repository.record).toMatchObject({
+      status: 'connected',
+      patientId: 'dynamic-patient-id',
+    });
+    expect(repository.record?.encryptedGrant).toBeDefined();
+    expect(JSON.stringify(repository.record)).not.toContain('dynamic-access-token');
+  });
+
   it('can run optional live SMART discovery diagnostics without token exchange', async () => {
     const sandboxConfig = {
       enabled: true,
       mode: 'sandbox' as const,
+      connectFlow: 'authorization_code' as const,
+      clientAuthMethod: 'auto' as const,
       fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
       clientId: 'smart-client-id',
+      clientAssertionAlgorithm: 'RS384' as const,
       redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
       scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
       encryptionKey: 'unit-test-epic-grant-key',
@@ -392,4 +459,12 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     json: async () => body,
   } as Response;
+}
+
+function testPrivateKey(): string {
+  return generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  }).privateKey;
 }

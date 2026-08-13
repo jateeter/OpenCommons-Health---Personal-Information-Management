@@ -92,7 +92,13 @@ export interface EpicRegistrationReadiness {
     fhirBaseUrl: boolean;
     fhirBaseUrlHost?: string;
     clientId: boolean;
+    dynamicClientId?: boolean;
     clientSecret: boolean;
+    clientAssertionPrivateKey?: boolean;
+    clientAssertionKeyId?: boolean;
+    clientAssertionAlgorithm?: string;
+    connectFlow?: string;
+    clientAuthMethod?: string;
     redirectUri: boolean;
     redirectUriHost?: string;
     redirectUriPath?: string;
@@ -147,6 +153,12 @@ export interface EpicFhirResource {
   [key: string]: unknown;
 }
 
+export interface EpicOperationOutcomeIssue {
+  severity?: string;
+  code?: string;
+  diagnosticsClass?: string;
+}
+
 export interface EpicSourceDiagnostic {
   resourceType: string;
   operation: 'read' | 'search';
@@ -155,6 +167,7 @@ export interface EpicSourceDiagnostic {
   fhirResourceType?: string;
   entryCount: number;
   mappableCount: number;
+  outcomeIssues?: EpicOperationOutcomeIssue[];
   detail: string;
 }
 

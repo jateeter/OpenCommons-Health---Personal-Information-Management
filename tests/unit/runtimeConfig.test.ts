@@ -99,6 +99,9 @@ describe('runtime configuration', () => {
     expect(loadEpicRuntimeConfig({})).toMatchObject({
       enabled: false,
       mode: 'mock',
+      connectFlow: 'authorization_code',
+      clientAuthMethod: 'auto',
+      clientAssertionAlgorithm: 'RS384',
       syncOnStartup: false,
       scopes: expect.arrayContaining([
         'openid',
@@ -124,6 +127,8 @@ describe('runtime configuration', () => {
       EPIC_MODE: 'sandbox',
       EPIC_FHIR_BASE_URL: 'https://example.org/fhir/R4',
       EPIC_CLIENT_ID: 'epic-client',
+      EPIC_CONNECT_FLOW: 'authorization_code',
+      EPIC_CLIENT_AUTH_METHOD: 'client_secret_basic',
       EPIC_CLIENT_SECRET: 'epic-secret',
       EPIC_REDIRECT_URI: 'https://app.example.org/api/integrations/epic/connect/callback',
       EPIC_GRANT_ENCRYPTION_KEY: 'local-test-key',
@@ -132,9 +137,12 @@ describe('runtime configuration', () => {
     })).toEqual({
       enabled: true,
       mode: 'sandbox',
+      connectFlow: 'authorization_code',
+      clientAuthMethod: 'client_secret_basic',
       fhirBaseUrl: 'https://example.org/fhir/R4',
       clientId: 'epic-client',
       clientSecret: 'epic-secret',
+      clientAssertionAlgorithm: 'RS384',
       redirectUri: 'https://app.example.org/api/integrations/epic/connect/callback',
       encryptionKey: 'local-test-key',
       scopes: ['openid', 'fhirUser', 'patient/Patient.rs'],
@@ -161,5 +169,53 @@ describe('runtime configuration', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+
+  it('loads Epic dynamic JWT bearer settings from local secret files', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'opencommons-epic-jwt-'));
+    const file = join(directory, 'epic-private-key.pem');
+    try {
+      writeFileSync(file, '-----BEGIN PRIVATE KEY-----\nlocal-test-key\n-----END PRIVATE KEY-----\n');
+      expect(loadEpicRuntimeConfig({
+        EPIC_ENABLED: 'true',
+        EPIC_MODE: 'sandbox',
+        EPIC_FHIR_BASE_URL: 'https://example.org/fhir/R4',
+        EPIC_CLIENT_ID: 'software-client',
+        EPIC_DYNAMIC_CLIENT_ID: 'dynamic-client',
+        EPIC_CONNECT_FLOW: 'dynamic_jwt_bearer',
+        EPIC_CLIENT_AUTH_METHOD: 'private_key_jwt',
+        EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE: file,
+        EPIC_CLIENT_ASSERTION_KID: 'kid-123',
+        EPIC_CLIENT_ASSERTION_ALG: 'RS256',
+        EPIC_REDIRECT_URI: 'https://app.example.org/api/integrations/epic/connect/callback',
+        EPIC_GRANT_ENCRYPTION_KEY: 'local-test-key',
+      })).toMatchObject({
+        connectFlow: 'dynamic_jwt_bearer',
+        clientAuthMethod: 'private_key_jwt',
+        clientId: 'software-client',
+        dynamicClientId: 'dynamic-client',
+        clientAssertionPrivateKey: expect.stringContaining('BEGIN PRIVATE KEY'),
+        clientAssertionKeyId: 'kid-123',
+        clientAssertionAlgorithm: 'RS256',
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('requires a dynamic client id and signing key for Epic dynamic JWT bearer flow', () => {
+    const base = {
+      EPIC_ENABLED: 'true',
+      EPIC_MODE: 'sandbox',
+      EPIC_FHIR_BASE_URL: 'https://example.org/fhir/R4',
+      EPIC_CLIENT_ID: 'software-client',
+      EPIC_CONNECT_FLOW: 'dynamic_jwt_bearer',
+      EPIC_REDIRECT_URI: 'https://app.example.org/api/integrations/epic/connect/callback',
+      EPIC_GRANT_ENCRYPTION_KEY: 'local-test-key',
+    };
+    expect(() => loadEpicRuntimeConfig(base)).toThrow('EPIC_DYNAMIC_CLIENT_ID is required');
+    expect(() => loadEpicRuntimeConfig({ ...base, EPIC_DYNAMIC_CLIENT_ID: 'dynamic-client' })).toThrow(
+      'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE or EPIC_CLIENT_ASSERTION_PRIVATE_KEY is required',
+    );
   });
 });
