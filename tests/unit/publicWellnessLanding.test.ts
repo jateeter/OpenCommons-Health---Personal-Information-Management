@@ -171,6 +171,15 @@ describe('wellness spider-graph landing page', () => {
     expect(appSource).toContain("'aria-label': `${element.label}: ${count} current record");
   });
 
+  it('keeps the domain data window separated from spider graph labels', () => {
+    expect(styleSource).toContain('--domain-summary-min-gap: clamp(48px, 5vw, 72px)');
+    expect(styleSource).toMatch(/\.domain-graph-layout \{[^}]*grid-template-columns: minmax\(390px, 1fr\) minmax\(280px, 340px\)/s);
+    expect(styleSource).toMatch(/\.domain-graph-layout \{[^}]*column-gap: var\(--domain-summary-min-gap\)/s);
+    expect(styleSource).toContain('@media (max-width: 1100px)');
+    expect(styleSource).toMatch(/@media \(max-width: 1100px\) \{[^}]*\.domain-graph-layout \{[^}]*grid-template-columns: 1fr/s);
+    expect(styleSource).toMatch(/\.domain-node-summary \{[^}]*width: min\(100%, 520px\)/s);
+  });
+
   it('keeps landing text minimal and degrades without replacing the layout', () => {
     const landing = indexSource.slice(
       indexSource.indexOf('id="view-wellness"'),
