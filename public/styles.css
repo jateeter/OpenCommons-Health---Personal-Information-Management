@@ -12,6 +12,7 @@
   --shadow: 0 20px 55px rgba(25, 53, 47, .09);
   --content-gutter: clamp(28px, 5vw, 72px);
   --mobile-gutter: 18px;
+  --domain-summary-min-gap: clamp(48px, 5vw, 72px);
 }
 
 * { box-sizing: border-box; }
@@ -193,8 +194,9 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 .domain-graph-copy p:last-child { margin: 0; color: var(--muted); }
 .domain-graph-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(260px, 340px);
-  gap: 18px;
+  grid-template-columns: minmax(390px, 1fr) minmax(280px, 340px);
+  column-gap: var(--domain-summary-min-gap);
+  row-gap: 18px;
   align-items: center;
   min-width: 0;
 }
@@ -248,6 +250,16 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
   min-height: 185px;
   color: var(--muted);
   text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .domain-graph-layout {
+    grid-template-columns: 1fr;
+  }
+  .domain-node-summary {
+    width: min(100%, 520px);
+    justify-self: center;
+  }
 }
 
 .records-panel { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
@@ -685,7 +697,6 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   main { padding: 30px var(--mobile-gutter) 60px; }
   h1 { font-size: 36px; }
   .summary { grid-template-columns: 1fr; }
-  .domain-graph-layout { grid-template-columns: 1fr; }
   .domain-graph { min-height: 270px; }
   .domain-node-summary-empty { min-height: auto; padding: 12px; }
   .pod-actions { justify-content: flex-start; }
