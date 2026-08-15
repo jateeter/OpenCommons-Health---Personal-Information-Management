@@ -54,6 +54,96 @@ button { cursor: pointer; }
 .masthead-actions { display: flex; align-items: center; gap: 13px; }
 .text-link { color: var(--teal-dark); font-weight: 800; text-decoration: none; }
 .text-link:hover { text-decoration: underline; }
+.utility-menu { position: relative; }
+.utility-menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--teal-dark);
+  background: #fff;
+  font-weight: 850;
+  box-shadow: 0 8px 20px rgba(23,108,92,.08);
+}
+.utility-menu-toggle:hover,
+.utility-menu-toggle:focus-visible {
+  background: var(--mint);
+  outline: none;
+}
+.utility-menu-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  right: 0;
+  display: none;
+  width: min(82vw, 330px);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,253,247,.98);
+  box-shadow: 0 22px 55px rgba(25, 53, 47, .18);
+}
+.utility-menu.open .utility-menu-panel { display: grid; gap: 13px; }
+.utility-menu-section {
+  margin: 0 0 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 10px;
+  font-weight: 900;
+}
+.utility-domain-menu { display: grid; gap: 7px; }
+.utility-domain-item,
+.utility-legal-links a {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid #edf0eb;
+  border-radius: 12px;
+  color: var(--ink);
+  background: #fff;
+  text-align: left;
+  text-decoration: none;
+}
+.utility-domain-item:hover,
+.utility-domain-item:focus-visible,
+.utility-legal-links a:hover,
+.utility-legal-links a:focus-visible {
+  border-color: rgba(23,108,92,.28);
+  background: var(--mint);
+  outline: none;
+}
+.utility-domain-icon,
+.utility-legal-links a span {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--tile-color, var(--teal));
+  background: rgba(219,238,230,.68);
+  font-weight: 900;
+}
+.utility-domain-label { min-width: 0; font-weight: 800; }
+.utility-domain-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+.utility-legal-links {
+  display: grid;
+  gap: 7px;
+  padding-top: 11px;
+  border-top: 1px solid #edf0eb;
+}
+.utility-legal-links a {
+  grid-template-columns: 26px minmax(0, 1fr);
+}
 .connection {
   padding: 8px 13px; border-radius: 999px; color: var(--teal-dark);
   background: var(--mint); font-size: 12px; font-weight: 700;
@@ -131,22 +221,6 @@ button { cursor: pointer; }
 }
 .spider-label { font-size: 12px; font-weight: 800; cursor: pointer; }
 .spider-label:hover, .spider-label:focus-visible { text-decoration: underline; outline: none; }
-
-.browse-nav {
-  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;
-  width: min(100%, 640px); margin: 22px auto 0; padding-bottom: 6px;
-}
-.browse-tile {
-  flex: 0 0 auto; min-width: 96px;
-  display: grid; justify-items: center; gap: 3px;
-  padding: 12px 14px; border-radius: 15px;
-  border: 1px solid var(--line); background: var(--surface);
-  border-top: 3px solid var(--tile-color, var(--teal));
-}
-.browse-tile:hover { background: #fff; box-shadow: 0 6px 18px rgba(25, 53, 47, .08); }
-.browse-icon { color: var(--tile-color, var(--teal)); font-size: 18px; line-height: 1; }
-.browse-label { font-size: 12px; font-weight: 750; white-space: nowrap; }
-.browse-count { color: var(--muted); font-size: 11px; font-weight: 700; }
 
 main { grid-column: 1 / -1; padding: 46px var(--content-gutter) 80px; min-width: 0; width: 100%; }
 .shell.records-layout main { grid-column: auto; }
@@ -722,6 +796,13 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .brand strong { font-size: 16px; }
   .masthead-actions { gap: 9px; }
   .masthead-actions .text-link { font-size: 11px; }
+  .utility-menu-label { display: none; }
+  .utility-menu-panel {
+    position: fixed;
+    top: 68px;
+    right: 12px;
+    width: min(calc(100vw - 24px), 330px);
+  }
   .connection { padding: 9px; }
   .connection-dot { margin-right: 0; }
   .connection-label { display: none; }
@@ -732,6 +813,4 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .spider { width: min(100%, 330px); }
   .domain-graph-panel { margin-top: 20px; padding: 16px 14px; }
   .domain-spider { width: min(100%, 310px); }
-  .browse-nav { margin-top: 14px; gap: 8px; }
-  .browse-tile { min-width: 84px; padding: 10px 12px; }
 }

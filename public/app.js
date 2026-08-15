@@ -580,11 +580,11 @@ function renderWellness(summary) {
     message.textContent = summary?.error
       || 'Your wellness overview appears once the pod connection is ready. Open Pod status for details.';
     target.append(message);
-    renderBrowseNav(null);
+    renderUtilityMenu(null);
     return;
   }
   target.append(createSpiderGraph(summary.axes));
-  renderBrowseNav(summary.browse);
+  renderUtilityMenu(summary.browse);
 }
 
 /**
@@ -696,9 +696,27 @@ function createSpiderGraph(axes) {
   return svg;
 }
 
-/** Non-graph domains: a browse/exploration row with per-domain record counts. */
-function renderBrowseNav(browse) {
-  const nav = $('browse-nav');
+function initializeUtilityMenu() {
+  renderUtilityMenu(null);
+  $('utility-menu-toggle').addEventListener('click', () => {
+    setUtilityMenuOpen(!$('utility-menu').classList.contains('open'));
+  });
+  document.addEventListener('click', (event) => {
+    if (!$('utility-menu').contains(event.target)) setUtilityMenuOpen(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setUtilityMenuOpen(false);
+  });
+}
+
+function setUtilityMenuOpen(open) {
+  $('utility-menu').classList.toggle('open', open);
+  $('utility-menu-toggle').setAttribute('aria-expanded', String(open));
+}
+
+/** Non-graph domains: secondary navigation lives in the top-right hamburger. */
+function renderUtilityMenu(browse) {
+  const nav = $('utility-domain-menu');
   nav.replaceChildren();
   const entries = browse || WELLNESS_BROWSE_DOMAINS.map((domain) => ({ domain, count: null }));
   for (const entry of entries) {
@@ -706,11 +724,15 @@ function renderBrowseNav(browse) {
     if (!config) continue;
     const tile = document.createElement('button');
     tile.type = 'button';
-    tile.className = 'browse-tile';
+    tile.className = 'utility-domain-item';
+    tile.setAttribute('role', 'menuitem');
     tile.style.setProperty('--tile-color', DOMAIN_COLORS[entry.domain] || '#176c5c');
     tile.setAttribute('aria-label', `Browse ${config.plural}${Number.isInteger(entry.count) ? `, ${entry.count} record${entry.count === 1 ? '' : 's'}` : ''}`);
-    tile.innerHTML = `<span class="browse-icon">${config.icon}</span><span class="browse-label">${config.plural}</span><span class="browse-count">${Number.isInteger(entry.count) ? entry.count : '—'}</span>`;
-    tile.addEventListener('click', () => selectDomain(entry.domain));
+    tile.innerHTML = `<span class="utility-domain-icon" aria-hidden="true">${config.icon}</span><span class="utility-domain-label">${config.plural}</span><span class="utility-domain-count">${Number.isInteger(entry.count) ? entry.count : '—'}</span>`;
+    tile.addEventListener('click', () => {
+      void selectDomain(entry.domain);
+      setUtilityMenuOpen(false);
+    });
     nav.append(tile);
   }
 }
@@ -1843,6 +1865,7 @@ document.querySelector('.brand').addEventListener('click', (event) => {
   showView('wellness');
 });
 initializeNavigation();
+initializeUtilityMenu();
 showView('wellness');
 void (async () => {
   await checkStatus();

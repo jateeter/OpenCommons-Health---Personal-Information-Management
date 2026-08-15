@@ -190,22 +190,28 @@ requireText('public/app.js', publicApp, 'SNOMED CT workflow task search');
 requireText('public/app.js', publicApp, 'Owner-held clinical document metadata');
 requireText('public/app.js', publicApp, 'Care tasks, follow-ups, and review steps');
 
-// Wellness spider-graph landing (issue #32): the landing view is the graph, the
-// non-graph domains browse area exists, and pod status stays reachable.
+// Wellness spider-graph landing (issues #32/#66): the landing view is the graph,
+// non-graph domains live in the exposed hamburger menu, and pod status stays reachable.
 requireText('public/app.js', publicApp, "fetch('/api/wellness/summary')");
 requireText('public/app.js', publicApp, 'function createSpiderGraph');
-requireText('public/app.js', publicApp, 'function renderBrowseNav');
+requireText('public/app.js', publicApp, 'function renderUtilityMenu');
+requireText('public/app.js', publicApp, 'function initializeUtilityMenu');
 requireText('public/app.js', publicApp, 'function showView');
 requireText('public/app.js', publicApp, "const WELLNESS_AXIS_DOMAINS = ['vital-signs', 'lab-results', 'medications', 'conditions', 'allergies', 'immunizations']");
 requireText('public/app.js', publicApp, "const WELLNESS_BROWSE_DOMAINS = ['profiles', 'providers', 'insurance-policies', 'documents', 'workflow-tasks']");
 requireText('public/app.js', publicApp, "$('connection').addEventListener('click', () => showView('status'))");
 requireText('public/index.html', publicIndex, 'id="view-wellness"');
 requireText('public/index.html', publicIndex, 'id="wellness-graph"');
-requireText('public/index.html', publicIndex, 'id="browse-nav"');
+requireText('public/index.html', publicIndex, 'id="utility-menu"');
+requireText('public/index.html', publicIndex, 'id="utility-menu-toggle"');
+requireText('public/index.html', publicIndex, 'id="utility-domain-menu"');
+requireText('public/index.html', publicIndex, 'href="/terms.html"');
+requireText('public/index.html', publicIndex, 'href="/data-disclosure.html"');
 requireText('public/index.html', publicIndex, 'id="view-status"');
 requireText('public/index.html', publicIndex, 'id="pod-management-panel"');
 requireText('public/styles.css', publicStyles, '.spider-point');
-requireText('public/styles.css', publicStyles, '.browse-tile');
+requireText('public/styles.css', publicStyles, '.utility-menu-panel');
+requireText('public/styles.css', publicStyles, '.utility-domain-item');
 requireText('public/styles.css', publicStyles, '@media (max-width: 480px)');
 requireText('docs/WELLNESS_LANDING_SCORING.md', wellnessScoring, 'clinical decision support and not medical advice');
 requireText('docs/WELLNESS_LANDING_SCORING.md', wellnessScoring, 'Axis domains vs browse domains');

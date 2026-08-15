@@ -38,21 +38,28 @@ describe('wellness spider-graph landing page', () => {
     expect(indexSource).toContain('dot-red');
   });
 
-  it('places non-graph domains in a browse navigation area with record counts', () => {
+  it('places non-graph domains in the top-right hamburger menu with record counts', () => {
     expect(appSource).toContain("const WELLNESS_BROWSE_DOMAINS = ['profiles', 'providers', 'insurance-policies', 'documents', 'workflow-tasks']");
-    expect(appSource).toContain('function renderBrowseNav');
-    expect(appSource).toContain('browse-tile');
-    expect(appSource).toContain('browse-count');
-    expect(indexSource).toContain('id="browse-nav"');
-    expect(indexSource).toContain('aria-label="Browse other health records"');
-    expect(styleSource).toContain('.browse-nav');
+    expect(appSource).toContain('function renderUtilityMenu');
+    expect(appSource).toContain('utility-domain-item');
+    expect(appSource).toContain('utility-domain-count');
+    expect(indexSource).toContain('id="utility-menu" class="utility-menu open"');
+    expect(indexSource).toContain('id="utility-menu-toggle"');
+    expect(indexSource).toContain('id="utility-domain-menu"');
+    expect(indexSource).not.toContain('id="browse-nav"');
+    expect(styleSource).toContain('.utility-menu-panel');
+    expect(styleSource).not.toContain('.browse-nav');
   });
 
-  it('centers the browse buttons beneath the spider graph at every width', () => {
-    expect(styleSource).toMatch(/\.browse-nav \{[^}]*justify-content: center/s);
-    expect(styleSource).toMatch(/\.browse-nav \{[^}]*flex-wrap: wrap/s);
-    expect(styleSource).toMatch(/\.browse-nav \{[^}]*width: min\(100%, 640px\)/s);
-    expect(styleSource).toMatch(/\.browse-nav \{[^}]*margin: 22px auto 0/s);
+  it('keeps secondary domains and legal links discoverable in the hamburger', () => {
+    expect(indexSource).toContain('aria-expanded="true"');
+    expect(indexSource).toContain('aria-label="Menu: secondary domains, terms, and data disclosure"');
+    expect(indexSource).toContain('href="/terms.html"');
+    expect(indexSource).toContain('href="/data-disclosure.html"');
+    expect(indexSource).toContain('Terms</a>');
+    expect(indexSource).toContain('Data disclosure</a>');
+    expect(styleSource).toContain('.utility-menu.open .utility-menu-panel');
+    expect(styleSource).toMatch(/\.utility-menu-panel \{[^}]*right: 0/s);
   });
 
   it('visually marks spider graph nodes as clickable points of departure', () => {
@@ -119,10 +126,11 @@ describe('wellness spider-graph landing page', () => {
     expect(appSource).toContain('await refreshWellness();');
   });
 
-  it('navigates from a data point or browse tile into that domain', () => {
+  it('navigates from a data point or hamburger domain item into that domain', () => {
     expect(appSource).toContain("marker.addEventListener('click', () => selectDomain(axis.domain))");
     expect(appSource).toContain("label.addEventListener('click', () => selectDomain(axis.domain))");
-    expect(appSource).toContain("tile.addEventListener('click', () => selectDomain(entry.domain))");
+    expect(appSource).toContain('void selectDomain(entry.domain)');
+    expect(appSource).toContain('setUtilityMenuOpen(false)');
   });
 
   it('adds a semantic spider graph to every domain landing view', () => {

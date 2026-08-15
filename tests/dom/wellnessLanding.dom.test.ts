@@ -351,13 +351,16 @@ describe('wellness landing behaviour', () => {
     expect(visible('view-wellness')).toBe(false);
   });
 
-  it('lists the non-graph domains for browsing with their record counts', async () => {
+  it('lists the non-graph domains in the exposed hamburger menu with their record counts', async () => {
     boot();
     await flush();
-    const tiles = document.querySelectorAll('.browse-tile');
-    expect(tiles).toHaveLength(5);
-    expect($('browse-nav').textContent).toContain('Documents');
-    expect($('browse-nav').textContent).toContain('5');
+    const menu = $('utility-menu');
+    expect(menu.classList.contains('open')).toBe(true);
+    const items = document.querySelectorAll('.utility-domain-item');
+    expect(items).toHaveLength(5);
+    expect($('utility-domain-menu').textContent).toContain('Documents');
+    expect($('utility-domain-menu').textContent).toContain('5');
+    expect($('utility-domain-menu').textContent).toContain('◎');
   });
 
   it('re-reads the summary whenever the wellness tab is shown', async () => {
