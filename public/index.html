@@ -63,6 +63,18 @@
             <button id="add-button" class="primary" type="button">Add record</button>
           </section>
 
+          <section id="domain-graph-panel" class="domain-graph-panel" aria-label="Domain semantic graph">
+            <div class="domain-graph-copy">
+              <p class="eyebrow">Domain map</p>
+              <h2 id="domain-graph-title">Semantic elements</h2>
+              <p id="domain-graph-description">Hover a node to inspect current data and add a focused record.</p>
+            </div>
+            <div class="domain-graph-layout">
+              <div id="domain-graph" class="domain-graph" aria-live="polite"></div>
+              <aside id="domain-node-summary" class="domain-node-summary" aria-live="polite"></aside>
+            </div>
+          </section>
+
           <section class="records-panel">
             <div class="panel-heading">
               <h2 id="table-title">Records</h2>

@@ -125,6 +125,52 @@ describe('wellness spider-graph landing page', () => {
     expect(appSource).toContain("tile.addEventListener('click', () => selectDomain(entry.domain))");
   });
 
+  it('adds a semantic spider graph to every domain landing view', () => {
+    expect(indexSource).toContain('id="domain-graph-panel"');
+    expect(indexSource).toContain('id="domain-graph"');
+    expect(indexSource).toContain('id="domain-node-summary"');
+    expect(appSource).toContain('const DOMAIN_SEMANTIC_ELEMENTS = {');
+    for (const domain of [
+      'profiles',
+      'conditions',
+      'medications',
+      'allergies',
+      'immunizations',
+      'vital-signs',
+      'providers',
+      'lab-results',
+      'insurance-policies',
+      'documents',
+      'workflow-tasks',
+    ]) {
+      expect(appSource).toMatch(new RegExp(`['"]?${domain}['"]?: \\[`));
+    }
+    expect(appSource).toContain('function renderDomainGraph');
+    expect(appSource).toContain('function createDomainSpiderGraph');
+    expect(styleSource).toContain('.domain-graph-panel');
+    expect(styleSource).toContain('.domain-spider');
+  });
+
+  it('shows node summary tables with a prominent Add action that opens the existing modal', () => {
+    expect(appSource).toContain('function renderDomainNodeSummary');
+    expect(appSource).toContain('summaryRow');
+    expect(appSource).toContain("button.className = 'primary'");
+    expect(appSource).toContain("button.textContent = `Add ${config.label.toLowerCase()}`");
+    expect(appSource).toContain('openForm(null, structuredClone(element.prefill || {}))');
+    expect(appSource).toContain('const fieldValues = record || prefill || {};');
+    expect(styleSource).toContain('.domain-node-summary table');
+    expect(styleSource).toContain('.domain-node-summary .primary');
+  });
+
+  it('uses hover and keyboard focus to reveal semantic node summaries', () => {
+    expect(appSource).toContain("marker.addEventListener('mouseenter', showSummary)");
+    expect(appSource).toContain("marker.addEventListener('focus', showSummary)");
+    expect(appSource).toContain("label.addEventListener('mouseenter', showSummary)");
+    expect(appSource).toContain("label.addEventListener('focus', showSummary)");
+    expect(appSource).toContain("'data-semantic-node': element.id");
+    expect(appSource).toContain("'aria-label': `${element.label}: ${count} current record");
+  });
+
   it('keeps landing text minimal and degrades without replacing the layout', () => {
     const landing = indexSource.slice(
       indexSource.indexOf('id="view-wellness"'),

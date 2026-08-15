@@ -411,6 +411,77 @@ const DOMAIN_COLORS = {
   'workflow-tasks': '#6b8f5a',
 };
 
+const DOMAIN_SEMANTIC_ELEMENTS = {
+  profiles: [
+    { id: 'identity', label: 'Identity', summary: 'Owner name and demographic basics.', prefill: {} },
+    { id: 'birth-date', label: 'Birth date', summary: 'Date of birth used for owner-held health context.', prefill: {} },
+    { id: 'biological-sex', label: 'Biological sex', summary: 'Administrative clinical sex value.', prefill: { biologicalSex: 'unknown' } },
+    { id: 'photo', label: 'Photo', summary: 'Optional owner-selected profile image URL.', prefill: {} },
+  ],
+  conditions: [
+    { id: 'active-condition', label: 'Active condition', summary: 'SNOMED CT-coded active diagnosis or concern.', prefill: { ...codingPrefill('code', SNOMED_CT_SYSTEM, '38341003', 'Hypertensive disorder'), status: 'active' }, match: (record) => record.status === 'active' },
+    { id: 'severity', label: 'Severity', summary: 'Mild, moderate, or severe clinical impact.', prefill: { ...codingPrefill('code', SNOMED_CT_SYSTEM, '386661006', 'Fever'), status: 'active', severity: 'mild' }, match: (record) => Boolean(record.severity) },
+    { id: 'onset', label: 'Onset', summary: 'When a condition began or was recognized.', prefill: { ...codingPrefill('code', SNOMED_CT_SYSTEM, '73211009', 'Diabetes mellitus'), status: 'active' }, match: (record) => Boolean(record.onsetDate) },
+    { id: 'resolved', label: 'Resolved', summary: 'Conditions that are inactive, resolved, or in remission.', prefill: { ...codingPrefill('code', SNOMED_CT_SYSTEM, '195967001', 'Asthma'), status: 'resolved' }, match: (record) => ['inactive', 'remission', 'resolved'].includes(record.status) },
+  ],
+  medications: [
+    { id: 'active-medication', label: 'Active medication', summary: 'RxNorm-coded medicine currently taken.', prefill: { ...codingPrefill('medicationCode', RXNORM_SYSTEM, '860975', 'Metformin 500 MG Oral Tablet'), status: 'active' }, match: (record) => record.status === 'active' },
+    { id: 'dosage', label: 'Dosage', summary: 'Dose, route, and timing instructions.', prefill: { ...codingPrefill('medicationCode', RXNORM_SYSTEM, '617314', 'Atorvastatin 20 MG Oral Tablet'), status: 'active', dosage: { text: 'Take as directed' } }, match: (record) => Boolean(record.dosage?.text) },
+    { id: 'prescriber', label: 'Prescriber', summary: 'Clinician or source associated with the medication.', prefill: { ...codingPrefill('medicationCode', RXNORM_SYSTEM, '197361', 'Lisinopril 10 MG Oral Tablet'), status: 'active' }, match: (record) => Boolean(record.prescriber) },
+    { id: 'history', label: 'Medication history', summary: 'Stopped, completed, or historical medications.', prefill: { ...codingPrefill('medicationCode', RXNORM_SYSTEM, '198440', 'Acetaminophen 325 MG Oral Tablet'), status: 'completed' }, match: (record) => ['completed', 'stopped', 'on-hold'].includes(record.status) },
+  ],
+  allergies: [
+    { id: 'substance', label: 'Substance', summary: 'SNOMED CT-coded allergen or intolerance.', prefill: { ...codingPrefill('substance', SNOMED_CT_SYSTEM, '91936005', 'Allergy to penicillin'), category: 'medication', status: 'active' }, match: (record) => Boolean(record.substance?.code) },
+    { id: 'food', label: 'Food', summary: 'Food allergy or intolerance.', prefill: { ...codingPrefill('substance', SNOMED_CT_SYSTEM, '91935009', 'Allergy to peanuts'), category: 'food', status: 'active' }, match: (record) => record.category === 'food' },
+    { id: 'medication', label: 'Medication', summary: 'Medication allergy or adverse sensitivity.', prefill: { ...codingPrefill('substance', SNOMED_CT_SYSTEM, '294954006', 'Aspirin allergy'), category: 'medication', status: 'active' }, match: (record) => record.category === 'medication' },
+    { id: 'environment', label: 'Environment', summary: 'Environmental allergy or sensitivity.', prefill: { ...codingPrefill('substance', SNOMED_CT_SYSTEM, '300916003', 'Latex allergy'), category: 'environment', status: 'active' }, match: (record) => record.category === 'environment' },
+  ],
+  immunizations: [
+    { id: 'vaccine', label: 'Vaccine', summary: 'CVX-coded vaccine record.', prefill: { ...codingPrefill('vaccineCode', CVX_SYSTEM, '141', 'Influenza, seasonal, injectable'), status: 'completed' }, match: (record) => Boolean(record.vaccineCode?.code) },
+    { id: 'date', label: 'Administration date', summary: 'When the vaccine was given.', prefill: { ...codingPrefill('vaccineCode', CVX_SYSTEM, '207', 'COVID-19, mRNA, LNP-S, PF, 100 mcg/0.5 mL dose'), status: 'completed' }, match: (record) => Boolean(record.occurrenceDate) },
+    { id: 'dose', label: 'Dose series', summary: 'Dose number within a vaccine series.', prefill: { ...codingPrefill('vaccineCode', CVX_SYSTEM, '208', 'COVID-19, mRNA, LNP-S, PF, 30 mcg/0.3 mL dose'), status: 'completed', doseNumber: 1 }, match: (record) => Boolean(record.doseNumber) },
+    { id: 'performer', label: 'Performer', summary: 'Clinic, pharmacy, or clinician administering the vaccine.', prefill: { ...codingPrefill('vaccineCode', CVX_SYSTEM, '140', 'Influenza, seasonal, injectable, preservative free'), status: 'completed' }, match: (record) => Boolean(record.performer) },
+  ],
+  'vital-signs': [
+    { id: 'blood-pressure', label: 'Blood pressure', summary: 'LOINC blood pressure panel.', prefill: vitalPrefill('blood-pressure', '85354-9', 'Blood pressure panel with all children optional', 'mmHg'), match: (record) => record.code === 'blood-pressure' },
+    { id: 'heart-rate', label: 'Heart rate', summary: 'LOINC heart rate observation.', prefill: vitalPrefill('heart-rate', '8867-4', 'Heart rate', 'beats/min'), match: (record) => record.code === 'heart-rate' },
+    { id: 'body-temperature', label: 'Temperature', summary: 'LOINC body temperature observation.', prefill: vitalPrefill('body-temperature', '8310-5', 'Body temperature', 'Cel'), match: (record) => record.code === 'body-temperature' },
+    { id: 'oxygen-saturation', label: 'Oxygen saturation', summary: 'LOINC pulse oximetry oxygen saturation.', prefill: vitalPrefill('oxygen-saturation', '59408-5', 'Oxygen saturation in arterial blood by pulse oximetry', '%'), match: (record) => record.code === 'oxygen-saturation' },
+    { id: 'body-weight', label: 'Body weight', summary: 'LOINC body weight measurement.', prefill: vitalPrefill('body-weight', '29463-7', 'Body weight', 'kg'), match: (record) => record.code === 'body-weight' },
+    { id: 'bmi', label: 'BMI', summary: 'LOINC body mass index measurement.', prefill: vitalPrefill('bmi', '39156-5', 'Body mass index (BMI)', 'kg/m2'), match: (record) => record.code === 'bmi' },
+  ],
+  providers: [
+    { id: 'primary-care', label: 'Primary care', summary: 'Primary care clinician or practice.', prefill: { role: 'primary-care' }, match: (record) => record.role === 'primary-care' },
+    { id: 'specialist', label: 'Specialist', summary: 'Specialty care clinician.', prefill: { role: 'specialist' }, match: (record) => record.role === 'specialist' },
+    { id: 'pharmacy', label: 'Pharmacy', summary: 'Preferred or historical pharmacy.', prefill: { role: 'pharmacy' }, match: (record) => record.role === 'pharmacy' },
+    { id: 'lab', label: 'Laboratory', summary: 'Laboratory or diagnostic service provider.', prefill: { role: 'lab' }, match: (record) => record.role === 'lab' },
+  ],
+  'lab-results': [
+    { id: 'glucose', label: 'Glucose', summary: 'LOINC-coded glucose laboratory result.', prefill: { ...codingPrefill('code', LOINC_SYSTEM, '2339-0', 'Glucose mass/volume in blood'), unit: 'mg/dL' }, match: (record) => record.code?.code === '2339-0' },
+    { id: 'hemoglobin-a1c', label: 'Hemoglobin A1c', summary: 'LOINC-coded A1c result.', prefill: { ...codingPrefill('code', LOINC_SYSTEM, '4548-4', 'Hemoglobin A1c/Hemoglobin.total in Blood'), unit: '%' }, match: (record) => record.code?.code === '4548-4' },
+    { id: 'lipids', label: 'Lipids', summary: 'Cholesterol and lipid panel observations.', prefill: { ...codingPrefill('code', LOINC_SYSTEM, '24331-1', 'Lipid panel'), unit: 'mg/dL' }, match: (record) => ['24331-1', '2093-3', '2085-9', '2089-1'].includes(record.code?.code) },
+    { id: 'interpretation', label: 'Interpretation', summary: 'Normal, abnormal, high, low, or critical result interpretation.', prefill: { ...codingPrefill('code', LOINC_SYSTEM, '718-7', 'Hemoglobin [Mass/volume] in Blood'), interpretation: 'normal' }, match: (record) => Boolean(record.interpretation) },
+  ],
+  'insurance-policies': [
+    { id: 'medical', label: 'Medical', summary: 'Medical coverage policy.', prefill: { type: 'medical' }, match: (record) => record.type === 'medical' },
+    { id: 'pharmacy', label: 'Pharmacy', summary: 'Prescription benefit coverage.', prefill: { type: 'pharmacy' }, match: (record) => record.type === 'pharmacy' },
+    { id: 'member-id', label: 'Member ID', summary: 'Owner-held member identifier for the plan.', prefill: { type: 'medical' }, match: (record) => Boolean(record.memberId) },
+    { id: 'effective-dates', label: 'Effective dates', summary: 'Coverage start and expiration dates.', prefill: { type: 'medical' }, match: (record) => Boolean(record.effectiveDate || record.expirationDate) },
+  ],
+  documents: [
+    { id: 'summary', label: 'Visit summary', summary: 'LOINC-coded clinical or visit summary metadata.', prefill: { ...codingPrefill('documentType', LOINC_SYSTEM, '34133-9', 'Summary of episode note'), status: 'current' }, match: (record) => record.documentType?.code === '34133-9' },
+    { id: 'lab-report', label: 'Lab report', summary: 'Laboratory report document metadata.', prefill: { ...codingPrefill('documentType', LOINC_SYSTEM, '11502-2', 'Laboratory report'), status: 'current' }, match: (record) => record.documentType?.code === '11502-2' },
+    { id: 'care-plan', label: 'Care plan', summary: 'Plan of care or care coordination document.', prefill: { ...codingPrefill('documentType', LOINC_SYSTEM, '18776-5', 'Plan of care note'), status: 'current' }, match: (record) => record.documentType?.code === '18776-5' },
+    { id: 'source', label: 'Source', summary: 'Source system, custodian, or pod binary link.', prefill: { status: 'current' }, match: (record) => Boolean(record.sourceSystem || record.sourceDocumentUrl || record.binaryUrl || record.custodian) },
+  ],
+  'workflow-tasks': [
+    { id: 'review', label: 'Review', summary: 'Owner-tracked review task.', prefill: { ...codingPrefill('taskType', SNOMED_CT_SYSTEM, '183452005', 'Review of medication'), status: 'requested', intent: 'plan' }, match: (record) => record.taskType?.code === '183452005' },
+    { id: 'follow-up', label: 'Follow-up', summary: 'Care follow-up or next-step task.', prefill: { ...codingPrefill('taskType', SNOMED_CT_SYSTEM, '185389009', 'Follow-up visit'), status: 'requested', intent: 'plan' }, match: (record) => /follow/i.test(record.description || record.taskType?.display || '') },
+    { id: 'due-date', label: 'Due date', summary: 'Task with a planned due date.', prefill: { ...codingPrefill('taskType', SNOMED_CT_SYSTEM, '225358003', 'Wound care'), status: 'requested', intent: 'plan' }, match: (record) => Boolean(record.dueDate) },
+    { id: 'completed', label: 'Completed', summary: 'Finished owner-held workflow task.', prefill: { ...codingPrefill('taskType', SNOMED_CT_SYSTEM, '308335008', 'Patient encounter procedure'), status: 'completed', intent: 'plan' }, match: (record) => record.status === 'completed' },
+  ],
+};
+
 const STATUS_COLORS = { green: '#2b9a73', yellow: '#d9a441', red: '#cf5240', empty: '#a9b6b1' };
 const STATUS_LABELS = { green: 'On track', yellow: 'Watch', red: 'Attention', empty: 'No data' };
 
@@ -642,6 +713,197 @@ function renderBrowseNav(browse) {
     tile.addEventListener('click', () => selectDomain(entry.domain));
     nav.append(tile);
   }
+}
+
+function codingPrefill(prefix, system, code, display) {
+  const record = {};
+  setPath(record, `${prefix}.system`, system);
+  setPath(record, `${prefix}.code`, code);
+  setPath(record, `${prefix}.display`, display);
+  return record;
+}
+
+function vitalPrefill(domainCode, loincCode, display, unit) {
+  return {
+    code: domainCode,
+    ...codingPrefill('loincCode', LOINC_SYSTEM, loincCode, display),
+    unit,
+  };
+}
+
+function renderDomainGraph(domainKey = activeDomain, sourceRecords = records) {
+  const config = domains[domainKey];
+  const elements = DOMAIN_SEMANTIC_ELEMENTS[domainKey] || semanticElementsFromFields(config);
+  $('domain-graph-title').textContent = `${config.plural} semantic map`;
+  $('domain-graph-description').textContent = 'Hover or focus a node to inspect current data and add a focused record.';
+  const graph = $('domain-graph');
+  graph.replaceChildren();
+  graph.append(createDomainSpiderGraph(domainKey, elements, sourceRecords));
+  renderDomainNodeSummary(domainKey, elements[0], sourceRecords);
+}
+
+function semanticElementsFromFields(config) {
+  return config.fields
+    .filter((field) => !field.transient && field.type !== 'terminology-search')
+    .slice(0, 6)
+    .map((field) => ({
+      id: field.name,
+      label: field.label.replace(/\s*\*$/, ''),
+      summary: field.help || `Owner-held ${field.label.toLowerCase()} value.`,
+      prefill: {},
+      match: (record) => getPath(record, field.name) !== undefined,
+    }));
+}
+
+function createDomainSpiderGraph(domainKey, elements, sourceRecords) {
+  const size = 320;
+  const center = size / 2;
+  const radius = center - 48;
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.setAttribute('class', 'spider domain-spider');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `${domains[domainKey].plural} semantic spider graph with ${elements.length} nodes`);
+
+  const node = (name, attributes) => {
+    const element = document.createElementNS(svgNs, name);
+    for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+    return element;
+  };
+  const point = (index, fraction) => {
+    const angle = (Math.PI * 2 * index) / elements.length - Math.PI / 2;
+    return [center + Math.cos(angle) * radius * fraction, center + Math.sin(angle) * radius * fraction];
+  };
+
+  for (const ring of [0.25, 0.5, 0.75, 1]) {
+    svg.append(node('polygon', { points: elements.map((_, index) => point(index, ring).join(',')).join(' '), class: 'spider-ring' }));
+  }
+
+  const fractions = elements.map((element) => {
+    const count = recordsForSemanticElement(element, sourceRecords).length;
+    return count > 0 ? Math.min(1, 0.35 + count * 0.18) : 0.18;
+  });
+  svg.append(node('polygon', { points: elements.map((_, index) => point(index, fractions[index]).join(',')).join(' '), class: 'spider-area' }));
+
+  elements.forEach((element, index) => {
+    const color = DOMAIN_COLORS[domainKey] || '#176c5c';
+    const [ax, ay] = point(index, 1);
+    svg.append(node('line', { x1: center, y1: center, x2: ax, y2: ay, stroke: color, 'stroke-width': 2, 'stroke-opacity': .5 }));
+    const [px, py] = point(index, fractions[index]);
+    const count = recordsForSemanticElement(element, sourceRecords).length;
+    svg.append(node('circle', {
+      cx: px, cy: py, r: 12, fill: 'none', stroke: color, 'stroke-width': 1.8,
+      'stroke-dasharray': '3 3', class: 'spider-point-halo', 'aria-hidden': 'true',
+    }));
+    const marker = node('circle', {
+      cx: px, cy: py, r: 7,
+      fill: count > 0 ? color : STATUS_COLORS.empty,
+      stroke: '#fffdf7', 'stroke-width': 2,
+      class: 'spider-point', tabindex: '0', role: 'button',
+      'data-domain': domainKey,
+      'data-semantic-node': element.id,
+      'aria-label': `${element.label}: ${count} current record${count === 1 ? '' : 's'}. Show summary and add ${domains[domainKey].label.toLowerCase()}.`,
+    });
+    const showSummary = () => renderDomainNodeSummary(domainKey, element, sourceRecords);
+    marker.addEventListener('mouseenter', showSummary);
+    marker.addEventListener('focus', showSummary);
+    marker.addEventListener('click', showSummary);
+    marker.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSummary(); }
+    });
+    svg.append(marker);
+
+    const [lx, ly] = point(index, 1.18);
+    const label = node('text', {
+      x: lx, y: ly, fill: color, class: 'spider-label',
+      'text-anchor': lx > center + 4 ? 'start' : lx < center - 4 ? 'end' : 'middle',
+      'dominant-baseline': ly > center ? 'hanging' : ly < center ? 'auto' : 'middle',
+      tabindex: '0', role: 'button', 'data-domain': domainKey, 'data-semantic-node': element.id,
+      'aria-label': `${element.label}: show ${domains[domainKey].plural} summary.`,
+    });
+    label.textContent = element.label;
+    label.addEventListener('mouseenter', showSummary);
+    label.addEventListener('focus', showSummary);
+    label.addEventListener('click', showSummary);
+    label.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSummary(); }
+    });
+    svg.append(label);
+  });
+
+  return svg;
+}
+
+function renderDomainNodeSummary(domainKey, element, sourceRecords) {
+  const target = $('domain-node-summary');
+  target.replaceChildren();
+  if (!element) {
+    const empty = document.createElement('div');
+    empty.className = 'domain-node-summary-empty';
+    empty.textContent = 'Choose a graph node to inspect current records.';
+    target.append(empty);
+    return;
+  }
+  const matches = recordsForSemanticElement(element, sourceRecords);
+  const latest = matches[0];
+  const config = domains[domainKey];
+  const heading = document.createElement('h3');
+  heading.textContent = element.label;
+  const summary = document.createElement('p');
+  summary.textContent = element.summary;
+  const table = document.createElement('table');
+  table.append(
+    summaryRow('Current records', String(matches.length)),
+    summaryRow('Latest item', latest ? config.title(latest) : 'No current record'),
+    summaryRow('Latest detail', latest ? (config.detail(latest) || 'Stored in your Solid pod') : 'Use Add to create the first entry'),
+  );
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'primary';
+  button.textContent = `Add ${config.label.toLowerCase()}`;
+  button.addEventListener('click', () => openForm(null, structuredClone(element.prefill || {})));
+  target.append(heading, summary, table, button);
+}
+
+function summaryRow(label, value) {
+  const row = document.createElement('tr');
+  const heading = document.createElement('th');
+  heading.scope = 'row';
+  heading.textContent = label;
+  const cell = document.createElement('td');
+  cell.textContent = value;
+  row.append(heading, cell);
+  return row;
+}
+
+function recordsForSemanticElement(element, sourceRecords) {
+  const matches = (sourceRecords || []).filter((record) => {
+    try {
+      return element.match ? element.match(record) : true;
+    } catch {
+      return false;
+    }
+  });
+  return matches.sort((a, b) => recordTimestamp(b) - recordTimestamp(a));
+}
+
+function recordTimestamp(record) {
+  const candidates = [
+    record.updatedAt,
+    record.effectiveDateTime,
+    record.authoredDate,
+    record.occurrenceDate,
+    record.effectiveDate,
+    record.onsetDate,
+    record.startDate,
+    record.dueDate,
+  ];
+  for (const value of candidates) {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return 0;
 }
 
 /**
@@ -946,15 +1208,13 @@ async function handleEpicCallbackCompletion() {
 async function selectDomain(key) {
   activeDomain = key;
   const config = domains[key];
-  activeView = 'records';
-  for (const name of ['wellness', 'records', 'status']) {
-    $(`view-${name}`).classList.toggle('hidden', name !== 'records');
-  }
+  showView('records');
   document.querySelectorAll('.domain-nav button').forEach((button) => button.classList.toggle('active', button.dataset.domain === key));
   $('page-title').textContent = config.plural;
   $('page-description').textContent = config.description;
   $('table-title').textContent = config.plural;
   $('search').value = '';
+  renderDomainGraph(key, []);
   if (!applicationReady) {
     records = [];
     $('record-count').textContent = '0';
@@ -987,6 +1247,7 @@ function renderRecords() {
   const query = $('search').value.trim().toLowerCase();
   const config = domains[activeDomain];
   const visible = records.filter((record) => JSON.stringify(record).toLowerCase().includes(query));
+  renderDomainGraph(activeDomain, records);
   $('loading').classList.add('hidden');
   $('empty').classList.toggle('hidden', records.length !== 0);
   $('record-count').textContent = records.length;
@@ -1004,7 +1265,7 @@ function renderRecords() {
   }
 }
 
-function openForm(record = null) {
+function openForm(record = null, prefill = null) {
   editing = record;
   const config = domains[activeDomain];
   $('form-eyebrow').textContent = record ? 'Update record' : 'New record';
@@ -1012,7 +1273,8 @@ function openForm(record = null) {
   $('form-error').classList.add('hidden');
   const fields = $('form-fields');
   fields.replaceChildren();
-  for (const field of config.fields) fields.append(createField(field, record));
+  const fieldValues = record || prefill || {};
+  for (const field of config.fields) fields.append(createField(field, fieldValues));
   if (!record) document.querySelectorAll('#form-fields select[data-coded-select="true"]').forEach((input) => applyCodedSelect(input._fieldConfig, input));
   recordFormSnapshot = serializeRecordForm();
   $('record-dialog').showModal();
