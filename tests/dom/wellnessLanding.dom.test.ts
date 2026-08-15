@@ -351,16 +351,26 @@ describe('wellness landing behaviour', () => {
     expect(visible('view-wellness')).toBe(false);
   });
 
-  it('lists the non-graph domains in the exposed hamburger menu with their record counts', async () => {
+  it('lists the non-graph domains in the initially closed hamburger menu with their record counts', async () => {
     boot();
     await flush();
     const menu = $('utility-menu');
-    expect(menu.classList.contains('open')).toBe(true);
+    const toggle = $('utility-menu-toggle');
+    expect(menu.classList.contains('open')).toBe(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
     const items = document.querySelectorAll('.utility-domain-item');
     expect(items).toHaveLength(5);
     expect($('utility-domain-menu').textContent).toContain('Documents');
     expect($('utility-domain-menu').textContent).toContain('5');
     expect($('utility-domain-menu').textContent).toContain('◎');
+
+    toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(menu.classList.contains('open')).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(menu.classList.contains('open')).toBe(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('re-reads the summary whenever the wellness tab is shown', async () => {

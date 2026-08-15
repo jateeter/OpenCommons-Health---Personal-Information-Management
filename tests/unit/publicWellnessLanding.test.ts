@@ -43,16 +43,19 @@ describe('wellness spider-graph landing page', () => {
     expect(appSource).toContain('function renderUtilityMenu');
     expect(appSource).toContain('utility-domain-item');
     expect(appSource).toContain('utility-domain-count');
-    expect(indexSource).toContain('id="utility-menu" class="utility-menu open"');
+    expect(indexSource).toContain('id="utility-menu" class="utility-menu"');
     expect(indexSource).toContain('id="utility-menu-toggle"');
     expect(indexSource).toContain('id="utility-domain-menu"');
+    expect(indexSource.indexOf('id="connection"')).toBeLessThan(indexSource.indexOf('id="utility-menu"'));
     expect(indexSource).not.toContain('id="browse-nav"');
     expect(styleSource).toContain('.utility-menu-panel');
+    expect(styleSource).toMatch(/\.masthead-actions \{[^}]*justify-content: flex-end/s);
+    expect(styleSource).toMatch(/\.masthead-actions \{[^}]*margin-left: auto/s);
     expect(styleSource).not.toContain('.browse-nav');
   });
 
   it('keeps secondary domains and legal links discoverable in the hamburger', () => {
-    expect(indexSource).toContain('aria-expanded="true"');
+    expect(indexSource).toContain('aria-expanded="false"');
     expect(indexSource).toContain('aria-label="Menu: secondary domains, terms, and data disclosure"');
     expect(indexSource).toContain('href="/terms.html"');
     expect(indexSource).toContain('href="/data-disclosure.html"');

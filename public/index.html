@@ -9,7 +9,7 @@
     <title>OpenCommons Health</title>
     <link rel="icon" type="image/png" href="/opencommons-health-thumbnail.png">
     <link rel="apple-touch-icon" href="/opencommons-health-thumbnail.png">
-    <link rel="stylesheet" href="/styles.css?v=hamburger-secondary-nav-20260815">
+    <link rel="stylesheet" href="/styles.css?v=hamburger-closed-topright-20260815">
   </head>
   <body>
     <header class="masthead">
@@ -18,8 +18,9 @@
         <span><strong>OpenCommons</strong><small>Personal health, held by you</small></span>
       </a>
       <div class="masthead-actions">
-        <div id="utility-menu" class="utility-menu open">
-          <button id="utility-menu-toggle" class="utility-menu-toggle" type="button" aria-expanded="true" aria-controls="utility-menu-panel" aria-label="Menu: secondary domains, terms, and data disclosure">
+        <button id="connection" class="connection checking" type="button" title="Open pod connection status" aria-label="Pod connection: checking. Open pod connection status."><span class="connection-dot"></span><span class="connection-label">Checking your pod</span></button>
+        <div id="utility-menu" class="utility-menu">
+          <button id="utility-menu-toggle" class="utility-menu-toggle" type="button" aria-expanded="false" aria-controls="utility-menu-panel" aria-label="Menu: secondary domains, terms, and data disclosure">
             <span aria-hidden="true">☰</span>
             <span class="utility-menu-label">Menu</span>
           </button>
@@ -35,7 +36,6 @@
             </div>
           </div>
         </div>
-        <button id="connection" class="connection checking" type="button" title="Open pod connection status" aria-label="Pod connection: checking. Open pod connection status."><span class="connection-dot"></span><span class="connection-label">Checking your pod</span></button>
       </div>
     </header>
 
@@ -241,6 +241,6 @@
         </div>
       </article>
     </template>
-    <script src="/app.js?v=hamburger-secondary-nav-20260815" defer></script>
+    <script src="/app.js?v=hamburger-closed-topright-20260815" defer></script>
   </body>
 </html>
