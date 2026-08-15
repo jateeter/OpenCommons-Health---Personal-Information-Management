@@ -51,10 +51,19 @@ button { cursor: pointer; }
 .brand strong, .brand small { display: block; }
 .brand strong { font-family: Georgia, serif; font-size: 19px; }
 .brand small { color: var(--muted); font-size: 11px; letter-spacing: .03em; }
-.masthead-actions { display: flex; align-items: center; gap: 13px; }
+.masthead-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 13px;
+  margin-left: auto;
+}
 .text-link { color: var(--teal-dark); font-weight: 800; text-decoration: none; }
 .text-link:hover { text-decoration: underline; }
-.utility-menu { position: relative; }
+.utility-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
 .utility-menu-toggle {
   display: inline-flex;
   align-items: center;

@@ -190,8 +190,8 @@ requireText('public/app.js', publicApp, 'SNOMED CT workflow task search');
 requireText('public/app.js', publicApp, 'Owner-held clinical document metadata');
 requireText('public/app.js', publicApp, 'Care tasks, follow-ups, and review steps');
 
-// Wellness spider-graph landing (issues #32/#66): the landing view is the graph,
-// non-graph domains live in the exposed hamburger menu, and pod status stays reachable.
+// Wellness spider-graph landing (issues #32/#66/#70): the landing view is the graph,
+// non-graph domains live in a top-right hamburger menu that starts closed, and pod status stays reachable.
 requireText('public/app.js', publicApp, "fetch('/api/wellness/summary')");
 requireText('public/app.js', publicApp, 'function createSpiderGraph');
 requireText('public/app.js', publicApp, 'function renderUtilityMenu');
@@ -204,12 +204,15 @@ requireText('public/index.html', publicIndex, 'id="view-wellness"');
 requireText('public/index.html', publicIndex, 'id="wellness-graph"');
 requireText('public/index.html', publicIndex, 'id="utility-menu"');
 requireText('public/index.html', publicIndex, 'id="utility-menu-toggle"');
+requireText('public/index.html', publicIndex, 'aria-expanded="false"');
 requireText('public/index.html', publicIndex, 'id="utility-domain-menu"');
 requireText('public/index.html', publicIndex, 'href="/terms.html"');
 requireText('public/index.html', publicIndex, 'href="/data-disclosure.html"');
 requireText('public/index.html', publicIndex, 'id="view-status"');
 requireText('public/index.html', publicIndex, 'id="pod-management-panel"');
 requireText('public/styles.css', publicStyles, '.spider-point');
+requireText('public/styles.css', publicStyles, 'justify-content: flex-end');
+requireText('public/styles.css', publicStyles, 'margin-left: auto');
 requireText('public/styles.css', publicStyles, '.utility-menu-panel');
 requireText('public/styles.css', publicStyles, '.utility-domain-item');
 requireText('public/styles.css', publicStyles, '@media (max-width: 480px)');
