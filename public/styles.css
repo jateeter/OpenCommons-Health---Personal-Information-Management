@@ -172,6 +172,84 @@ h1 { margin-bottom: 9px; font: 46px/1.06 Georgia, serif; letter-spacing: -.035em
 .summary span { font: 24px/1.2 Georgia, serif; }
 .summary small { color: var(--muted); margin-top: 4px; }
 
+.domain-graph-panel {
+  min-width: 0;
+  margin: 28px 0 22px;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,253,247,.9);
+  box-shadow: var(--shadow);
+}
+.domain-graph-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.domain-graph-copy h2 { margin: 0; font: 22px Georgia, serif; }
+.domain-graph-copy p:last-child { margin: 0; color: var(--muted); }
+.domain-graph-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 340px);
+  gap: 18px;
+  align-items: center;
+  min-width: 0;
+}
+.domain-graph {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 310px;
+}
+.domain-spider {
+  width: min(100%, clamp(280px, 36vw, 390px));
+}
+.domain-node-summary {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  padding: 15px;
+  box-shadow: 0 10px 25px rgba(25, 53, 47, .06);
+}
+.domain-node-summary h3 { margin: 0 0 4px; font-size: 16px; color: var(--teal-dark); }
+.domain-node-summary p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.domain-node-summary table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.domain-node-summary th,
+.domain-node-summary td {
+  padding: 7px 0;
+  border-top: 1px solid #edf0eb;
+  text-align: left;
+  vertical-align: top;
+}
+.domain-node-summary th {
+  width: 34%;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.domain-node-summary td { overflow-wrap: anywhere; }
+.domain-node-summary .primary {
+  width: 100%;
+  justify-content: center;
+}
+.domain-node-summary-empty {
+  display: grid;
+  place-items: center;
+  min-height: 185px;
+  color: var(--muted);
+  text-align: center;
+}
+
 .records-panel { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; padding: 19px 22px; border-bottom: 1px solid var(--line); }
 .panel-heading > div { min-width: 0; }
@@ -607,6 +685,9 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   main { padding: 30px var(--mobile-gutter) 60px; }
   h1 { font-size: 36px; }
   .summary { grid-template-columns: 1fr; }
+  .domain-graph-layout { grid-template-columns: 1fr; }
+  .domain-graph { min-height: 270px; }
+  .domain-node-summary-empty { min-height: auto; padding: 12px; }
   .pod-actions { justify-content: flex-start; }
   .pod-grid { grid-template-columns: 1fr; }
   .pod-details div { grid-template-columns: 1fr; gap: 3px; }
@@ -638,6 +719,8 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .wellness-legend { gap: 11px; font-size: 11px; }
   .wellness-graph { padding: 4px 0 0; }
   .spider { width: min(100%, 330px); }
+  .domain-graph-panel { margin-top: 20px; padding: 16px 14px; }
+  .domain-spider { width: min(100%, 310px); }
   .browse-nav { margin-top: 14px; gap: 8px; }
   .browse-tile { min-width: 84px; padding: 10px 12px; }
 }
