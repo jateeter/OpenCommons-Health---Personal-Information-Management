@@ -21,6 +21,8 @@ const publicApp = read('public/app.js');
 const publicIndex = read('public/index.html');
 const publicStyles = read('public/styles.css');
 const wellnessScoring = read('docs/WELLNESS_LANDING_SCORING.md');
+const semanticGraphContract = read('docs/SEMANTIC_GRAPH_CONTRACT.md');
+const semanticGraphContractJson = read('public/semantic-domain-contract.json');
 
 const failures = [];
 
@@ -54,6 +56,7 @@ for (const script of [
   'test:e2e:playwright',
   'validate:openapi',
   'validate:localhost-mvp',
+  'validate:semantic-contract',
 ]) {
   requireScript(script);
 }
@@ -220,6 +223,20 @@ requireText('docs/WELLNESS_LANDING_SCORING.md', wellnessScoring, 'clinical decis
 requireText('docs/WELLNESS_LANDING_SCORING.md', wellnessScoring, 'Axis domains vs browse domains');
 requireText('docs/WELLNESS_LANDING_SCORING.md', wellnessScoring, 'GET /api/wellness/summary');
 requireText('docs/WELLNESS_LANDING_SCORING.md', wellnessScoring, 'It does not revert to a status-first page.');
+
+// Semantic graph contract (issue #72): browser/mobile parity contract for all 11 domains.
+requireText('docs/SEMANTIC_GRAPH_CONTRACT.md', semanticGraphContract, 'public/semantic-domain-contract.json');
+requireText('docs/SEMANTIC_GRAPH_CONTRACT.md', semanticGraphContract, 'npm run validate:semantic-contract');
+requireText('docs/SEMANTIC_GRAPH_CONTRACT.md', semanticGraphContract, 'HealthKit-specific concepts such as activity, sleep, and provenance');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"contractId": "opencommons-health.semantic-domain-contract"');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"key": "vital-signs"');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"id": "blood-pressure"');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"id": "bmi"');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"system": "http://loinc.org"');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"system": "http://www.nlm.nih.gov/research/umls/rxnorm"');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"system": "http://snomed.info/id/"');
+requireText('public/semantic-domain-contract.json', semanticGraphContractJson, '"system": "http://hl7.org/fhir/sid/cvx"');
+requireText('scripts/validate-semantic-domain-contract.mjs', read('scripts/validate-semantic-domain-contract.mjs'), 'vital-signs must include');
 
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, '/api/integrations/epic/diagnostics');
 requireText('scripts/epic-diagnostics-check.mjs', epicDiagnosticsCheck, 'EPIC_DIAGNOSTICS_LIVE');

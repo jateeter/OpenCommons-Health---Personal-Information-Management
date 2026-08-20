@@ -19,6 +19,7 @@
     "validate:openapi": "node scripts/validate-openapi.mjs",
     "validate:localhost-mvp": "node scripts/validate-localhost-mvp.mjs",
     "validate:wellness-seeds": "node scripts/validate-wellness-pillar-seeds.mjs",
+    "validate:semantic-contract": "node scripts/validate-semantic-domain-contract.mjs",
     "validate:documentation-contracts": "node scripts/validate-documentation-contracts.mjs",
     "dev": "ts-node src/index.ts",
     "test": "jest --passWithNoTests",

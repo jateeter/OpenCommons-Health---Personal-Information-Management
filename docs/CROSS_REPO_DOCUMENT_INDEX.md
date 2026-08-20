@@ -62,6 +62,7 @@ it is an untracked local Epic scratch/credential-adjacent file.
 | Document | Audience | Purpose |
 |---|---|---|
 | [docs/WELLNESS_LANDING_SCORING.md](WELLNESS_LANDING_SCORING.md) | Developers, UX/product reviewers | Wellness landing view model, axis vs browse domains, score/status model, and domain-specific scoring behavior. |
+| [docs/SEMANTIC_GRAPH_CONTRACT.md](SEMANTIC_GRAPH_CONTRACT.md) | Browser/mobile UX developers, QA | Versioned semantic graph contract for all 11 domains, Vitals parity, terminology hooks, and mobile consumption guidance. |
 | [docs/MVP_11_DOMAIN_UI_ROADMAP.md](MVP_11_DOMAIN_UI_ROADMAP.md) | Product, UX, engineering | Roadmap and implemented MVP slice for first-class 11-domain UI navigation and workflow behavior. |
 | [docs/POD_MANAGEMENT_UX_FINAL_UPDATE.md](POD_MANAGEMENT_UX_FINAL_UPDATE.md) | Product, UX, engineering | Final update for owner-facing Pod management UX, local MVP posture, deployment contract, and next focus. |
 | [docs/PRE_MVP_VISUAL_REVIEW_STARTUP.md](PRE_MVP_VISUAL_REVIEW_STARTUP.md) | Demo operators, reviewers | Startup workflow and configuration for pre-MVP local visual review. |

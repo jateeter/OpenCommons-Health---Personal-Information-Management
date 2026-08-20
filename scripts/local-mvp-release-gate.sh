@@ -10,7 +10,7 @@ set -e
 echo "Running OpenCommons Health localhost MVP release gate..."
 
 echo ""
-echo "1/8 Checking deployment shell scripts..."
+echo "1/9 Checking deployment shell scripts..."
 sh -n scripts/local-container-up.sh
 sh -n scripts/start-realityengine-suite.sh
 sh -n scripts/stop-realityengine-suite.sh
@@ -22,31 +22,35 @@ node --check scripts/epic-diagnostics-check.mjs
 node --check scripts/local-preflight.mjs
 
 echo ""
-echo "2/8 Typechecking..."
+echo "2/9 Typechecking..."
 npm run typecheck
 
 echo ""
-echo "3/8 Linting..."
+echo "3/9 Linting..."
 npm run lint
 
 echo ""
-echo "4/8 Running unit tests..."
+echo "4/9 Running unit tests..."
 npm test -- --runInBand
 
 echo ""
-echo "5/8 Building distributable artifacts..."
+echo "5/9 Building distributable artifacts..."
 npm run build
 
 echo ""
-echo "6/8 Validating OpenAPI..."
+echo "6/9 Validating OpenAPI..."
 npm run validate:openapi
 
 echo ""
-echo "7/8 Validating localhost MVP contract..."
+echo "7/9 Validating semantic graph contract..."
+npm run validate:semantic-contract
+
+echo ""
+echo "8/9 Validating localhost MVP contract..."
 npm run validate:localhost-mvp
 
 echo ""
-echo "8/8 Checking diff whitespace..."
+echo "9/9 Checking diff whitespace..."
 git diff --check
 
 echo ""

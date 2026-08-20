@@ -1,0 +1,503 @@
+{
+  "contractId": "opencommons-health.semantic-domain-contract",
+  "version": "1.0.0",
+  "updated": "2026-08-20",
+  "description": "Owner-authoritative semantic graph contract for OpenCommons Health PIM browser and mobile UX parity.",
+  "ownerAuthority": "Solid Pod",
+  "privacyBoundary": "No PHI, credential material, access tokens, refresh tokens, DPoP keys, Pod resource paths, Epic payloads, or raw HealthKit samples are included in this contract.",
+  "codingSystems": {
+    "loinc": {
+      "name": "LOINC",
+      "system": "http://loinc.org"
+    },
+    "rxnorm": {
+      "name": "RxNorm",
+      "system": "http://www.nlm.nih.gov/research/umls/rxnorm"
+    },
+    "snomedCt": {
+      "name": "SNOMED CT",
+      "system": "http://snomed.info/id/"
+    },
+    "cvx": {
+      "name": "CVX",
+      "system": "http://hl7.org/fhir/sid/cvx"
+    },
+    "schemaOrg": {
+      "name": "schema.org",
+      "system": "https://schema.org/"
+    },
+    "administrative": {
+      "name": "OpenCommons administrative",
+      "system": "https://opencommons.health/ns/admin"
+    }
+  },
+  "domains": [
+    {
+      "key": "profiles",
+      "label": "Profile",
+      "plural": "Profiles",
+      "fhirResourceType": "Patient",
+      "codingSystemRefs": ["schemaOrg", "administrative"],
+      "elements": [
+        {
+          "id": "identity",
+          "label": "Identity",
+          "summary": "Owner name and demographic basics.",
+          "fhirElement": "Patient.identifier",
+          "codingSystemRefs": ["schemaOrg"],
+          "addPrefill": {}
+        },
+        {
+          "id": "birth-date",
+          "label": "Birth date",
+          "summary": "Date of birth used for owner-held health context.",
+          "fhirElement": "Patient.birthDate",
+          "codingSystemRefs": ["schemaOrg"],
+          "addPrefill": {}
+        },
+        {
+          "id": "biological-sex",
+          "label": "Biological sex",
+          "summary": "Administrative clinical sex value.",
+          "fhirElement": "Patient.gender",
+          "codingSystemRefs": ["administrative"],
+          "addPrefill": { "biologicalSex": "unknown" }
+        },
+        {
+          "id": "photo",
+          "label": "Photo",
+          "summary": "Optional owner-selected profile image URL.",
+          "fhirElement": "Patient.photo",
+          "codingSystemRefs": ["schemaOrg"],
+          "addPrefill": {}
+        }
+      ]
+    },
+    {
+      "key": "conditions",
+      "label": "Condition",
+      "plural": "Conditions",
+      "fhirResourceType": "Condition",
+      "codingSystemRefs": ["snomedCt"],
+      "elements": [
+        {
+          "id": "active-condition",
+          "label": "Active condition",
+          "summary": "SNOMED CT-coded active diagnosis or concern.",
+          "fhirElement": "Condition.code",
+          "coding": { "systemRef": "snomedCt", "code": "38341003", "display": "Hypertensive disorder" },
+          "addPrefill": { "code": { "system": "http://snomed.info/id/", "code": "38341003", "display": "Hypertensive disorder" }, "status": "active" }
+        },
+        {
+          "id": "severity",
+          "label": "Severity",
+          "summary": "Mild, moderate, or severe clinical impact.",
+          "fhirElement": "Condition.severity",
+          "coding": { "systemRef": "snomedCt", "code": "386661006", "display": "Fever" },
+          "addPrefill": { "code": { "system": "http://snomed.info/id/", "code": "386661006", "display": "Fever" }, "status": "active", "severity": "mild" }
+        },
+        {
+          "id": "onset",
+          "label": "Onset",
+          "summary": "When a condition began or was recognized.",
+          "fhirElement": "Condition.onset",
+          "coding": { "systemRef": "snomedCt", "code": "73211009", "display": "Diabetes mellitus" },
+          "addPrefill": { "code": { "system": "http://snomed.info/id/", "code": "73211009", "display": "Diabetes mellitus" }, "status": "active" }
+        },
+        {
+          "id": "resolved",
+          "label": "Resolved",
+          "summary": "Conditions that are inactive, resolved, or in remission.",
+          "fhirElement": "Condition.abatement",
+          "coding": { "systemRef": "snomedCt", "code": "195967001", "display": "Asthma" },
+          "addPrefill": { "code": { "system": "http://snomed.info/id/", "code": "195967001", "display": "Asthma" }, "status": "resolved" }
+        }
+      ]
+    },
+    {
+      "key": "medications",
+      "label": "Medication",
+      "plural": "Medications",
+      "fhirResourceType": "MedicationStatement",
+      "codingSystemRefs": ["rxnorm"],
+      "elements": [
+        {
+          "id": "active-medication",
+          "label": "Active medication",
+          "summary": "RxNorm-coded medicine currently taken.",
+          "fhirElement": "MedicationStatement.medication",
+          "coding": { "systemRef": "rxnorm", "code": "860975", "display": "Metformin 500 MG Oral Tablet" },
+          "addPrefill": { "medicationCode": { "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "860975", "display": "Metformin 500 MG Oral Tablet" }, "status": "active" }
+        },
+        {
+          "id": "dosage",
+          "label": "Dosage",
+          "summary": "Dose, route, and timing instructions.",
+          "fhirElement": "MedicationStatement.dosage",
+          "coding": { "systemRef": "rxnorm", "code": "617314", "display": "Atorvastatin 20 MG Oral Tablet" },
+          "addPrefill": { "medicationCode": { "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "617314", "display": "Atorvastatin 20 MG Oral Tablet" }, "status": "active", "dosage": { "text": "Take as directed" } }
+        },
+        {
+          "id": "prescriber",
+          "label": "Prescriber",
+          "summary": "Clinician or source associated with the medication.",
+          "fhirElement": "MedicationRequest.requester",
+          "coding": { "systemRef": "rxnorm", "code": "197361", "display": "Lisinopril 10 MG Oral Tablet" },
+          "addPrefill": { "medicationCode": { "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "197361", "display": "Lisinopril 10 MG Oral Tablet" }, "status": "active" }
+        },
+        {
+          "id": "history",
+          "label": "Medication history",
+          "summary": "Stopped, completed, or historical medications.",
+          "fhirElement": "MedicationStatement.status",
+          "coding": { "systemRef": "rxnorm", "code": "198440", "display": "Acetaminophen 325 MG Oral Tablet" },
+          "addPrefill": { "medicationCode": { "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "198440", "display": "Acetaminophen 325 MG Oral Tablet" }, "status": "completed" }
+        }
+      ]
+    },
+    {
+      "key": "allergies",
+      "label": "Allergy",
+      "plural": "Allergies",
+      "fhirResourceType": "AllergyIntolerance",
+      "codingSystemRefs": ["snomedCt"],
+      "elements": [
+        {
+          "id": "substance",
+          "label": "Substance",
+          "summary": "SNOMED CT-coded allergen or intolerance.",
+          "fhirElement": "AllergyIntolerance.code",
+          "coding": { "systemRef": "snomedCt", "code": "91936005", "display": "Allergy to penicillin" },
+          "addPrefill": { "substance": { "system": "http://snomed.info/id/", "code": "91936005", "display": "Allergy to penicillin" }, "category": "medication", "status": "active" }
+        },
+        {
+          "id": "food",
+          "label": "Food",
+          "summary": "Food allergy or intolerance.",
+          "fhirElement": "AllergyIntolerance.category",
+          "coding": { "systemRef": "snomedCt", "code": "91935009", "display": "Allergy to peanuts" },
+          "addPrefill": { "substance": { "system": "http://snomed.info/id/", "code": "91935009", "display": "Allergy to peanuts" }, "category": "food", "status": "active" }
+        },
+        {
+          "id": "medication",
+          "label": "Medication",
+          "summary": "Medication allergy or adverse sensitivity.",
+          "fhirElement": "AllergyIntolerance.category",
+          "coding": { "systemRef": "snomedCt", "code": "294954006", "display": "Aspirin allergy" },
+          "addPrefill": { "substance": { "system": "http://snomed.info/id/", "code": "294954006", "display": "Aspirin allergy" }, "category": "medication", "status": "active" }
+        },
+        {
+          "id": "environment",
+          "label": "Environment",
+          "summary": "Environmental allergy or sensitivity.",
+          "fhirElement": "AllergyIntolerance.category",
+          "coding": { "systemRef": "snomedCt", "code": "300916003", "display": "Latex allergy" },
+          "addPrefill": { "substance": { "system": "http://snomed.info/id/", "code": "300916003", "display": "Latex allergy" }, "category": "environment", "status": "active" }
+        }
+      ]
+    },
+    {
+      "key": "immunizations",
+      "label": "Immunization",
+      "plural": "Immunizations",
+      "fhirResourceType": "Immunization",
+      "codingSystemRefs": ["cvx"],
+      "elements": [
+        {
+          "id": "vaccine",
+          "label": "Vaccine",
+          "summary": "CVX-coded vaccine record.",
+          "fhirElement": "Immunization.vaccineCode",
+          "coding": { "systemRef": "cvx", "code": "141", "display": "Influenza, seasonal, injectable" },
+          "addPrefill": { "vaccineCode": { "system": "http://hl7.org/fhir/sid/cvx", "code": "141", "display": "Influenza, seasonal, injectable" }, "status": "completed" }
+        },
+        {
+          "id": "date",
+          "label": "Administration date",
+          "summary": "When the vaccine was given.",
+          "fhirElement": "Immunization.occurrence",
+          "coding": { "systemRef": "cvx", "code": "207", "display": "COVID-19, mRNA, LNP-S, PF, 100 mcg/0.5 mL dose" },
+          "addPrefill": { "vaccineCode": { "system": "http://hl7.org/fhir/sid/cvx", "code": "207", "display": "COVID-19, mRNA, LNP-S, PF, 100 mcg/0.5 mL dose" }, "status": "completed" }
+        },
+        {
+          "id": "dose",
+          "label": "Dose series",
+          "summary": "Dose number within a vaccine series.",
+          "fhirElement": "Immunization.protocolApplied",
+          "coding": { "systemRef": "cvx", "code": "208", "display": "COVID-19, mRNA, LNP-S, PF, 30 mcg/0.3 mL dose" },
+          "addPrefill": { "vaccineCode": { "system": "http://hl7.org/fhir/sid/cvx", "code": "208", "display": "COVID-19, mRNA, LNP-S, PF, 30 mcg/0.3 mL dose" }, "status": "completed", "doseNumber": 1 }
+        },
+        {
+          "id": "performer",
+          "label": "Performer",
+          "summary": "Clinic, pharmacy, or clinician administering the vaccine.",
+          "fhirElement": "Immunization.performer",
+          "coding": { "systemRef": "cvx", "code": "140", "display": "Influenza, seasonal, injectable, preservative free" },
+          "addPrefill": { "vaccineCode": { "system": "http://hl7.org/fhir/sid/cvx", "code": "140", "display": "Influenza, seasonal, injectable, preservative free" }, "status": "completed" }
+        }
+      ]
+    },
+    {
+      "key": "vital-signs",
+      "label": "Vital sign",
+      "plural": "Vital signs",
+      "fhirResourceType": "Observation",
+      "codingSystemRefs": ["loinc"],
+      "elements": [
+        {
+          "id": "blood-pressure",
+          "label": "Blood pressure",
+          "summary": "LOINC blood pressure panel.",
+          "fhirElement": "Observation.code",
+          "coding": { "systemRef": "loinc", "code": "85354-9", "display": "Blood pressure panel with all children optional" },
+          "addPrefill": { "code": "blood-pressure", "loincCode": { "system": "http://loinc.org", "code": "85354-9", "display": "Blood pressure panel with all children optional" }, "unit": "mmHg" }
+        },
+        {
+          "id": "heart-rate",
+          "label": "Heart rate",
+          "summary": "LOINC heart rate observation.",
+          "fhirElement": "Observation.valueQuantity",
+          "coding": { "systemRef": "loinc", "code": "8867-4", "display": "Heart rate" },
+          "addPrefill": { "code": "heart-rate", "loincCode": { "system": "http://loinc.org", "code": "8867-4", "display": "Heart rate" }, "unit": "beats/min" }
+        },
+        {
+          "id": "body-temperature",
+          "label": "Temperature",
+          "summary": "LOINC body temperature observation.",
+          "fhirElement": "Observation.valueQuantity",
+          "coding": { "systemRef": "loinc", "code": "8310-5", "display": "Body temperature" },
+          "addPrefill": { "code": "body-temperature", "loincCode": { "system": "http://loinc.org", "code": "8310-5", "display": "Body temperature" }, "unit": "Cel" }
+        },
+        {
+          "id": "oxygen-saturation",
+          "label": "Oxygen saturation",
+          "summary": "LOINC pulse oximetry oxygen saturation.",
+          "fhirElement": "Observation.valueQuantity",
+          "coding": { "systemRef": "loinc", "code": "59408-5", "display": "Oxygen saturation in arterial blood by pulse oximetry" },
+          "addPrefill": { "code": "oxygen-saturation", "loincCode": { "system": "http://loinc.org", "code": "59408-5", "display": "Oxygen saturation in arterial blood by pulse oximetry" }, "unit": "%" }
+        },
+        {
+          "id": "body-weight",
+          "label": "Body weight",
+          "summary": "LOINC body weight measurement.",
+          "fhirElement": "Observation.valueQuantity",
+          "coding": { "systemRef": "loinc", "code": "29463-7", "display": "Body weight" },
+          "addPrefill": { "code": "body-weight", "loincCode": { "system": "http://loinc.org", "code": "29463-7", "display": "Body weight" }, "unit": "kg" }
+        },
+        {
+          "id": "bmi",
+          "label": "BMI",
+          "summary": "LOINC body mass index measurement.",
+          "fhirElement": "Observation.valueQuantity",
+          "coding": { "systemRef": "loinc", "code": "39156-5", "display": "Body mass index (BMI)" },
+          "addPrefill": { "code": "bmi", "loincCode": { "system": "http://loinc.org", "code": "39156-5", "display": "Body mass index (BMI)" }, "unit": "kg/m2" }
+        }
+      ]
+    },
+    {
+      "key": "providers",
+      "label": "Provider",
+      "plural": "Providers",
+      "fhirResourceType": "PractitionerRole",
+      "codingSystemRefs": ["schemaOrg", "administrative"],
+      "elements": [
+        {
+          "id": "primary-care",
+          "label": "Primary care",
+          "summary": "Primary care clinician or practice.",
+          "fhirElement": "PractitionerRole.code",
+          "codingSystemRefs": ["schemaOrg"],
+          "addPrefill": { "role": "primary-care" }
+        },
+        {
+          "id": "specialist",
+          "label": "Specialist",
+          "summary": "Specialty care clinician.",
+          "fhirElement": "PractitionerRole.specialty",
+          "codingSystemRefs": ["schemaOrg"],
+          "addPrefill": { "role": "specialist" }
+        },
+        {
+          "id": "pharmacy",
+          "label": "Pharmacy",
+          "summary": "Preferred or historical pharmacy.",
+          "fhirElement": "Organization.type",
+          "codingSystemRefs": ["schemaOrg"],
+          "addPrefill": { "role": "pharmacy" }
+        },
+        {
+          "id": "lab",
+          "label": "Laboratory",
+          "summary": "Laboratory or diagnostic service provider.",
+          "fhirElement": "Organization.type",
+          "codingSystemRefs": ["schemaOrg"],
+          "addPrefill": { "role": "lab" }
+        }
+      ]
+    },
+    {
+      "key": "lab-results",
+      "label": "Lab result",
+      "plural": "Lab results",
+      "fhirResourceType": "Observation",
+      "codingSystemRefs": ["loinc"],
+      "elements": [
+        {
+          "id": "glucose",
+          "label": "Glucose",
+          "summary": "LOINC-coded glucose laboratory result.",
+          "fhirElement": "Observation.code",
+          "coding": { "systemRef": "loinc", "code": "2339-0", "display": "Glucose mass/volume in blood" },
+          "addPrefill": { "code": { "system": "http://loinc.org", "code": "2339-0", "display": "Glucose mass/volume in blood" }, "unit": "mg/dL" }
+        },
+        {
+          "id": "hemoglobin-a1c",
+          "label": "Hemoglobin A1c",
+          "summary": "LOINC-coded A1c result.",
+          "fhirElement": "Observation.code",
+          "coding": { "systemRef": "loinc", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood" },
+          "addPrefill": { "code": { "system": "http://loinc.org", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood" }, "unit": "%" }
+        },
+        {
+          "id": "lipids",
+          "label": "Lipids",
+          "summary": "Cholesterol and lipid panel observations.",
+          "fhirElement": "Observation.code",
+          "coding": { "systemRef": "loinc", "code": "24331-1", "display": "Lipid panel" },
+          "addPrefill": { "code": { "system": "http://loinc.org", "code": "24331-1", "display": "Lipid panel" }, "unit": "mg/dL" }
+        },
+        {
+          "id": "interpretation",
+          "label": "Interpretation",
+          "summary": "Normal, abnormal, high, low, or critical result interpretation.",
+          "fhirElement": "Observation.interpretation",
+          "coding": { "systemRef": "loinc", "code": "718-7", "display": "Hemoglobin [Mass/volume] in Blood" },
+          "addPrefill": { "code": { "system": "http://loinc.org", "code": "718-7", "display": "Hemoglobin [Mass/volume] in Blood" }, "interpretation": "normal" }
+        }
+      ]
+    },
+    {
+      "key": "insurance-policies",
+      "label": "Insurance",
+      "plural": "Insurance",
+      "fhirResourceType": "Coverage",
+      "codingSystemRefs": ["administrative"],
+      "elements": [
+        {
+          "id": "medical",
+          "label": "Medical",
+          "summary": "Medical coverage policy.",
+          "fhirElement": "Coverage.type",
+          "codingSystemRefs": ["administrative"],
+          "addPrefill": { "type": "medical" }
+        },
+        {
+          "id": "pharmacy",
+          "label": "Pharmacy",
+          "summary": "Prescription benefit coverage.",
+          "fhirElement": "Coverage.class",
+          "codingSystemRefs": ["administrative"],
+          "addPrefill": { "type": "pharmacy" }
+        },
+        {
+          "id": "member-id",
+          "label": "Member ID",
+          "summary": "Owner-held member identifier for the plan.",
+          "fhirElement": "Coverage.identifier",
+          "codingSystemRefs": ["administrative"],
+          "addPrefill": { "type": "medical" }
+        },
+        {
+          "id": "effective-dates",
+          "label": "Effective dates",
+          "summary": "Coverage start and expiration dates.",
+          "fhirElement": "Coverage.period",
+          "codingSystemRefs": ["administrative"],
+          "addPrefill": { "type": "medical" }
+        }
+      ]
+    },
+    {
+      "key": "documents",
+      "label": "Document",
+      "plural": "Documents",
+      "fhirResourceType": "DocumentReference",
+      "codingSystemRefs": ["loinc"],
+      "elements": [
+        {
+          "id": "summary",
+          "label": "Visit summary",
+          "summary": "LOINC-coded clinical or visit summary metadata.",
+          "fhirElement": "DocumentReference.type",
+          "coding": { "systemRef": "loinc", "code": "34133-9", "display": "Summary of episode note" },
+          "addPrefill": { "documentType": { "system": "http://loinc.org", "code": "34133-9", "display": "Summary of episode note" }, "status": "current" }
+        },
+        {
+          "id": "lab-report",
+          "label": "Lab report",
+          "summary": "Laboratory report document metadata.",
+          "fhirElement": "DocumentReference.type",
+          "coding": { "systemRef": "loinc", "code": "11502-2", "display": "Laboratory report" },
+          "addPrefill": { "documentType": { "system": "http://loinc.org", "code": "11502-2", "display": "Laboratory report" }, "status": "current" }
+        },
+        {
+          "id": "care-plan",
+          "label": "Care plan",
+          "summary": "Plan of care or care coordination document.",
+          "fhirElement": "DocumentReference.category",
+          "coding": { "systemRef": "loinc", "code": "18776-5", "display": "Plan of care note" },
+          "addPrefill": { "documentType": { "system": "http://loinc.org", "code": "18776-5", "display": "Plan of care note" }, "status": "current" }
+        },
+        {
+          "id": "source",
+          "label": "Source",
+          "summary": "Source system, custodian, or pod binary link.",
+          "fhirElement": "DocumentReference.content",
+          "codingSystemRefs": ["administrative"],
+          "addPrefill": { "status": "current" }
+        }
+      ]
+    },
+    {
+      "key": "workflow-tasks",
+      "label": "Workflow task",
+      "plural": "Workflow tasks",
+      "fhirResourceType": "Task",
+      "codingSystemRefs": ["snomedCt"],
+      "elements": [
+        {
+          "id": "review",
+          "label": "Review",
+          "summary": "Owner-tracked review task.",
+          "fhirElement": "Task.intent",
+          "coding": { "systemRef": "snomedCt", "code": "183452005", "display": "Review of medication" },
+          "addPrefill": { "taskType": { "system": "http://snomed.info/id/", "code": "183452005", "display": "Review of medication" }, "status": "requested", "intent": "plan" }
+        },
+        {
+          "id": "follow-up",
+          "label": "Follow-up",
+          "summary": "Care follow-up or next-step task.",
+          "fhirElement": "Task.executionPeriod",
+          "coding": { "systemRef": "snomedCt", "code": "185389009", "display": "Follow-up visit" },
+          "addPrefill": { "taskType": { "system": "http://snomed.info/id/", "code": "185389009", "display": "Follow-up visit" }, "status": "requested", "intent": "plan" }
+        },
+        {
+          "id": "due-date",
+          "label": "Due date",
+          "summary": "Task with a planned due date.",
+          "fhirElement": "Task.executionPeriod",
+          "coding": { "systemRef": "snomedCt", "code": "225358003", "display": "Wound care" },
+          "addPrefill": { "taskType": { "system": "http://snomed.info/id/", "code": "225358003", "display": "Wound care" }, "status": "requested", "intent": "plan" }
+        },
+        {
+          "id": "completed",
+          "label": "Completed",
+          "summary": "Finished owner-held workflow task.",
+          "fhirElement": "Task.status",
+          "coding": { "systemRef": "snomedCt", "code": "308335008", "display": "Patient encounter procedure" },
+          "addPrefill": { "taskType": { "system": "http://snomed.info/id/", "code": "308335008", "display": "Patient encounter procedure" }, "status": "completed", "intent": "plan" }
+        }
+      ]
+    }
+  ]
+}
