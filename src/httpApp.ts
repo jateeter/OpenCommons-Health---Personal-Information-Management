@@ -615,7 +615,7 @@ function allowedEpicMethods(pathname: string): string {
 
 function servePublicAsset(requestPath: string, publicDirectory: string, res: ServerResponse): void {
   const asset = requestPath === '/' ? 'index.html' : requestPath.slice(1);
-  const allowed = new Set(['index.html', 'app.js', 'styles.css', 'api-docs.html', 'terms.html', 'data-disclosure.html', 'opencommons-health-thumbnail.png']);
+  const allowed = new Set(['index.html', 'app.js', 'styles.css', 'api-docs.html', 'terms.html', 'data-disclosure.html', 'semantic-domain-contract.json', 'opencommons-health-thumbnail.png']);
   if (!allowed.has(asset)) return sendJson(res, 404, { error: 'Not found' });
   const filePath = path.join(publicDirectory, asset);
   if (!existsSync(filePath)) return sendJson(res, 404, { error: 'UI asset not found' });
@@ -623,6 +623,7 @@ function servePublicAsset(requestPath: string, publicDirectory: string, res: Ser
     '.html': 'text/html; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
   };
   res.writeHead(200, {
     'content-type': types[path.extname(asset)] ?? 'application/octet-stream',

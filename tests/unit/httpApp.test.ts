@@ -104,6 +104,17 @@ describe('OpenCommons Health HTTP application', () => {
     expect(styles.headers.get('cache-control')).toBe('no-store');
     await styles.text();
 
+    const semanticContract = await fetch(`${baseUrl}/semantic-domain-contract.json`);
+    expect(semanticContract.status).toBe(200);
+    expect(semanticContract.headers.get('content-type')).toContain('application/json');
+    expect(semanticContract.headers.get('cache-control')).toBe('no-store');
+    await expect(semanticContract.json()).resolves.toMatchObject({
+      contractId: 'opencommons-health.semantic-domain-contract',
+      domains: expect.arrayContaining([
+        expect.objectContaining({ key: 'vital-signs' }),
+      ]),
+    });
+
     const thumbnail = await fetch(`${baseUrl}/opencommons-health-thumbnail.png`);
     expect(thumbnail.status).toBe(200);
     expect(thumbnail.headers.get('cache-control')).toBe('public, max-age=3600');
