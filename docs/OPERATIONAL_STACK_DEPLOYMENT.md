@@ -117,6 +117,9 @@ registration values still come from deployment configuration.
 | `EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE` | Dynamic/private key auth | Local untracked private key used to sign JWT assertions. In Docker use `/run/opencommons-secrets/epic-dynamic-client/private-key.pem`. |
 | `EPIC_CLIENT_ASSERTION_KID` | Dynamic/private key auth | Key id matching the registered public JWKS. |
 | `EPIC_CLIENT_ASSERTION_ALG` | Dynamic/private key auth | `RS384` default, or `RS256` when that is the registered key algorithm. |
+| `EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE` | No | Optional untracked JWKS file used only for PHI-safe diagnostics that verify `kid` and signing algorithm alignment. |
+| `EPIC_DYNAMIC_CLIENT_METADATA_FILE` | No | Optional untracked metadata file used only for PHI-safe diagnostics that verify local dynamic-client identity, redirect, and FHIR base-url alignment. |
+| `EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE` | No | Optional untracked DCR request template used only for PHI-safe diagnostics that verify `software_id`, JWKS, and grant-type alignment. |
 | `EPIC_CLIENT_SECRET` | Conditional | Optional confidential-client secret. Prefer file-based secrets. |
 | `EPIC_CLIENT_SECRET_FILE` | Conditional | Optional path to an untracked confidential-client secret file. |
 | `EPIC_REDIRECT_URI` | Sandbox/production | Callback URL registered with Epic. |

@@ -1,4 +1,7 @@
 import { generateKeyPairSync } from 'node:crypto';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { decryptJson, EpicIntegrationService, type EpicConnectionRecord } from '../../../src/integrations/epic';
 import type { DomainRepository } from '../../../src/httpApp';
 
@@ -362,6 +365,66 @@ describe('Epic MVP integration service', () => {
     });
     expect(repository.record?.encryptedGrant).toBeDefined();
     expect(JSON.stringify(repository.record)).not.toContain('dynamic-access-token');
+  });
+
+  it('reports PHI-safe dynamic client artifact consistency checks', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'opencommons-epic-artifacts-'));
+    const jwksFile = join(directory, 'jwks.json');
+    const metadataFile = join(directory, 'metadata.json');
+    const registrationRequestFile = join(directory, 'dynamic-client-registration.request.json');
+    try {
+      writeFileSync(jwksFile, JSON.stringify({
+        keys: [{ kty: 'RSA', kid: 'kid-123', alg: 'RS384', n: 'public-modulus-placeholder', e: 'AQAB' }],
+      }));
+      writeFileSync(metadataFile, JSON.stringify({
+        issuerSubject: 'dynamic-client-value-123',
+        softwareId: 'software-client-value-123',
+        fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
+        redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
+      }));
+      writeFileSync(registrationRequestFile, JSON.stringify({
+        software_id: 'software-client-value-123',
+        grant_types: ['urn:ietf:params:oauth:grant-type:jwt-bearer'],
+        jwks: { keys: [{ kid: 'kid-123' }] },
+      }));
+      const sandboxConfig = {
+        enabled: true,
+        mode: 'sandbox' as const,
+        connectFlow: 'dynamic_jwt_bearer' as const,
+        clientAuthMethod: 'auto' as const,
+        fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
+        clientId: 'software-client-value-123',
+        dynamicClientId: 'dynamic-client-value-123',
+        clientAssertionPrivateKey: testPrivateKey(),
+        clientAssertionKeyId: 'kid-123',
+        clientAssertionAlgorithm: 'RS384' as const,
+        dynamicClientPublicJwksFile: jwksFile,
+        dynamicClientMetadataFile: metadataFile,
+        dynamicClientRegistrationRequestFile: registrationRequestFile,
+        redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
+        scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.rs'],
+        encryptionKey: 'unit-test-epic-grant-key',
+        syncOnStartup: false,
+      };
+      const service = new EpicIntegrationService(sandboxConfig, new FakeEpicRepository() as never, {});
+
+      const diagnostics = await service.diagnostics();
+
+      expect(diagnostics.checks).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'jwt-bearer-audience', status: 'ok' }),
+        expect.objectContaining({ name: 'dynamic-client-jwks-kid', status: 'ok' }),
+        expect.objectContaining({ name: 'dynamic-client-jwks-alg', status: 'ok' }),
+        expect.objectContaining({ name: 'dynamic-client-metadata-client-id', status: 'ok' }),
+        expect.objectContaining({ name: 'dynamic-client-metadata-software-id', status: 'ok' }),
+        expect.objectContaining({ name: 'dynamic-client-registration-software-id', status: 'ok' }),
+        expect.objectContaining({ name: 'dynamic-client-registration-grant-type', status: 'ok' }),
+      ]));
+      expect(JSON.stringify(diagnostics)).not.toContain('software-client-value-123');
+      expect(JSON.stringify(diagnostics)).not.toContain('dynamic-client-value-123');
+      expect(JSON.stringify(diagnostics)).not.toContain('unit-test-epic-grant-key');
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('can run optional live SMART discovery diagnostics without token exchange', async () => {

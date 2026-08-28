@@ -30,8 +30,12 @@ export interface EpicRuntimeConfig {
   dynamicClientId?: string;
   clientSecret?: string;
   clientAssertionPrivateKey?: string;
+  clientAssertionPrivateKeyFile?: string;
   clientAssertionKeyId?: string;
   clientAssertionAlgorithm: EpicClientAssertionAlgorithm;
+  dynamicClientPublicJwksFile?: string;
+  dynamicClientMetadataFile?: string;
+  dynamicClientRegistrationRequestFile?: string;
   redirectUri?: string;
   scopes: string[];
   encryptionKey?: string;
@@ -104,8 +108,12 @@ export function loadEpicRuntimeConfig(env: Environment = process.env): EpicRunti
     dynamicClientId: env.EPIC_DYNAMIC_CLIENT_ID?.trim() || undefined,
     clientSecret: loadOptionalSecret(env, 'EPIC_CLIENT_SECRET', 'EPIC_CLIENT_SECRET_FILE'),
     clientAssertionPrivateKey: loadOptionalSecret(env, 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY', 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE'),
+    clientAssertionPrivateKeyFile: env.EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE?.trim() || undefined,
     clientAssertionKeyId: env.EPIC_CLIENT_ASSERTION_KID?.trim() || undefined,
     clientAssertionAlgorithm: parseEpicClientAssertionAlgorithm(env.EPIC_CLIENT_ASSERTION_ALG),
+    dynamicClientPublicJwksFile: env.EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE?.trim() || undefined,
+    dynamicClientMetadataFile: env.EPIC_DYNAMIC_CLIENT_METADATA_FILE?.trim() || undefined,
+    dynamicClientRegistrationRequestFile: env.EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE?.trim() || undefined,
     redirectUri: optionalHttpUrl(env, 'EPIC_REDIRECT_URI'),
     scopes,
     encryptionKey: env.EPIC_GRANT_ENCRYPTION_KEY?.trim() || undefined,

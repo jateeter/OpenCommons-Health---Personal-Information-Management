@@ -110,7 +110,7 @@ export class EpicSmartClient {
     const clientId = this.requireDynamicClientId();
     const params = new URLSearchParams({
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: this.jwtBearerGrantAssertion(clientId),
+      assertion: this.jwtBearerGrantAssertion(clientId, configuration.token_endpoint),
       client_id: clientId,
     });
     return this.tokenRequest(configuration.token_endpoint, params);
@@ -430,9 +430,9 @@ export class EpicSmartClient {
     });
   }
 
-  private jwtBearerGrantAssertion(subject = this.requireDynamicClientId()): string {
+  private jwtBearerGrantAssertion(subject = this.requireDynamicClientId(), tokenEndpoint: string): string {
     return this.signedJwtAssertion({
-      audience: ensureTrailingSlash(this.requireFhirBaseUrl()),
+      audience: tokenEndpoint,
       issuer: subject,
       subject,
     });
