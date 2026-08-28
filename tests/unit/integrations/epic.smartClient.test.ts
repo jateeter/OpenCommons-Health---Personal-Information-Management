@@ -232,7 +232,7 @@ describe('EpicSmartClient', () => {
       expect(assertion.payload).toMatchObject({
         iss: 'dynamic-client-id',
         sub: 'dynamic-client-id',
-        aud: 'https://epic.example.test/FHIR/R4/',
+        aud: 'https://epic.example.test/oauth2/token',
       });
       return jsonResponse({
         access_token: 'access-123',

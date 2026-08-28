@@ -23,6 +23,9 @@ EPIC_DYNAMIC_CLIENT_ID=<dynamic-client-id-returned-by-Epic-DCR>
 EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=.secrets/epic-dynamic-client/private-key.pem
 EPIC_CLIENT_ASSERTION_KID=<kid-from-the-registered-jwks>
 EPIC_CLIENT_ASSERTION_ALG=RS384
+EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE=.secrets/epic-dynamic-client/jwks.json
+EPIC_DYNAMIC_CLIENT_METADATA_FILE=.secrets/epic-dynamic-client/metadata.json
+EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE=.secrets/epic-dynamic-client/dynamic-client-registration.request.json
 ```
 
 For Docker deployment, mount `.secrets` through the compose-provided read-only
@@ -55,8 +58,9 @@ EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=/run/opencommons-secrets/epic-dynamic-cli
   payloads.
 - The JWT header uses the configured `kid` and algorithm.
 - For the dynamic JWT bearer grant, the JWT payload uses the dynamic client id
-  as both `iss` and `sub`, the Epic FHIR base URL as `aud`, and short-lived
-  `iat`/`nbf`/`exp` claims. This JWT is sent as the token request `assertion`.
+  as both `iss` and `sub`, the discovered Epic token endpoint as `aud`, and
+  short-lived `iat`/`nbf`/`exp` claims. This JWT is sent as the token request
+  `assertion`.
 - For `private_key_jwt` client authentication on authorization-code or refresh
   token calls, the JWT payload uses the client id as `iss` and `sub`, the Epic
   token endpoint as `aud`, and is sent as `client_assertion` with

@@ -187,6 +187,9 @@ describe('runtime configuration', () => {
         EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE: file,
         EPIC_CLIENT_ASSERTION_KID: 'kid-123',
         EPIC_CLIENT_ASSERTION_ALG: 'RS256',
+        EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE: '/local/secrets/jwks.json',
+        EPIC_DYNAMIC_CLIENT_METADATA_FILE: '/local/secrets/metadata.json',
+        EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE: '/local/secrets/dynamic-client-registration.request.json',
         EPIC_REDIRECT_URI: 'https://app.example.org/api/integrations/epic/connect/callback',
         EPIC_GRANT_ENCRYPTION_KEY: 'local-test-key',
       })).toMatchObject({
@@ -195,8 +198,12 @@ describe('runtime configuration', () => {
         clientId: 'software-client',
         dynamicClientId: 'dynamic-client',
         clientAssertionPrivateKey: expect.stringContaining('BEGIN PRIVATE KEY'),
+        clientAssertionPrivateKeyFile: file,
         clientAssertionKeyId: 'kid-123',
         clientAssertionAlgorithm: 'RS256',
+        dynamicClientPublicJwksFile: '/local/secrets/jwks.json',
+        dynamicClientMetadataFile: '/local/secrets/metadata.json',
+        dynamicClientRegistrationRequestFile: '/local/secrets/dynamic-client-registration.request.json',
       });
     } finally {
       rmSync(directory, { recursive: true, force: true });

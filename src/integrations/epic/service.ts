@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import type { EpicRuntimeConfig } from '../../runtimeConfig';
 import type { DomainRepository } from '../../httpApp';
 import { ValidationError } from '../../errors';
@@ -155,11 +156,17 @@ export class EpicIntegrationService {
       add('dynamic-client-id', this.config.dynamicClientId ? 'ok' : 'failed', this.config.dynamicClientId
         ? 'Epic dynamic client id is configured; value is not reported.'
         : 'EPIC_DYNAMIC_CLIENT_ID is required for dynamic JWT bearer connection.');
+      add('jwt-bearer-audience', 'ok', 'Dynamic JWT bearer assertions use the discovered Epic token endpoint as the JWT aud claim.');
     }
     if (this.config.connectFlow === 'dynamic_jwt_bearer' || this.config.clientAuthMethod === 'private_key_jwt') {
       add('client-assertion-key', this.config.clientAssertionPrivateKey ? 'ok' : 'failed', this.config.clientAssertionPrivateKey
         ? `Epic JWT signing key is configured for ${this.config.clientAssertionAlgorithm}; key material is not reported.`
         : 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE or EPIC_CLIENT_ASSERTION_PRIVATE_KEY is required for JWT bearer/private_key_jwt authentication.');
+    }
+    if (this.config.connectFlow === 'dynamic_jwt_bearer') {
+      for (const check of dynamicClientArtifactChecks(this.config)) {
+        checks.push(check);
+      }
     }
 
     if (!live) {
@@ -664,6 +671,110 @@ function safeUrlParts(value: string | undefined): { host: string; pathname: stri
     return { host: url.host, pathname: url.pathname || '/' };
   } catch {
     return undefined;
+  }
+}
+
+function dynamicClientArtifactChecks(config: EpicRuntimeConfig): EpicDiagnosticCheck[] {
+  const checks: EpicDiagnosticCheck[] = [];
+  const add = (name: string, status: EpicDiagnosticCheck['status'], detail: string): void => {
+    checks.push({ name, status, detail });
+  };
+  const hasAnyArtifactPath = Boolean(
+    config.dynamicClientPublicJwksFile
+    || config.dynamicClientMetadataFile
+    || config.dynamicClientRegistrationRequestFile,
+  );
+  if (!hasAnyArtifactPath) {
+    add('dynamic-client-artifacts', 'skipped', 'Optional local dynamic-client artifact files are not configured; live token exchange can still run, but artifact consistency cannot be prechecked.');
+    return checks;
+  }
+
+  if (config.dynamicClientPublicJwksFile) {
+    const jwks = readJsonObject(config.dynamicClientPublicJwksFile);
+    if (!jwks) {
+      add('dynamic-client-jwks', 'failed', 'Configured local public JWKS file could not be read as JSON; path and key material are not reported.');
+    } else {
+      const key = Array.isArray(jwks.keys)
+        ? jwks.keys.find((entry) => isRecord(entry) && entry.kid === config.clientAssertionKeyId)
+        : undefined;
+      add('dynamic-client-jwks-kid', key ? 'ok' : 'failed', key
+        ? 'Configured KID is present in the local public JWKS.'
+        : 'Configured KID was not found in the local public JWKS; values are not reported.');
+      if (isRecord(key)) {
+        add('dynamic-client-jwks-alg', key.alg === config.clientAssertionAlgorithm ? 'ok' : 'failed', key.alg === config.clientAssertionAlgorithm
+          ? 'Configured signing algorithm matches the local public JWKS.'
+          : 'Configured signing algorithm does not match the local public JWKS; values are not reported.');
+      }
+    }
+  } else {
+    add('dynamic-client-jwks', 'skipped', 'EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE is not configured; KID/JWKS alignment was not prechecked.');
+  }
+
+  if (config.dynamicClientMetadataFile) {
+    const metadata = readJsonObject(config.dynamicClientMetadataFile);
+    if (!metadata) {
+      add('dynamic-client-metadata', 'failed', 'Configured local dynamic-client metadata file could not be read as JSON; path and values are not reported.');
+    } else {
+      add('dynamic-client-metadata-client-id', metadata.issuerSubject === config.dynamicClientId ? 'ok' : 'failed', metadata.issuerSubject === config.dynamicClientId
+        ? 'Configured dynamic client id matches local metadata issuer/subject.'
+        : 'Configured dynamic client id does not match local metadata issuer/subject; values are not reported.');
+      add('dynamic-client-metadata-software-id', metadata.softwareId === config.clientId ? 'ok' : 'failed', metadata.softwareId === config.clientId
+        ? 'Configured Epic app client id matches local metadata software id.'
+        : 'Configured Epic app client id does not match local metadata software id; values are not reported.');
+      add('dynamic-client-metadata-fhir-base', normalizedUrlString(metadata.fhirBaseUrl) === normalizedUrlString(config.fhirBaseUrl) ? 'ok' : 'failed', normalizedUrlString(metadata.fhirBaseUrl) === normalizedUrlString(config.fhirBaseUrl)
+        ? 'Configured FHIR base URL matches local dynamic-client metadata.'
+        : 'Configured FHIR base URL does not match local dynamic-client metadata; values are not reported.');
+      add('dynamic-client-metadata-redirect', normalizedUrlString(metadata.redirectUri) === normalizedUrlString(config.redirectUri) ? 'ok' : 'failed', normalizedUrlString(metadata.redirectUri) === normalizedUrlString(config.redirectUri)
+        ? 'Configured redirect URI matches local dynamic-client metadata.'
+        : 'Configured redirect URI does not match local dynamic-client metadata; values are not reported.');
+    }
+  } else {
+    add('dynamic-client-metadata', 'skipped', 'EPIC_DYNAMIC_CLIENT_METADATA_FILE is not configured; dynamic-client metadata alignment was not prechecked.');
+  }
+
+  if (config.dynamicClientRegistrationRequestFile) {
+    const registration = readJsonObject(config.dynamicClientRegistrationRequestFile);
+    if (!registration) {
+      add('dynamic-client-registration-request', 'failed', 'Configured local dynamic-client registration request file could not be read as JSON; path and values are not reported.');
+    } else {
+      const grantTypes = Array.isArray(registration.grant_types) ? registration.grant_types : [];
+      add('dynamic-client-registration-software-id', registration.software_id === config.clientId ? 'ok' : 'failed', registration.software_id === config.clientId
+        ? 'Configured Epic app client id matches the local registration request software_id.'
+        : 'Configured Epic app client id does not match the local registration request software_id; values are not reported.');
+      add('dynamic-client-registration-grant-type', grantTypes.includes('urn:ietf:params:oauth:grant-type:jwt-bearer') ? 'ok' : 'failed', grantTypes.includes('urn:ietf:params:oauth:grant-type:jwt-bearer')
+        ? 'Local registration request includes the JWT bearer grant type.'
+        : 'Local registration request does not include the JWT bearer grant type.');
+      add('dynamic-client-registration-jwks', isRecord(registration.jwks) && Array.isArray(registration.jwks.keys) && registration.jwks.keys.length > 0 ? 'ok' : 'failed',
+        isRecord(registration.jwks) && Array.isArray(registration.jwks.keys) && registration.jwks.keys.length > 0
+          ? 'Local registration request includes a public JWKS.'
+          : 'Local registration request does not include a usable public JWKS.');
+    }
+  } else {
+    add('dynamic-client-registration-request', 'skipped', 'EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE is not configured; DCR request alignment was not prechecked.');
+  }
+
+  return checks;
+}
+
+function readJsonObject(path: string): Record<string, unknown> | undefined {
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizedUrlString(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  try {
+    return new URL(value).href.replace(/\/$/, '');
+  } catch {
+    return value.trim().replace(/\/$/, '');
   }
 }
 
