@@ -66,7 +66,7 @@ export interface EpicConnectionPublicStatus {
   mode: 'mock' | 'sandbox' | 'production';
   status: EpicConnectionStatus;
   fhirBaseUrl?: string;
-  patientId?: string;
+  hasPatientContext?: boolean;
   requestedScopes: string[];
   grantedScopes: string[];
   connectedAt?: string;
@@ -179,7 +179,6 @@ export interface EpicPatientResourceFetch {
 export interface EpicImportProvenance {
   sourceSystem: 'epic';
   sourceFhirBaseUrl: string;
-  sourcePatientId: string;
   sourceResourceType: string;
   sourceResourceId: string;
   sourceVersion?: string;
@@ -232,7 +231,7 @@ export interface EpicImportPreview {
   importJobId: string;
   source: 'mock' | 'epic';
   generatedAt: string;
-  patientId: string;
+  hasPatientContext: boolean;
   sourceDiagnostics: EpicSourceDiagnostic[];
   changes: EpicImportCandidate[];
   reconciliationSummary: ReconciliationSummary;

@@ -208,7 +208,7 @@ describe('OpenCommons Health HTTP application', () => {
     const connectCallback = jest.fn(async () => ({
       mode: 'sandbox',
       status: 'connected',
-      patientId: 'patient-123',
+      hasPatientContext: true,
       grantedScopes: ['openid'],
     }));
     context.epic = {
@@ -225,7 +225,7 @@ describe('OpenCommons Health HTTP application', () => {
       data: {
         mode: 'sandbox',
         status: 'connected',
-        patientId: 'patient-123',
+        hasPatientContext: true,
       },
     });
   });

@@ -431,7 +431,7 @@ export const OPENAPI_DOCUMENT = {
         mode: enumSchema(['mock', 'sandbox', 'production']),
         status: enumSchema(['disabled', 'not-connected', 'authorization-started', 'connected', 'needs-reconnect', 'disconnected']),
         fhirBaseUrl: uri('Epic FHIR base URL'),
-        patientId: string('Epic FHIR patient id returned by SMART launch context'),
+        hasPatientContext: { type: 'boolean', description: 'True when Epic returned patient launch context; the patient identifier is never exposed through public APIs.' },
         requestedScopes: { type: 'array', items: { type: 'string' } },
         grantedScopes: { type: 'array', items: { type: 'string' } },
         connectedAt: dateTime(),
@@ -519,11 +519,11 @@ export const OPENAPI_DOCUMENT = {
           }),
         },
       }),
-      EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'patientId', 'sourceDiagnostics', 'changes', 'reconciliationSummary'], {
+      EpicImportPreview: objectSchema(['importJobId', 'source', 'generatedAt', 'hasPatientContext', 'sourceDiagnostics', 'changes', 'reconciliationSummary'], {
         importJobId: string('Import job id'),
         source: enumSchema(['mock', 'epic']),
         generatedAt: dateTime(),
-        patientId: string('Epic patient id'),
+        hasPatientContext: { type: 'boolean', description: 'True when the preview used Epic patient launch context; the patient identifier is never exposed through public APIs.' },
         sourceDiagnostics: {
           type: 'array',
           items: objectSchema(['resourceType', 'operation', 'status', 'entryCount', 'mappableCount', 'detail'], {
@@ -590,10 +590,9 @@ export const OPENAPI_DOCUMENT = {
         byDomain: { type: 'array', items: { $ref: '#/components/schemas/ReconciliationDomainSummary' } },
         advisories: { type: 'array', items: string('Owner review advisory') },
       }),
-      EpicImportProvenance: objectSchema(['sourceSystem', 'sourceFhirBaseUrl', 'sourcePatientId', 'sourceResourceType', 'sourceResourceId', 'mapperVersion'], {
+      EpicImportProvenance: objectSchema(['sourceSystem', 'sourceFhirBaseUrl', 'sourceResourceType', 'sourceResourceId', 'mapperVersion'], {
         sourceSystem: { type: 'string', const: 'epic' },
         sourceFhirBaseUrl: uri('Epic FHIR base URL'),
-        sourcePatientId: string('Epic patient id'),
         sourceResourceType: string('FHIR resource type'),
         sourceResourceId: string('FHIR resource id'),
         sourceVersion: string('FHIR meta.versionId'),

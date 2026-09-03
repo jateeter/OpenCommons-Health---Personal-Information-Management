@@ -253,11 +253,16 @@ function waitForCallback(callbackUrl, expectedState, timeout) {
         reject(new Error(`Epic authorization returned error: ${error}`));
         return;
       }
-      if (!code || state !== expectedState) {
+      if (!code) {
+        res.writeHead(202, { 'content-type': 'text/html' });
+        res.end('<h1>Epic authorization listener is active</h1><p>No authorization code was present on this request. Return to the current Epic authorization URL and continue.</p>');
+        console.log('Ignored a callback request with no authorization code.');
+        return;
+      }
+      if (state !== expectedState) {
         res.writeHead(400, { 'content-type': 'text/html' });
-        res.end('<h1>Epic authorization callback was invalid</h1><p>You can return to Codex.</p>');
-        cleanup();
-        reject(new Error('Epic authorization callback was missing code or had mismatched state.'));
+        res.end('<h1>Epic authorization callback state did not match</h1><p>This looks like a stale authorization URL. Return to the current Epic authorization URL and continue.</p>');
+        console.log('Ignored a callback request with a stale or mismatched state.');
         return;
       }
       res.writeHead(200, { 'content-type': 'text/html' });
