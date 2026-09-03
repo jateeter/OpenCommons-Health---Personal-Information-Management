@@ -223,7 +223,6 @@ function provenanceFor(
   return {
     sourceSystem: 'epic',
     sourceFhirBaseUrl: context.fhirBaseUrl,
-    sourcePatientId: context.patientId,
     sourceResourceType: resource.resourceType,
     sourceResourceId: resource.id || 'unknown',
     sourceVersion: resource.meta?.versionId,

@@ -44,9 +44,10 @@ describe('Epic MVP integration service', () => {
       enabled: true,
       mode: 'mock',
       status: 'connected',
-      patientId: 'epic-patient-mock-001',
+      hasPatientContext: true,
       grantedScopes: config.scopes,
     });
+    expect(status).not.toHaveProperty('patientId');
     expect(status).not.toHaveProperty('encryptedGrant');
     expect(JSON.stringify(status)).not.toContain('refresh-token');
     expect(repository.record?.encryptedGrant).toBeDefined();
@@ -67,7 +68,8 @@ describe('Epic MVP integration service', () => {
 
     const preview = await service.preview();
 
-    expect(preview.patientId).toBe('epic-patient-mock-001');
+    expect(preview.hasPatientContext).toBe(true);
+    expect(preview).not.toHaveProperty('patientId');
     expect(new Set(preview.changes.map((change) => change.domain))).toEqual(new Set([
       'profiles',
       'conditions',
@@ -302,9 +304,10 @@ describe('Epic MVP integration service', () => {
     expect(status).toMatchObject({
       mode: 'sandbox',
       status: 'connected',
-      patientId: 'live-patient-id',
+      hasPatientContext: true,
       grantedScopes: ['openid', 'fhirUser', 'patient/Patient.rs'],
     });
+    expect(status).not.toHaveProperty('patientId');
     expect(JSON.stringify(status)).not.toContain('live-access-token');
     expect(JSON.stringify(status)).not.toContain('live-refresh-token');
     expect(repository.record?.encryptedGrant).toBeDefined();
