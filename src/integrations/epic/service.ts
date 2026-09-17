@@ -780,7 +780,8 @@ function normalizedUrlString(value: unknown): string | undefined {
 
 function hasConfiguredReadScope(scopes: string[], resourceType: string): boolean {
   return scopes.some((scope) => {
-    if (scope === 'patient/*.rs' || scope === 'patient/*.*' || scope === 'patient/*.read') return true;
+    if (scope === 'patient/*.r' || scope === 'patient/*.rs' || scope === 'patient/*.*' || scope === 'patient/*.read') return true;
+    if (scope === `patient/${resourceType}.r`) return true;
     return scope === `patient/${resourceType}.rs`
       || scope === `patient/${resourceType}.read`
       || scope === `patient/${resourceType}.*`;

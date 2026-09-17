@@ -226,6 +226,7 @@ describe('EpicSmartClient', () => {
       const body = new URLSearchParams(String(init?.body));
       expect(body.get('grant_type')).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
       expect(body.get('client_id')).toBe('dynamic-client-id');
+      expect(body.get('scope')).toBe('openid fhirUser launch/patient patient/Patient.rs');
       expect(body.has('client_assertion')).toBe(false);
       const assertion = decodeJwt(body.get('assertion') as string);
       expect(assertion.header).toMatchObject({ alg: 'RS384', typ: 'JWT', kid: 'kid-123' });

@@ -100,7 +100,10 @@ export abstract class BaseRepository<T extends { url?: string }> {
    */
   async findAll(): Promise<T[]> {
     const containerUrl = this.client.containerUrlFor(this.typeName);
-    const urls = await this.client.listResources(containerUrl);
+    const urls = await this.client.listResources(containerUrl).catch((error: unknown) => {
+      if (isNotFound(error)) return [];
+      throw error;
+    });
     const results = await Promise.all(urls.map((u) => this.findByUrl(u)));
     return results.filter((r): r is NonNullable<typeof r> => r !== null) as T[];
   }
