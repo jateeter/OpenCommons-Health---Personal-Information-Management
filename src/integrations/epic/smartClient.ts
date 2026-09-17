@@ -112,6 +112,7 @@ export class EpicSmartClient {
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion: this.jwtBearerGrantAssertion(clientId, configuration.token_endpoint),
       client_id: clientId,
+      scope: this.config.scopes.join(' '),
     });
     return this.tokenRequest(configuration.token_endpoint, params);
   }

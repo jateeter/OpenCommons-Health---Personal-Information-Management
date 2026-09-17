@@ -39,6 +39,8 @@ class BrokenInsuranceRepository extends BaseRepository<MinimalEntity> {
 describe('BaseRepository ShEx RDF validation', () => {
   const client = {
     ensureContainer: jest.fn(async () => 'http://pod/health-pim/insurancepolicys/'),
+    containerUrlFor: jest.fn(() => 'http://pod/health-pim/insurancepolicys/'),
+    listResources: jest.fn(async () => []),
     createEmptyDataset: jest.fn(() => createSolidDataset()),
     saveDataset: jest.fn(async (_url: string, dataset: unknown) => dataset),
     getDataset: jest.fn(async (url: string) => setThing(
@@ -66,5 +68,13 @@ describe('BaseRepository ShEx RDF validation', () => {
   it('uses ValidationError for ShEx failures', async () => {
     const repository = new BrokenInsuranceRepository(client);
     await expect(repository.create({})).rejects.toThrow(ValidationError);
+  });
+
+  it('treats a missing Solid container as an empty result set', async () => {
+    (client.listResources as jest.Mock).mockRejectedValueOnce({ response: { status: 404 } });
+    const repository = new BrokenInsuranceRepository(client);
+
+    await expect(repository.findAll()).resolves.toEqual([]);
+    expect(client.listResources).toHaveBeenCalledWith('http://pod/health-pim/insurancepolicys/');
   });
 });

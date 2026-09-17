@@ -110,6 +110,7 @@ async function main() {
     keyId: required(loadEnv(envFile), 'EPIC_CLIENT_ASSERTION_KID'),
     privateKeyPath: resolveRepoPath(required(loadEnv(envFile), 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE')),
     algorithm: loadEnv(envFile).EPIC_CLIENT_ASSERTION_ALG ?? 'RS384',
+    scopes: scopes(loadEnv(envFile)),
   });
 
   console.log('');
@@ -315,7 +316,7 @@ async function registerDynamicClient(endpoint, bearerToken, body) {
   return responseBody;
 }
 
-async function tryDynamicBearerGrant({ tokenEndpoint, dynamicClientId, keyId, privateKeyPath, algorithm }) {
+async function tryDynamicBearerGrant({ tokenEndpoint, dynamicClientId, keyId, privateKeyPath, algorithm, scopes }) {
   try {
     const privateKey = readFileSync(privateKeyPath, 'utf8');
     const now = Math.floor(Date.now() / 1000);
@@ -329,6 +330,7 @@ async function tryDynamicBearerGrant({ tokenEndpoint, dynamicClientId, keyId, pr
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion,
       client_id: dynamicClientId,
+      scope: scopes.join(' '),
     });
     const response = await fetch(tokenEndpoint, {
       method: 'POST',
