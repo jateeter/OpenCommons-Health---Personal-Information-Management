@@ -515,13 +515,20 @@ export class EpicIntegrationService {
     }
     let grant = decryptJson<EpicGrant>(record.encryptedGrant, this.config.encryptionKey as string);
     if (this.config.mode !== 'mock' && grantNeedsRefresh(grant)) {
-      grant = await this.smartClient.refreshGrant(grant);
+      const refreshedBy = this.config.connectFlow === 'dynamic_jwt_bearer' && !grant.refreshToken
+        ? 'dynamic-jwt-bearer'
+        : 'refresh-token';
+      grant = refreshedBy === 'dynamic-jwt-bearer'
+        ? await this.smartClient.exchangeJwtBearerGrant()
+        : await this.smartClient.refreshGrant(grant);
       const refreshed = this.withAudit({
         ...record,
         encryptedGrant: encryptJson(grant, this.config.encryptionKey as string),
         grantedScopes: grant.scope?.split(/\s+/).filter(Boolean) ?? record.grantedScopes,
         patientId: grant.patient ?? record.patientId,
-      }, 'token-refresh', 'ok', 'Epic access token refreshed using encrypted pod-owned grant state.');
+      }, 'token-refresh', 'ok', refreshedBy === 'dynamic-jwt-bearer'
+        ? 'Epic access token renewed with dynamic JWT bearer grant because no refresh token was issued.'
+        : 'Epic access token refreshed using encrypted pod-owned refresh token state.');
       await this.connectionRepository?.save(refreshed);
       return { record: refreshed, grant };
     }
