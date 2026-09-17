@@ -2,7 +2,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { decryptJson, EpicIntegrationService, type EpicConnectionRecord } from '../../../src/integrations/epic';
+import { decryptJson, encryptJson, EpicIntegrationService, type EpicConnectionRecord } from '../../../src/integrations/epic';
 import type { DomainRepository } from '../../../src/httpApp';
 
 class FakeEpicRepository {
@@ -368,6 +368,82 @@ describe('Epic MVP integration service', () => {
     });
     expect(repository.record?.encryptedGrant).toBeDefined();
     expect(JSON.stringify(repository.record)).not.toContain('dynamic-access-token');
+  });
+
+  it('renews expired dynamic JWT bearer grants without requiring a refresh token', async () => {
+    const sandboxConfig = {
+      enabled: true,
+      mode: 'sandbox' as const,
+      connectFlow: 'dynamic_jwt_bearer' as const,
+      clientAuthMethod: 'auto' as const,
+      fhirBaseUrl: 'https://epic.example.test/FHIR/R4',
+      clientId: 'software-client-id',
+      dynamicClientId: 'dynamic-client-id',
+      clientAssertionPrivateKey: testPrivateKey(),
+      clientAssertionKeyId: 'kid-123',
+      clientAssertionAlgorithm: 'RS384' as const,
+      redirectUri: 'http://localhost:8080/api/integrations/epic/connect/callback',
+      scopes: ['openid', 'fhirUser', 'launch/patient', 'patient/Patient.r', 'patient/Patient.s'],
+      encryptionKey: 'unit-test-epic-grant-key',
+      syncOnStartup: false,
+    };
+    const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/.well-known/smart-configuration')) {
+        return jsonResponse({
+          authorization_endpoint: 'https://epic.example.test/oauth2/authorize',
+          token_endpoint: 'https://epic.example.test/oauth2/token',
+        });
+      }
+      if (url === 'https://epic.example.test/oauth2/token') {
+        const body = new URLSearchParams(String(init?.body));
+        expect(body.get('grant_type')).toBe('urn:ietf:params:oauth:grant-type:jwt-bearer');
+        expect(body.get('scope')).toBe('openid fhirUser launch/patient patient/Patient.r patient/Patient.s');
+        return jsonResponse({
+          access_token: 'renewed-dynamic-access-token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+          scope: 'openid fhirUser launch/patient patient/Patient.r patient/Patient.s',
+          patient: 'dynamic-patient-id',
+        });
+      }
+      throw new Error(`Unexpected URL ${url}`);
+    });
+    const repository = new FakeEpicRepository();
+    const record: EpicConnectionRecord = {
+      status: 'connected',
+      mode: 'sandbox',
+      fhirBaseUrl: sandboxConfig.fhirBaseUrl,
+      patientId: 'dynamic-patient-id',
+      requestedScopes: sandboxConfig.scopes,
+      grantedScopes: sandboxConfig.scopes,
+      connectedAt: new Date(Date.now() - 3_600_000).toISOString(),
+      encryptedGrant: encryptJson({
+        accessToken: 'expired-dynamic-access-token',
+        tokenType: 'Bearer',
+        scope: sandboxConfig.scopes.join(' '),
+        patient: 'dynamic-patient-id',
+        issuedAt: new Date(Date.now() - 7_200_000).toISOString(),
+        expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      }, sandboxConfig.encryptionKey),
+      audit: [],
+    };
+    repository.record = record;
+    const service = new EpicIntegrationService(sandboxConfig, repository as never, {}, fetchMock as never);
+
+    const active = await (service as unknown as {
+      ensureFreshGrant(record: EpicConnectionRecord): Promise<{ record: EpicConnectionRecord; grant: { accessToken?: string; refreshToken?: string } }>;
+    }).ensureFreshGrant(record);
+
+    expect(active.grant).toMatchObject({ accessToken: 'renewed-dynamic-access-token' });
+    expect(active.grant.refreshToken).toBeUndefined();
+    expect(repository.record?.audit).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        action: 'token-refresh',
+        status: 'ok',
+        detail: 'Epic access token renewed with dynamic JWT bearer grant because no refresh token was issued.',
+      }),
+    ]));
+    expect(JSON.stringify(repository.record)).not.toContain('renewed-dynamic-access-token');
   });
 
   it('reports PHI-safe dynamic client artifact consistency checks', async () => {
