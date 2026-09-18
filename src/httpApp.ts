@@ -346,6 +346,18 @@ async function handleEpicIntegrationRequest(
     await recordActivity(context, { kind: 'epic-apply', status: 'ok', summary: 'Owner-approved Epic import applied to Pod', source: 'epic' });
     return sendJson(res, 200, { data });
   }
+  if (requestUrl.pathname === '/api/integrations/epic/outbound' && req.method === 'POST') {
+    const data = await epic.stageOutboundWrite(await readJsonBodyOrEmpty(req));
+    await recordActivity(context, {
+      kind: 'epic-outbound',
+      status: 'info',
+      domain: data.domain,
+      resourcePath: resourcePathFromUrl(data.podResourceUrl),
+      summary: 'Owner staged a pod record for Epic outbound review',
+      source: 'epic',
+    });
+    return sendJson(res, 202, { data });
+  }
   if (requestUrl.pathname === '/api/integrations/epic/audit' && req.method === 'GET') {
     return sendJson(res, 200, { data: await epic.audit() });
   }
@@ -609,7 +621,7 @@ async function readJsonBodyOrEmpty(req: IncomingMessage): Promise<Record<string,
 
 function allowedEpicMethods(pathname: string): string {
   if (pathname.endsWith('/status') || pathname.endsWith('/diagnostics') || pathname.endsWith('/connect/callback') || pathname.endsWith('/audit')) return 'GET';
-  if (pathname.endsWith('/connect/start') || pathname.endsWith('/disconnect') || pathname.endsWith('/sync/preview') || pathname.endsWith('/sync/apply')) return 'POST';
+  if (pathname.endsWith('/connect/start') || pathname.endsWith('/disconnect') || pathname.endsWith('/sync/preview') || pathname.endsWith('/sync/apply') || pathname.endsWith('/outbound')) return 'POST';
   return 'GET, POST';
 }
 

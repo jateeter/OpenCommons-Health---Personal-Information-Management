@@ -173,6 +173,59 @@ describe('OpenCommons Health HTTP application', () => {
     expect(diagnostics).toHaveBeenCalledWith({ live: true });
   });
 
+  it('stages Epic outbound write intents and records only PHI-safe owner activity', async () => {
+    const stageOutboundWrite = jest.fn(async () => ({
+      outboundJobId: 'epic-outbound-123',
+      stagedAt: '2026-08-09T04:22:24.735Z',
+      status: 'staged',
+      domain: 'conditions',
+      action: 'create',
+      podResourceUrl: 'http://pod/conditions/2',
+      epicWriteEnabled: false,
+      liveWriteStatus: 'not-enabled',
+      message: 'Staged for owner review.',
+    }));
+    context.epic = {
+      stageOutboundWrite,
+    } as never;
+
+    const response = await fetch(`${baseUrl}/api/integrations/epic/outbound`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        domain: 'conditions',
+        action: 'create',
+        writeMode: 'stage',
+        record: {
+          code: { system: 'http://snomed.info/id/', code: '162864005', display: 'Jane Doe private condition' },
+          notes: 'PHI should not be in activity events',
+        },
+      }),
+    });
+
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        outboundJobId: 'epic-outbound-123',
+        status: 'staged',
+        epicWriteEnabled: false,
+      },
+    });
+    expect(stageOutboundWrite).toHaveBeenCalledWith(expect.objectContaining({
+      domain: 'conditions',
+      action: 'create',
+    }));
+    const activity = context.activityLog?.list().find((event) => event.kind === 'epic-outbound');
+    expect(activity).toMatchObject({
+      status: 'info',
+      domain: 'conditions',
+      resourcePath: '/conditions/2',
+      summary: 'Owner staged a pod record for Epic outbound review',
+    });
+    expect(JSON.stringify(activity)).not.toContain('Jane Doe');
+    expect(JSON.stringify(activity)).not.toContain('PHI should not be in activity events');
+  });
+
   it('serves a browser callback completion page for Epic SMART redirects without leaking connection identifiers', async () => {
     const connectCallback = jest.fn(async () => ({
       enabled: true,

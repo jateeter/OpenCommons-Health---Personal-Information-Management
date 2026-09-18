@@ -11,6 +11,7 @@ export type PodActivityKind =
   | 'anonymized-release-approved'
   | 'epic-preview'
   | 'epic-apply'
+  | 'epic-outbound'
   | 'epic-connect'
   | 'epic-disconnect';
 

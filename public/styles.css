@@ -733,6 +733,34 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
 }
 .tooltip::before { content: "?"; }
 .required { color: var(--coral); }
+.sync-targets {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid var(--line);
+  padding: 15px 0 13px;
+}
+.sync-targets-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.sync-target-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid #d8e4de;
+  border-radius: 12px;
+  background: #fbfdfc;
+  padding: 10px 12px;
+}
+.sync-target-option input { margin-top: 3px; accent-color: var(--teal); }
+.sync-target-option strong { display: block; font-size: 13px; }
+.sync-target-option small { display: block; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+.sync-target-option.disabled { opacity: .62; background: #f5f8f6; }
+.sync-target-note { color: var(--muted); line-height: 1.35; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; border-top: 1px solid var(--line); padding-top: 17px; }
 .form-error { color: #923e2b; background: #fff0eb; padding: 10px 12px; border-radius: 9px; margin-bottom: 12px; }
 

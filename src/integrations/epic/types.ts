@@ -248,3 +248,26 @@ export interface EpicApplyResult {
     provenance: EpicImportProvenance;
   }>;
 }
+
+export type EpicOutboundWriteAction = 'create' | 'update';
+
+export interface EpicOutboundWriteIntent {
+  domain: EpicMvpDomain;
+  action: EpicOutboundWriteAction;
+  record: Record<string, unknown>;
+  podResourceUrl?: string;
+  updatePod?: boolean;
+  writeMode?: 'stage';
+}
+
+export interface EpicOutboundWriteResult {
+  outboundJobId: string;
+  stagedAt: string;
+  status: 'staged';
+  domain: EpicMvpDomain;
+  action: EpicOutboundWriteAction;
+  podResourceUrl?: string;
+  epicWriteEnabled: false;
+  liveWriteStatus: 'not-enabled';
+  message: string;
+}
