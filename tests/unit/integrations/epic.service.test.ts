@@ -60,6 +60,42 @@ describe('Epic MVP integration service', () => {
     expect(grant.refreshToken).toBe('mock-refresh-token');
   });
 
+  it('stages owner-approved outbound Epic write intents without storing record payloads in audit details', async () => {
+    const repository = new FakeEpicRepository();
+    const service = new EpicIntegrationService(config, repository as never, {});
+    const start = await service.connectStart();
+    await service.connectCallback(new URLSearchParams({ code: 'mock-code', state: String(start.state) }));
+
+    const result = await service.stageOutboundWrite({
+      domain: 'medications',
+      action: 'create',
+      writeMode: 'stage',
+      updatePod: true,
+      podResourceUrl: 'http://localhost:3000/health-pim/medications/example.ttl',
+      record: {
+        medicationCode: { system: 'http://www.nlm.nih.gov/research/umls/rxnorm', code: '1049502', display: 'acetaminophen 325 MG Oral Tablet' },
+        patientName: 'Do Not Store This Name',
+      },
+    });
+
+    expect(result).toMatchObject({
+      status: 'staged',
+      domain: 'medications',
+      action: 'create',
+      epicWriteEnabled: false,
+      liveWriteStatus: 'not-enabled',
+    });
+    expect(result.outboundJobId).toMatch(/^epic-outbound-/);
+    const audit = repository.record?.audit ?? [];
+    expect(audit.at(-1)).toMatchObject({
+      action: 'outbound-stage',
+      status: 'info',
+      detail: 'Owner staged create for medications; live Epic writeback is not enabled in the localhost MVP.',
+    });
+    expect(JSON.stringify(audit)).not.toContain('Do Not Store This Name');
+    expect(JSON.stringify(audit)).not.toContain('acetaminophen');
+  });
+
   it('previews Annual Medicare Wellness FHIR resources across all MVP domains', async () => {
     const repository = new FakeEpicRepository();
     const service = new EpicIntegrationService(config, repository as never, {});

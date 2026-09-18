@@ -615,6 +615,25 @@ export const OPENAPI_DOCUMENT = {
           }),
         },
       }),
+      EpicOutboundWriteIntent: objectSchema(['domain', 'action', 'record'], {
+        domain: { type: 'string', enum: DOMAIN_NAMES },
+        action: enumSchema(['create', 'update']),
+        record: { type: 'object', description: 'Source pod record selected by the owner. Request payloads are not written to logs or public diagnostics.' },
+        podResourceUrl: resourceUrl(),
+        updatePod: { type: 'boolean', description: 'Whether the same modal submission also wrote to the Solid pod.' },
+        writeMode: { type: 'string', enum: ['stage'], description: 'Localhost MVP supports staged outbound Epic write intents only.' },
+      }),
+      EpicOutboundWriteResult: objectSchema(['outboundJobId', 'stagedAt', 'status', 'domain', 'action', 'epicWriteEnabled', 'liveWriteStatus', 'message'], {
+        outboundJobId: string('Outbound staging job id'),
+        stagedAt: dateTime(),
+        status: { type: 'string', const: 'staged' },
+        domain: { type: 'string', enum: DOMAIN_NAMES },
+        action: enumSchema(['create', 'update']),
+        podResourceUrl: resourceUrl(),
+        epicWriteEnabled: { type: 'boolean', const: false },
+        liveWriteStatus: { type: 'string', const: 'not-enabled' },
+        message: string('Owner-visible staged write status'),
+      }),
       EpicAuditEvent: objectSchema(['at', 'action', 'status'], {
         at: dateTime(),
         action: string('Epic integration action'),
@@ -653,6 +672,7 @@ export const OPENAPI_DOCUMENT = {
           'anonymized-release-approved',
           'epic-preview',
           'epic-apply',
+          'epic-outbound',
           'epic-connect',
           'epic-disconnect',
         ]),
@@ -879,6 +899,35 @@ function epicIntegrationPaths(): Record<string, unknown> {
         responses: okResponse('Epic import apply result.', objectSchema(['data'], {
           data: { $ref: '#/components/schemas/EpicApplyResult' },
         })),
+      },
+    },
+    '/api/integrations/epic/outbound': {
+      post: {
+        tags: ['epic'],
+        operationId: 'stageEpicOutboundWriteIntent',
+        summary: 'Stage an owner-approved pod record add or update for future Epic writeback review',
+        requestBody: jsonInlineRequest({ $ref: '#/components/schemas/EpicOutboundWriteIntent' }, {
+          domain: 'medications',
+          action: 'create',
+          writeMode: 'stage',
+          updatePod: true,
+          record: {
+            medicationCode: { system: 'http://www.nlm.nih.gov/research/umls/rxnorm', code: '1049502', display: 'acetaminophen 325 MG Oral Tablet' },
+            status: 'active',
+          },
+        }),
+        responses: {
+          202: {
+            description: 'Epic outbound write intent staged for owner-visible review.',
+            content: {
+              'application/json': {
+                schema: objectSchema(['data'], {
+                  data: { $ref: '#/components/schemas/EpicOutboundWriteResult' },
+                }),
+              },
+            },
+          },
+        },
       },
     },
     '/api/integrations/epic/audit': {

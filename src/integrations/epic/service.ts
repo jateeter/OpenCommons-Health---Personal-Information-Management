@@ -20,6 +20,9 @@ import type {
   EpicImportCandidate,
   EpicImportPreview,
   EpicMvpDomain,
+  EpicOutboundWriteAction,
+  EpicOutboundWriteIntent,
+  EpicOutboundWriteResult,
   EpicRegistrationReadiness,
   EpicResourceSupport,
   EpicSafeDiagnosticsExport,
@@ -54,6 +57,20 @@ const EPIC_RESOURCE_FAMILIES: Array<{
   { resourceType: 'Practitioner', pimDomains: ['providers'], scopeResource: 'Practitioner' },
   { resourceType: 'Organization', pimDomains: ['providers'], scopeResource: 'Organization' },
   { resourceType: 'Binary', pimDomains: ['documents'], scopeResource: 'Binary' },
+];
+
+const EPIC_MVP_DOMAINS: EpicMvpDomain[] = [
+  'profiles',
+  'conditions',
+  'medications',
+  'allergies',
+  'immunizations',
+  'vital-signs',
+  'providers',
+  'lab-results',
+  'insurance-policies',
+  'documents',
+  'workflow-tasks',
 ];
 
 export class EpicIntegrationService {
@@ -421,6 +438,28 @@ export class EpicIntegrationService {
       created,
       resources,
     };
+  }
+
+  async stageOutboundWrite(body: Record<string, unknown> = {}): Promise<EpicOutboundWriteResult> {
+    const record = await this.connectedRecord();
+    const intent = parseOutboundWriteIntent(body);
+    const stagedAt = nowIso();
+    const outboundJobId = `epic-outbound-${Date.now()}`;
+    const result: EpicOutboundWriteResult = {
+      outboundJobId,
+      stagedAt,
+      status: 'staged',
+      domain: intent.domain,
+      action: intent.action,
+      podResourceUrl: intent.podResourceUrl,
+      epicWriteEnabled: false,
+      liveWriteStatus: 'not-enabled',
+      message: 'Staged for owner review in the Epic integration audit. Live Epic writeback remains disabled until domain-specific FHIR write mappings and Epic write capability checks are validated.',
+    };
+    await this.connectionRepository?.save(this.withAudit({
+      ...record,
+    }, 'outbound-stage', 'info', `Owner staged ${intent.action} for ${intent.domain}; live Epic writeback is not enabled in the localhost MVP.`));
+    return result;
   }
 
   private async reconcile(changes: EpicImportCandidate[]): Promise<EpicImportCandidate[]> {
@@ -824,6 +863,55 @@ function selectedDomainSet(body: Record<string, unknown>): Set<EpicMvpDomain> | 
   const domains = body.domains;
   if (!Array.isArray(domains) || domains.length === 0) return undefined;
   return new Set(domains.filter((domain): domain is EpicMvpDomain => typeof domain === 'string') as EpicMvpDomain[]);
+}
+
+function parseOutboundWriteIntent(body: Record<string, unknown>): EpicOutboundWriteIntent {
+  const domain = body.domain;
+  const action = body.action;
+  const record = body.record;
+  const podResourceUrl = body.podResourceUrl;
+  const writeMode = body.writeMode;
+  if (!isEpicMvpDomain(domain)) {
+    throw new ValidationError('Epic outbound write intent requires a supported PIM domain.', [
+      { field: 'domain', reason: `domain must be one of: ${EPIC_MVP_DOMAINS.join(', ')}` },
+    ]);
+  }
+  if (!isEpicOutboundWriteAction(action)) {
+    throw new ValidationError('Epic outbound write intent requires a create or update action.', [
+      { field: 'action', reason: 'action must be create or update' },
+    ]);
+  }
+  if (!isRecord(record)) {
+    throw new ValidationError('Epic outbound write intent requires a source record object.', [
+      { field: 'record', reason: 'record must be a JSON object' },
+    ]);
+  }
+  if (podResourceUrl !== undefined && typeof podResourceUrl !== 'string') {
+    throw new ValidationError('Epic outbound write intent podResourceUrl must be a string when supplied.', [
+      { field: 'podResourceUrl', reason: 'podResourceUrl must be a string' },
+    ]);
+  }
+  if (writeMode !== undefined && writeMode !== 'stage') {
+    throw new ValidationError('Epic outbound write intent currently supports staged writes only.', [
+      { field: 'writeMode', reason: 'writeMode must be stage' },
+    ]);
+  }
+  return {
+    domain,
+    action,
+    record,
+    podResourceUrl,
+    updatePod: typeof body.updatePod === 'boolean' ? body.updatePod : undefined,
+    writeMode: 'stage',
+  };
+}
+
+function isEpicMvpDomain(value: unknown): value is EpicMvpDomain {
+  return typeof value === 'string' && EPIC_MVP_DOMAINS.includes(value as EpicMvpDomain);
+}
+
+function isEpicOutboundWriteAction(value: unknown): value is EpicOutboundWriteAction {
+  return value === 'create' || value === 'update';
 }
 
 function mockPatientResourceFetch(): { resources: ReturnType<typeof mockAnnualWellnessResources>; sourceDiagnostics: EpicSourceDiagnostic[] } {

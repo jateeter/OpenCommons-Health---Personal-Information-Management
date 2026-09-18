@@ -1297,9 +1297,58 @@ function openForm(record = null, prefill = null) {
   fields.replaceChildren();
   const fieldValues = record || prefill || {};
   for (const field of config.fields) fields.append(createField(field, fieldValues));
+  renderSyncTargets(record);
   if (!record) document.querySelectorAll('#form-fields select[data-coded-select="true"]').forEach((input) => applyCodedSelect(input._fieldConfig, input));
   recordFormSnapshot = serializeRecordForm();
   $('record-dialog').showModal();
+}
+
+function renderSyncTargets(record = null) {
+  const container = $('form-sync-targets');
+  const epicConnected = epicStatus.enabled && epicStatus.status === 'connected';
+  container.replaceChildren();
+  const title = document.createElement('div');
+  title.className = 'sync-targets-title';
+  title.textContent = 'Update targets';
+  const pod = createSyncTargetOption({
+    id: 'sync-update-pod',
+    name: '__updatePod',
+    label: 'Update Solid Pod',
+    detail: 'Writes this record to your owner-managed local Solid pod, the source of authority for the PIM.',
+    checked: true,
+  });
+  const epic = createSyncTargetOption({
+    id: 'sync-update-epic',
+    name: '__updateEpic',
+    label: 'Stage update to Epic',
+    detail: epicConnected
+      ? 'Stages an owner-approved outbound Epic write intent. Live Epic writeback is disabled until domain-specific FHIR write mappings are validated.'
+      : 'Connect Epic before staging outbound write intents.',
+    checked: false,
+    disabled: !epicConnected,
+  });
+  const note = document.createElement('small');
+  note.className = 'sync-target-note';
+  note.textContent = record
+    ? 'Editing can update the Pod and optionally stage the changed record for Epic outbound review.'
+    : 'Adding can create the Pod record and optionally stage the new record for Epic outbound review.';
+  container.append(title, pod, epic, note);
+}
+
+function createSyncTargetOption({ id, name, label, detail, checked = false, disabled = false }) {
+  const wrapper = document.createElement('label');
+  wrapper.className = `sync-target-option ${disabled ? 'disabled' : ''}`;
+  wrapper.htmlFor = id;
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.id = id;
+  input.name = name;
+  input.checked = checked;
+  input.disabled = disabled;
+  const copy = document.createElement('span');
+  copy.innerHTML = `<strong>${label}</strong><small>${detail}</small>`;
+  wrapper.append(input, copy);
+  return wrapper;
 }
 
 function createField(field, record) {
@@ -1464,6 +1513,13 @@ function setInputValue(name, value) {
 
 async function saveRecord(event) {
   event.preventDefault();
+  const updatePod = Boolean(event.currentTarget.elements.namedItem('__updatePod')?.checked);
+  const updateEpic = Boolean(event.currentTarget.elements.namedItem('__updateEpic')?.checked);
+  if (!updatePod && !updateEpic) {
+    $('form-error').textContent = 'Select at least one update target.';
+    $('form-error').classList.remove('hidden');
+    return;
+  }
   const entity = editing ? structuredClone(editing) : {};
   for (const field of domains[activeDomain].fields) {
     if (field.type === 'terminology-search' || field.transient) continue;
@@ -1476,17 +1532,45 @@ async function saveRecord(event) {
     setPath(entity, field.name, value);
   }
   try {
-    const response = await fetch(`/api/resources/${activeDomain}`, {
-      method: editing ? 'PUT' : 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(entity),
-    });
-    const payload = response.status === 204 ? {} : await response.json();
-    if (!response.ok) throw new Error(formatApiError(payload));
+    let savedEntity = entity;
+    if (updatePod) {
+      const response = await fetch(`/api/resources/${activeDomain}`, {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(entity),
+      });
+      const payload = response.status === 204 ? {} : await response.json();
+      if (!response.ok) throw new Error(formatApiError(payload));
+      savedEntity = payload.data || entity;
+    }
+    let epicMessage = '';
+    if (updateEpic) {
+      const response = await fetch('/api/integrations/epic/outbound', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          domain: activeDomain,
+          action: editing ? 'update' : 'create',
+          writeMode: 'stage',
+          updatePod,
+          podResourceUrl: savedEntity.url,
+          record: savedEntity,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(formatApiError(payload));
+      epicMessage = payload.data?.message || 'Epic outbound update staged for review.';
+    }
     recordFormSnapshot = serializeRecordForm();
     $('record-dialog').close();
-    await loadRecords();
-    await refreshWellness();
+    if (updatePod) {
+      await loadRecords();
+      await refreshWellness();
+    }
+    if (updateEpic) {
+      await refreshPodActivity();
+      alert(epicMessage);
+    }
   } catch (error) {
     $('form-error').textContent = error.message;
     $('form-error').classList.remove('hidden');
@@ -1497,7 +1581,7 @@ function serializeRecordForm() {
   const data = {};
   for (const element of $('record-form').elements) {
     if (!element.name || element.type === 'submit' || element.type === 'button') continue;
-    data[element.name] = element.value;
+    data[element.name] = element.type === 'checkbox' ? element.checked : element.value;
   }
   return JSON.stringify(data);
 }
