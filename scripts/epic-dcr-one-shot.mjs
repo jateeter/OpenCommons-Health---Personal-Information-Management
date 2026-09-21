@@ -9,6 +9,7 @@ const envFile = process.env.EPIC_ENV_FILE ?? join(repoRoot, '.env.epic-sandbox.l
 const secretDir = process.env.EPIC_DYNAMIC_CLIENT_SECRET_DIR ?? join(repoRoot, '.secrets/epic-dynamic-client');
 const resetKey = process.argv.includes('--reset-key');
 const timeoutMs = Number.parseInt(process.env.EPIC_DCR_TIMEOUT_MS ?? `${10 * 60 * 1000}`, 10);
+const skipDynamicGrantTest = process.env.EPIC_DCR_SKIP_DYNAMIC_GRANT_TEST === '1';
 
 main().catch((error) => {
   console.error(`ERROR: ${safeMessage(error)}`);
@@ -20,7 +21,8 @@ async function main() {
   if (resetKey) resetDynamicClientKeyMaterial();
 
   const env = loadEnv(envFile);
-  const callbackUrl = new URL(required(env, 'EPIC_REDIRECT_URI'));
+  // Keep the temporary one-shot listener independent from the deployed PIM.
+  const callbackUrl = new URL(process.env.EPIC_DCR_REDIRECT_URI ?? required(env, 'EPIC_REDIRECT_URI'));
   const fhirBaseUrl = required(env, 'EPIC_FHIR_BASE_URL');
   const softwareClientId = required(env, 'EPIC_CLIENT_ID');
   const registrationPath = env.EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE
@@ -103,22 +105,24 @@ async function main() {
   updateEnvLine(envFile, 'EPIC_CLIENT_AUTH_METHOD', 'auto');
   updateMetadata(metadataPath, { issuerSubject: dynamicClientId, dcrCompletedAt: new Date().toISOString() });
 
-  const dynamicResult = await tryDynamicBearerGrant({
-    tokenEndpoint: smart.token_endpoint,
-    fhirBaseUrl,
-    dynamicClientId,
-    keyId: required(loadEnv(envFile), 'EPIC_CLIENT_ASSERTION_KID'),
-    privateKeyPath: resolveRepoPath(required(loadEnv(envFile), 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE')),
-    algorithm: loadEnv(envFile).EPIC_CLIENT_ASSERTION_ALG ?? 'RS384',
-    scopes: scopes(loadEnv(envFile)),
-  });
+  const dynamicResult = skipDynamicGrantTest
+    ? { ok: true, skipped: true, hasPatient: false }
+    : await tryDynamicBearerGrant({
+      tokenEndpoint: smart.token_endpoint,
+      fhirBaseUrl,
+      dynamicClientId,
+      keyId: required(loadEnv(envFile), 'EPIC_CLIENT_ASSERTION_KID'),
+      privateKeyPath: resolveRepoPath(required(loadEnv(envFile), 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE')),
+      algorithm: loadEnv(envFile).EPIC_CLIENT_ASSERTION_ALG ?? 'RS384',
+      scopes: scopes(loadEnv(envFile)),
+    });
 
   console.log('');
   console.log('Epic Dynamic Client Registration completed.');
   console.log(`  Dynamic client id stored: yes`);
   console.log(`  Local env switched to: dynamic_jwt_bearer`);
-  console.log(`  Dynamic JWT bearer token test: ${dynamicResult.ok ? 'ok' : `failed (${dynamicResult.error})`}`);
-  if (dynamicResult.ok) {
+  console.log(`  Dynamic JWT bearer token test: ${dynamicResult.skipped ? 'skipped for PIM first exchange' : dynamicResult.ok ? 'ok' : `failed (${dynamicResult.error})`}`);
+  if (dynamicResult.ok && !dynamicResult.skipped) {
     console.log(`  Token response included patient context: ${dynamicResult.hasPatient ? 'yes' : 'no'}`);
   }
 }

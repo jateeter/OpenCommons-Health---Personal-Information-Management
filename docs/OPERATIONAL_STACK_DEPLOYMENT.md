@@ -123,6 +123,7 @@ registration values still come from deployment configuration.
 | `EPIC_CLIENT_SECRET` | Conditional | Optional confidential-client secret. Prefer file-based secrets. |
 | `EPIC_CLIENT_SECRET_FILE` | Conditional | Optional path to an untracked confidential-client secret file. |
 | `EPIC_REDIRECT_URI` | Sandbox/production | Callback URL registered with Epic. |
+| `EPIC_DCR_REDIRECT_URI` | One-shot DCR only | Optional callback URL for the temporary `npm run epic:dcr` listener, allowing it to use a port separate from the deployed PIM. |
 | `EPIC_SCOPES` | No | Overrides the default MVP SMART scope set. |
 | `EPIC_GRANT_ENCRYPTION_KEY` | Yes | Encrypts patient-owned Epic grant material before it is stored in the Solid pod. |
 | `EPIC_SYNC_ON_STARTUP` | No | When true, startup loads pod-owned Epic state and applies a sync if already connected. Default false. |

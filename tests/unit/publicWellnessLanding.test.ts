@@ -13,6 +13,7 @@ describe('wellness spider-graph landing page', () => {
     expect(indexSource).toMatch(/id="view-wellness" class="view"/);
     expect(indexSource).toMatch(/id="view-records" class="view hidden"/);
     expect(indexSource).toMatch(/id="view-status" class="view hidden"/);
+    expect(indexSource).toMatch(/id="view-pod" class="view hidden"/);
     expect(appSource).toContain("showView('wellness')");
     expect(appSource).toContain('function showView');
   });
@@ -75,37 +76,39 @@ describe('wellness spider-graph landing page', () => {
     expect(styleSource).toContain('.spider-label:hover, .spider-label:focus-visible');
   });
 
-  it('keeps the pod connection status page reachable from the landing view', () => {
-    expect(indexSource).toContain('id="view-status"');
+  it('keeps dedicated Pod settings reachable from the landing view', () => {
+    expect(indexSource).toContain('id="view-pod"');
     expect(indexSource).toContain('title="Open pod connection status"');
-    expect(appSource).toContain("$('connection').addEventListener('click', () => showView('status'))");
-    // Status content that previously occupied the landing page must still exist.
+    expect(appSource).toContain("$('connection').addEventListener('click', () => showView('pod'))");
+    expect(indexSource).toContain('class="pod-settings-nav"');
     expect(indexSource).toContain('id="pod-management-panel"');
     expect(indexSource).toContain('id="pod-activity-list"');
     expect(indexSource).toContain('id="healthkit-status"');
     expect(indexSource).toContain('id="epic-panel"');
   });
 
-  it('exposes connections as a primary tab beside wellness and records', () => {
+  it('exposes connections and Pod as primary tabs beside wellness and records', () => {
     // A tablist, not a trailing entry in the record-category list: on a phone
     // the category list scrolls horizontally, so a trailing item is hidden.
     expect(indexSource).toContain('role="tablist"');
-    for (const view of ['wellness', 'records', 'status']) {
+    for (const view of ['wellness', 'records', 'status', 'pod']) {
       expect(indexSource).toContain(`id="tab-${view}"`);
       expect(indexSource).toContain(`aria-controls="view-${view}"`);
     }
     expect(indexSource).toMatch(/id="tab-status"[^>]*>.*Connections/);
+    expect(indexSource).toMatch(/id="tab-pod"[^>]*>.*Pod/);
     // Wellness is the selected tab on load; the others are not.
     expect(indexSource).toMatch(/id="tab-wellness"[^>]*aria-selected="true"/);
     expect(indexSource).toMatch(/id="tab-records"[^>]*aria-selected="false"/);
     expect(indexSource).toMatch(/id="tab-status"[^>]*aria-selected="false"/);
-    expect(appSource).toContain("const PRIMARY_TABS = ['wellness', 'records', 'status']");
+    expect(indexSource).toMatch(/id="tab-pod"[^>]*aria-selected="false"/);
+    expect(appSource).toContain("const PRIMARY_TABS = ['wellness', 'records', 'status', 'pod']");
     expect(appSource).toContain("tab.setAttribute('aria-selected', String(selected))");
     expect(styleSource).toContain('.primary-tabs');
     expect(styleSource).toContain('.primary-tab.active');
   });
 
-  it('keeps all three tabs reachable without horizontal scrolling on phones', () => {
+  it('keeps all four tabs reachable without horizontal scrolling on phones', () => {
     // Tabs share the row evenly under the mobile breakpoint rather than
     // inheriting the category list's overflow-x behaviour.
     expect(styleSource).toMatch(/\.primary-tab \{[^}]*flex: 1 1 0/s);
@@ -129,11 +132,16 @@ describe('wellness spider-graph landing page', () => {
     expect(appSource).toContain('await refreshWellness();');
   });
 
-  it('navigates from a data point or hamburger domain item into that domain', () => {
-    expect(appSource).toContain("marker.addEventListener('click', () => selectDomain(axis.domain))");
-    expect(appSource).toContain("label.addEventListener('click', () => selectDomain(axis.domain))");
+  it('navigates from a data point into a pillar detail and from menu items into records', () => {
+    expect(appSource).toContain("marker.addEventListener('click', () => openPillarDetail(axis))");
+    expect(appSource).toContain("label.addEventListener('click', () => openPillarDetail(axis))");
+    expect(appSource).toContain('function openPillarDetail');
     expect(appSource).toContain('void selectDomain(entry.domain)');
     expect(appSource).toContain('setUtilityMenuOpen(false)');
+    expect(appSource).toContain('async function renderPillarWorkspace');
+    expect(appSource).toContain('function renderPillarRecordRows');
+    expect(styleSource).toContain('.pillar-record-filters');
+    expect(styleSource).toContain('.pillar-radar-stage');
   });
 
   it('adds a semantic spider graph to every domain landing view', () => {
@@ -191,22 +199,23 @@ describe('wellness spider-graph landing page', () => {
     expect(styleSource).toMatch(/\.domain-node-summary \{[^}]*width: min\(100%, 520px\)/s);
   });
 
-  it('keeps landing text minimal and degrades without replacing the layout', () => {
+  it('uses the Figma overview, status summary, priority, and activity composition', () => {
     const landing = indexSource.slice(
       indexSource.indexOf('id="view-wellness"'),
       indexSource.indexOf('id="view-records"'),
     );
-    // Axis labels are rendered from data, so the landing markup itself carries
-    // only the title, the legend, and the loading line.
-    expect(landing).toContain('<h1>Wellness</h1>');
+    expect(landing).toContain('Wellness overview</h1>');
+    expect(landing).toContain('id="wellness-status-summary"');
+    expect(landing).toContain('id="wellness-recent-activity"');
+    expect(landing).toContain('id="pillar-detail"');
     expect(landing).not.toContain('<p id="page-description"');
-    expect(landing.match(/<p/g) ?? []).toHaveLength(1);
     expect(appSource).toContain('Your wellness overview appears once the pod connection is ready.');
   });
 
   it('sizes the graph for iPhone-class viewports', () => {
     expect(styleSource).toContain('@media (max-width: 480px)');
-    expect(styleSource).toMatch(/\.spider \{[^}]*width: min\(100%, clamp\(300px, 42vw, 430px\)\)/);
+    expect(styleSource).toMatch(/\.spider \{[^}]*width: min\(100%, 380px\)/);
+    expect(styleSource).toMatch(/@media \(max-width: 480px\)[\s\S]*\.primary-tabs \{[\s\S]*position: fixed/);
   });
 
   it('uses overflow-safe responsive primitives for data views and edit forms', () => {
@@ -215,7 +224,7 @@ describe('wellness spider-graph landing page', () => {
     expect(styleSource).toContain('.record { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto;');
     expect(styleSource).toContain('.record-copy h3, .record-copy p, .record-copy small { overflow-wrap: anywhere; }');
     expect(styleSource).toContain('grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) auto;');
-    expect(styleSource).toContain('max-height: min(720px, calc(100dvh - 32px));');
+    expect(styleSource).toContain('max-height: min(840px, calc(100dvh - 32px));');
     expect(styleSource).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));');
   });
 
