@@ -9,7 +9,7 @@
     <title>OpenCommons Health</title>
     <link rel="icon" type="image/png" href="/opencommons-health-thumbnail.png">
     <link rel="apple-touch-icon" href="/opencommons-health-thumbnail.png">
-    <link rel="stylesheet" href="/styles.css?v=hamburger-closed-topright-20260815">
+    <link rel="stylesheet" href="/styles.css?v=figma-flow-upgrade-20260920-r2">
   </head>
   <body>
     <header class="masthead">
@@ -36,6 +36,9 @@
             </div>
           </div>
         </div>
+        <button id="profile-avatar" class="profile-avatar" type="button" aria-label="Open Pod settings" title="Open Pod settings">
+          <span aria-hidden="true">◎</span>
+        </button>
       </div>
     </header>
 
@@ -46,6 +49,7 @@
       <button id="tab-wellness" class="primary-tab" role="tab" type="button" data-view="wellness" aria-controls="view-wellness" aria-selected="true" tabindex="0"><span class="tab-icon" aria-hidden="true">✳</span>Wellness</button>
       <button id="tab-records" class="primary-tab" role="tab" type="button" data-view="records" aria-controls="view-records" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">▤</span>Records</button>
       <button id="tab-status" class="primary-tab" role="tab" type="button" data-view="status" aria-controls="view-status" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">◈</span>Connections</button>
+      <button id="tab-pod" class="primary-tab" role="tab" type="button" data-view="pod" aria-controls="view-pod" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">◉</span>Pod</button>
     </div>
 
     <div class="shell full-layout">
@@ -53,17 +57,44 @@
       <main>
         <!-- ── Wellness landing (issue #32) ─────────────────────────────── -->
         <section id="view-wellness" class="view" aria-label="Wellness overview">
-          <div class="wellness-head">
-            <h1>Wellness</h1>
-            <div class="wellness-legend" aria-label="Status legend">
-              <span><i class="dot dot-green"></i>On track</span>
-              <span><i class="dot dot-yellow"></i>Watch</span>
-              <span><i class="dot dot-red"></i>Attention</span>
-            </div>
+          <div class="wellness-dashboard">
+            <section class="wellness-chart-card" aria-labelledby="wellness-chart-title">
+              <div class="wellness-overview-header">
+                <div>
+                  <h1 id="wellness-chart-title">Wellness overview</h1>
+                  <p>A single view of all nine pillars, with strengths, watch points, and attention needs shown directly on the chart.</p>
+                </div>
+                <div id="wellness-status-summary" class="wellness-status-summary" aria-label="Wellness status summary"></div>
+              </div>
+              <div class="wellness-chart-stage">
+                <div id="wellness-graph" class="wellness-graph">
+                  <p class="wellness-loading">Reading your pod…</p>
+                </div>
+              </div>
+              <div class="wellness-legend" aria-label="Status legend">
+                <span class="och-chip status-on-track"><i class="dot dot-green"></i>On track</span>
+                <span class="och-chip status-watch"><i class="dot dot-yellow"></i>Watch</span>
+                <span class="och-chip status-attention"><i class="dot dot-red"></i>Attention</span>
+              </div>
+            </section>
+            <aside class="wellness-side-rail">
+              <section class="wellness-priority-rail och-panel" aria-labelledby="wellness-priority-title">
+                <div class="panel-intro">
+                  <h2 id="wellness-priority-title">Review next</h2>
+                  <p>Prioritized items from your wellness pillars so the next step feels clear and actionable.</p>
+                </div>
+                <div id="wellness-priorities" class="wellness-priorities" aria-live="polite"></div>
+              </section>
+              <section class="wellness-activity och-panel" aria-labelledby="wellness-activity-title">
+                <div class="panel-intro">
+                  <h2 id="wellness-activity-title">Recent activity</h2>
+                  <p>Small updates from your connected records and wellness tracking.</p>
+                </div>
+                <div id="wellness-recent-activity" class="wellness-recent-activity" aria-live="polite"></div>
+              </section>
+            </aside>
           </div>
-          <div id="wellness-graph" class="wellness-graph">
-            <p class="wellness-loading">Reading your pod…</p>
-          </div>
+          <section id="pillar-detail" class="pillar-detail hidden" aria-live="polite"></section>
         </section>
 
         <!-- ── Records view ─────────────────────────────────────────────── -->
@@ -104,13 +135,13 @@
           </section>
         </section>
 
-        <!-- ── Pod connection status view (kept, demoted) ──────────────── -->
-        <section id="view-status" class="view hidden" aria-label="Pod connection status">
+        <!-- ── Connected health services ───────────────────────────────── -->
+        <section id="view-status" class="view hidden" aria-label="Connected health services">
           <section class="hero">
             <div>
-              <p class="eyebrow">Deployment observability</p>
-              <h1>Pod connection status</h1>
-              <p>Connection, storage, and integration state for this local deployment.</p>
+              <p class="eyebrow">Connected health services</p>
+              <h1>Connections</h1>
+              <p>Review owner-authorized Epic, HealthKit, and local interoperability workflows.</p>
             </div>
           </section>
 
@@ -201,6 +232,7 @@
                 <button id="epic-diagnostics" class="secondary" type="button">Check live readiness</button>
                 <button id="epic-connect" class="secondary" type="button">Connect Epic</button>
                 <button id="epic-preview" class="secondary" type="button">Preview import</button>
+                <button id="epic-documents" class="secondary" type="button">Manage documents</button>
                 <button id="epic-apply" class="primary" type="button">Apply to pod</button>
               </div>
             </div>
@@ -209,6 +241,25 @@
             </div>
             <div id="epic-preview-list" class="epic-preview-list hidden"></div>
           </section>
+        </section>
+
+        <section id="view-pod" class="view hidden" aria-label="Pod settings">
+          <section class="hero pod-view-hero">
+            <div>
+              <p class="eyebrow">Owner-controlled infrastructure</p>
+              <h1>Pod settings</h1>
+              <p>Manage permissions, audit activity, and the inventory held in your Solid Pod.</p>
+            </div>
+          </section>
+          <div class="pod-settings-layout">
+            <nav class="pod-settings-nav" aria-label="Pod settings sections">
+              <button type="button" data-pod-target="pod-management-panel">Overview</button>
+              <button type="button" data-pod-target="pod-permissions">Permissions &amp; sharing</button>
+              <button type="button" data-pod-target="pod-audit">Audit log</button>
+              <button type="button" data-pod-target="pod-inventory">Data inventory</button>
+            </nav>
+            <div id="pod-view-content" class="pod-view-content"></div>
+          </div>
         </section>
       </main>
     </div>
@@ -222,7 +273,13 @@
           </div>
           <button id="record-close" class="icon-button" type="button" aria-label="Close">×</button>
         </div>
-        <div id="form-fields" class="form-fields"></div>
+        <div class="record-form-progress" aria-label="Record editing steps">
+          <span class="active">1 Clinical term</span><span>2 Details</span><span>3 Review &amp; sync</span>
+        </div>
+        <div class="record-form-body">
+          <div id="form-fields" class="form-fields"></div>
+          <aside id="form-review" class="form-review" aria-live="polite"></aside>
+        </div>
         <div id="form-sync-targets" class="sync-targets"></div>
         <div id="form-error" class="form-error hidden" role="alert"></div>
         <div class="dialog-actions">
@@ -230,6 +287,39 @@
           <button id="record-save" class="primary" type="submit">Save selected targets</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog id="epic-document-dialog" class="epic-document-dialog">
+      <div class="epic-document-shell">
+        <header class="epic-document-header">
+          <div>
+            <p class="eyebrow">Epic connection</p>
+            <h2>Document manager</h2>
+            <p>Review, reconcile, and stage owner-approved DocumentReference changes.</p>
+          </div>
+          <div class="epic-document-header-actions">
+            <span id="epic-document-connection" class="capability-chip capability-read">Connected</span>
+            <button id="epic-document-close" class="icon-button" type="button" aria-label="Close document manager">×</button>
+          </div>
+        </header>
+        <section id="epic-document-capabilities" class="epic-document-capabilities" aria-live="polite"></section>
+        <div class="epic-document-toolbar">
+          <input id="epic-document-search" type="search" placeholder="Search title, category, date, or source" aria-label="Search Epic documents">
+          <div>
+            <button id="epic-document-duplicates" class="secondary" type="button">Potential duplicates</button>
+            <button id="epic-document-add" class="primary" type="button">Add document</button>
+          </div>
+        </div>
+        <div class="epic-document-workspace">
+          <nav id="epic-document-list" class="epic-document-list" aria-label="Epic and Pod documents"></nav>
+          <section id="epic-document-detail" class="epic-document-detail"></section>
+          <aside id="epic-document-actions" class="epic-document-actions"></aside>
+        </div>
+        <footer class="epic-document-footer">
+          <span id="epic-document-summary">No documents loaded</span>
+          <button id="epic-document-review" class="primary" type="button" disabled>Review staged changes</button>
+        </footer>
+      </div>
     </dialog>
 
     <template id="record-template">
@@ -242,6 +332,6 @@
         </div>
       </article>
     </template>
-    <script src="/app.js?v=hamburger-closed-topright-20260815" defer></script>
+    <script src="/app.js?v=figma-flow-upgrade-20260920-r2" defer></script>
   </body>
 </html>

@@ -37,6 +37,21 @@ EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=/run/opencommons-secrets/epic-dynamic-cli
 
 ## Dynamic client setup sequence
 
+The one-shot listener can use a port separate from the deployed PIM callback:
+
+```sh
+EPIC_REDIRECT_URI=http://localhost:18080/api/integrations/epic/connect/callback
+EPIC_DCR_REDIRECT_URI=http://localhost:18081/api/integrations/epic/connect/callback \
+EPIC_DCR_SKIP_DYNAMIC_GRANT_TEST=1 \
+  npm run epic:dcr
+```
+
+`EPIC_DCR_REDIRECT_URI` affects only the temporary authorization listener and
+does not replace the PIM's configured redirect URI.
+`EPIC_DCR_SKIP_DYNAMIC_GRANT_TEST=1` reserves the newly registered client's
+first patient-bound JWT bearer exchange for the PIM instead of consuming it in
+the one-shot helper.
+
 1. Complete the public standalone SMART launch using the Epic-issued application
    client id. Epic returns a one-time registration access token for dynamic
    client registration.

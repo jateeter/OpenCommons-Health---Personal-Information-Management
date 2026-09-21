@@ -396,6 +396,21 @@ const domains = {
 const WELLNESS_AXIS_DOMAINS = ['vital-signs', 'lab-results', 'medications', 'conditions', 'allergies', 'immunizations'];
 const WELLNESS_BROWSE_DOMAINS = ['profiles', 'providers', 'insurance-policies', 'documents', 'workflow-tasks'];
 
+// Figma's owner-facing wellness model groups the existing clinical APIs into
+// nine understandable pillars. Multiple pillars may draw from the same
+// authoritative domain; navigation always resolves back to that real domain.
+const WELLNESS_PILLARS = [
+  { id: 'physical', label: 'Physical', domain: 'vital-signs' },
+  { id: 'purpose', label: 'Purpose', domain: 'workflow-tasks' },
+  { id: 'nutrition', label: 'Nutrition', domain: 'lab-results' },
+  { id: 'environment', label: 'Environment', domain: 'allergies' },
+  { id: 'sleep', label: 'Sleep', domain: 'vital-signs' },
+  { id: 'social', label: 'Social', domain: 'providers' },
+  { id: 'preventive', label: 'Preventive', domain: 'immunizations' },
+  { id: 'emotional', label: 'Emotional', domain: 'conditions' },
+  { id: 'medications', label: 'Medications', domain: 'medications' },
+];
+
 // One colour per domain, shared by graph vectors and browse tiles.
 const DOMAIN_COLORS = {
   'vital-signs': '#0f8a8d',
@@ -487,6 +502,7 @@ const STATUS_LABELS = { green: 'On track', yellow: 'Watch', red: 'Attention', em
 
 let activeView = 'wellness';
 let wellnessSummary = null;
+let podActivity = null;
 let activeDomain = 'conditions';
 let records = [];
 let editing = null;
@@ -495,10 +511,12 @@ let epicStatus = { enabled: false, status: 'disabled' };
 let epicDiagnostics = null;
 let epicPreview = null;
 let epicSelectedDomains = new Set();
+let epicDocumentRecords = [];
+let selectedEpicDocument = null;
 let recordFormSnapshot = '';
 const $ = (id) => document.getElementById(id);
 
-const PRIMARY_TABS = ['wellness', 'records', 'status'];
+const PRIMARY_TABS = ['wellness', 'records', 'status', 'pod'];
 
 function initializeNavigation() {
   // Primary tabs own the top-level destinations. The sidebar below is only a
@@ -530,11 +548,27 @@ function initializeNavigation() {
     button.addEventListener('click', () => selectDomain(key));
     nav.append(button);
   }
+
+  $('profile-avatar').addEventListener('click', () => showView('pod'));
+  const podContent = $('pod-view-content');
+  for (const id of ['setup-warning', 'summary', 'pod-management-panel']) {
+    const node = id === 'summary' ? document.querySelector('#view-status .summary') : $(id);
+    if (node) podContent.append(node);
+  }
+  document.querySelector('.pod-details')?.setAttribute('id', 'pod-permissions');
+  document.querySelector('.pod-observability > div:nth-child(2)')?.setAttribute('id', 'pod-audit');
+  document.querySelector('#pod-domain-list')?.parentElement?.setAttribute('id', 'pod-inventory');
+  document.querySelectorAll('[data-pod-target]').forEach((button) => {
+    button.addEventListener('click', () => {
+      $(button.dataset.podTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 }
 
 /** Switches the single-page view. 'wellness' is the landing view. */
 function showView(view) {
   activeView = view;
+  if (view === 'wellness') closePillarDetail();
   const recordsLayout = view === 'records';
   document.querySelector('.shell')?.classList.toggle('records-layout', recordsLayout);
   document.querySelector('.shell')?.classList.toggle('full-layout', !recordsLayout);
@@ -573,18 +607,198 @@ async function refreshWellness(ready = applicationReady) {
 
 function renderWellness(summary) {
   const target = $('wellness-graph');
+  const priorities = $('wellness-priorities');
   target.replaceChildren();
+  priorities.replaceChildren();
   if (!summary || summary.error) {
     const message = document.createElement('p');
     message.className = 'wellness-loading';
     message.textContent = summary?.error
       || 'Your wellness overview appears once the pod connection is ready. Open Pod status for details.';
     target.append(message);
+    const empty = document.createElement('p');
+    empty.className = 'wellness-loading';
+    empty.textContent = 'Priorities appear when the wellness summary is available.';
+    priorities.append(empty);
+    renderWellnessStatusSummary([]);
+    renderWellnessRecentActivity(podActivity);
     renderUtilityMenu(null);
     return;
   }
-  target.append(createSpiderGraph(summary.axes));
+  const pillars = mapWellnessPillars(summary);
+  target.append(createSpiderGraph(pillars));
+  renderWellnessStatusSummary(pillars);
+  renderWellnessPriorities(pillars);
+  renderWellnessRecentActivity(podActivity);
   renderUtilityMenu(summary.browse);
+}
+
+function mapWellnessPillars(summary) {
+  const sources = new Map([...(summary.axes || []), ...(summary.browse || [])].map((entry) => [entry.domain, entry]));
+  return WELLNESS_PILLARS.map((pillar) => {
+    const source = sources.get(pillar.domain) || {};
+    const hasRecords = Number(source.recordCount ?? source.count ?? 0) > 0;
+    return {
+      ...source,
+      ...pillar,
+      score: Number.isFinite(source.score) ? source.score : (hasRecords ? 70 : null),
+      status: source.status || (hasRecords ? 'green' : 'empty'),
+      summary: source.summary || `${source.count || 0} owner-held ${domains[pillar.domain]?.plural?.toLowerCase() || 'records'}`,
+    };
+  });
+}
+
+function renderWellnessStatusSummary(pillars) {
+  const target = $('wellness-status-summary');
+  target.replaceChildren();
+  for (const [status, label] of [['green', 'On track'], ['yellow', 'Watch'], ['red', 'Attention']]) {
+    const card = document.createElement('article');
+    card.className = `wellness-summary-card wellness-summary-${status}`;
+    const count = pillars.filter((pillar) => pillar.status === status).length;
+    card.innerHTML = `<small>${label}</small><strong>${count}</strong><span>pillars</span>`;
+    target.append(card);
+  }
+}
+
+function renderWellnessPriorities(axes) {
+  const target = $('wellness-priorities');
+  const weight = { red: 0, yellow: 1, empty: 2, green: 3 };
+  const selected = [...axes]
+    .sort((a, b) => (weight[a.status] ?? 4) - (weight[b.status] ?? 4) || (a.score ?? -1) - (b.score ?? -1))
+    .slice(0, 3);
+  for (const axis of selected) {
+    const card = document.createElement('article');
+    card.className = `wellness-priority-card wellness-priority-${axis.status}`;
+    const status = document.createElement('small');
+    status.textContent = STATUS_LABELS[axis.status] || axis.status;
+    const title = document.createElement('strong');
+    title.textContent = axis.label;
+    const detail = document.createElement('p');
+    detail.textContent = axis.summary;
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.textContent = 'Review records →';
+    action.addEventListener('click', () => openPillarDetail(axis));
+    card.append(status, title, detail, action);
+    target.append(card);
+  }
+}
+
+function renderWellnessRecentActivity(activity) {
+  const target = $('wellness-recent-activity');
+  target.replaceChildren();
+  const events = activity?.events?.slice(0, 4) || [];
+  if (!events.length) {
+    const empty = document.createElement('p');
+    empty.className = 'wellness-loading';
+    empty.textContent = activity?.error || 'Recent owner-approved updates will appear here.';
+    target.append(empty);
+    return;
+  }
+  for (const event of events) {
+    const row = document.createElement('article');
+    row.className = `wellness-activity-row wellness-activity-${event.status}`;
+    row.innerHTML = `<i aria-hidden="true"></i><div><strong>${event.summary}</strong><small>${event.domain ? `${domains[event.domain]?.plural || event.domain} · ` : ''}${formatDate(event.at)}</small></div>`;
+    target.append(row);
+  }
+}
+
+async function openPillarDetail(pillar) {
+  const detail = $('pillar-detail');
+  const status = STATUS_LABELS[pillar.status] || pillar.status;
+  const config = domains[pillar.domain];
+  detail.replaceChildren();
+  detail.innerHTML = `
+    <nav class="pillar-breadcrumb" aria-label="Breadcrumb"><button class="pillar-back" type="button">Wellness</button><span aria-hidden="true">›</span><strong>${pillar.label}</strong></nav>
+    <div class="pillar-detail-grid">
+      <section class="pillar-metric-card och-panel">
+        <header class="pillar-title-area">
+          <div><div class="pillar-title-line"><h1>${pillar.label}</h1><span class="och-chip status-${pillar.status === 'green' ? 'on-track' : pillar.status === 'yellow' ? 'watch' : 'attention'}">● ${status}</span></div><p>${pillar.summary}</p></div>
+          <div class="pillar-score-block"><small>PILLAR SCORE</small><strong>${pillar.score ?? '—'}${pillar.score == null ? '' : '%'}</strong></div>
+        </header>
+        <div class="pillar-radar-stage" aria-live="polite"><p class="wellness-loading">Reading linked records…</p></div>
+        <div class="pillar-legend"><span class="och-chip status-on-track">● On track</span><span class="och-chip status-watch">● Watch</span><span class="och-chip status-attention">● Attention</span></div>
+      </section>
+      <section class="pillar-records-card och-panel">
+        <header><div><h2>Records</h2><p>Linked entries from your secure Pod</p></div><button class="primary pillar-add" type="button">+ Add record</button></header>
+        <div class="pillar-record-filters" aria-label="Record filters"></div>
+        <div class="pillar-record-list" aria-live="polite"><p class="wellness-loading">Reading ${config?.plural?.toLowerCase() || 'records'}…</p></div>
+        <footer><button class="pillar-review" type="button">Show all records →</button><span class="pillar-record-count"></span></footer>
+      </section>
+    </div>`;
+  document.querySelector('.wellness-dashboard').classList.add('hidden');
+  detail.classList.remove('hidden');
+  detail.querySelector('.pillar-back').addEventListener('click', closePillarDetail);
+  detail.querySelector('.pillar-review').addEventListener('click', () => selectDomain(pillar.domain));
+  detail.querySelector('.pillar-add').addEventListener('click', async () => {
+    await selectDomain(pillar.domain);
+    openForm();
+  });
+  await renderPillarWorkspace(pillar, detail);
+}
+
+async function renderPillarWorkspace(pillar, detail) {
+  const config = domains[pillar.domain];
+  let linkedRecords = [];
+  try {
+    const response = await fetch(`/api/resources/${pillar.domain}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Unable to load linked records');
+    linkedRecords = Array.isArray(payload.data) ? payload.data : [];
+  } catch (error) {
+    const list = detail.querySelector('.pillar-record-list');
+    list.innerHTML = `<p class="wellness-loading">${error.message}</p>`;
+  }
+
+  const elements = (DOMAIN_SEMANTIC_ELEMENTS[pillar.domain] || semanticElementsFromFields(config)).slice(0, 5);
+  const radar = detail.querySelector('.pillar-radar-stage');
+  radar.replaceChildren(createDomainSpiderGraph(pillar.domain, elements, linkedRecords, false));
+
+  const filters = detail.querySelector('.pillar-record-filters');
+  const all = document.createElement('button');
+  all.type = 'button';
+  all.className = 'active';
+  all.textContent = 'All';
+  filters.append(all);
+  for (const element of elements) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = element.label;
+    button.addEventListener('click', () => renderPillarRecordRows(detail, pillar, linkedRecords, element));
+    filters.append(button);
+  }
+  all.addEventListener('click', () => renderPillarRecordRows(detail, pillar, linkedRecords));
+  renderPillarRecordRows(detail, pillar, linkedRecords);
+}
+
+function renderPillarRecordRows(detail, pillar, linkedRecords, semanticElement = null) {
+  const config = domains[pillar.domain];
+  const visible = semanticElement ? recordsForSemanticElement(semanticElement, linkedRecords) : [...linkedRecords].sort((a, b) => recordTimestamp(b) - recordTimestamp(a));
+  detail.querySelectorAll('.pillar-record-filters button').forEach((button) => button.classList.toggle('active', button.textContent === (semanticElement?.label || 'All')));
+  const list = detail.querySelector('.pillar-record-list');
+  list.replaceChildren();
+  for (const record of visible.slice(0, 7)) {
+    const row = document.createElement('article');
+    const timestamp = recordTimestamp(record);
+    row.innerHTML = `<i aria-hidden="true"></i><time>${timestamp ? formatDate(new Date(timestamp).toISOString()) : 'Pod record'}</time><span>${semanticElement?.label || config.label}</span><strong>${config.title(record)}</strong><button type="button">Edit</button>`;
+    row.querySelector('button').addEventListener('click', async () => {
+      await selectDomain(pillar.domain);
+      openForm(record);
+    });
+    list.append(row);
+  }
+  if (!visible.length) {
+    const empty = document.createElement('p');
+    empty.className = 'wellness-loading';
+    empty.textContent = 'No linked records yet. Add the first owner-held entry when you are ready.';
+    list.append(empty);
+  }
+  detail.querySelector('.pillar-record-count').textContent = `Showing ${Math.min(visible.length, 7)} of ${visible.length} entries`;
+}
+
+function closePillarDetail() {
+  $('pillar-detail').classList.add('hidden');
+  document.querySelector('.wellness-dashboard').classList.remove('hidden');
 }
 
 /**
@@ -668,9 +882,9 @@ function createSpiderGraph(axes) {
     const tip = node('title', {});
     tip.textContent = `${axis.label} — ${STATUS_LABELS[axis.status]}${axis.score === null ? '' : ` (${axis.score}/100)`}\n${axis.summary}`;
     marker.append(tip);
-    marker.addEventListener('click', () => selectDomain(axis.domain));
+    marker.addEventListener('click', () => openPillarDetail(axis));
     marker.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectDomain(axis.domain); }
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPillarDetail(axis); }
     });
     svg.append(marker);
 
@@ -686,9 +900,9 @@ function createSpiderGraph(axes) {
       'aria-label': `${axis.label}: ${STATUS_LABELS[axis.status]}. Open ${axis.label} records.`,
     });
     label.textContent = axis.label;
-    label.addEventListener('click', () => selectDomain(axis.domain));
+    label.addEventListener('click', () => openPillarDetail(axis));
     label.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectDomain(axis.domain); }
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPillarDetail(axis); }
     });
     svg.append(label);
   });
@@ -777,7 +991,7 @@ function semanticElementsFromFields(config) {
     }));
 }
 
-function createDomainSpiderGraph(domainKey, elements, sourceRecords) {
+function createDomainSpiderGraph(domainKey, elements, sourceRecords, interactive = true) {
   const size = 320;
   const center = size / 2;
   const radius = center - 48;
@@ -827,13 +1041,15 @@ function createDomainSpiderGraph(domainKey, elements, sourceRecords) {
       'data-semantic-node': element.id,
       'aria-label': `${element.label}: ${count} current record${count === 1 ? '' : 's'}. Show summary and add ${domains[domainKey].label.toLowerCase()}.`,
     });
-    const showSummary = () => renderDomainNodeSummary(domainKey, element, sourceRecords);
-    marker.addEventListener('mouseenter', showSummary);
-    marker.addEventListener('focus', showSummary);
-    marker.addEventListener('click', showSummary);
-    marker.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSummary(); }
-    });
+    if (interactive) {
+      const showSummary = () => renderDomainNodeSummary(domainKey, element, sourceRecords);
+      marker.addEventListener('mouseenter', showSummary);
+      marker.addEventListener('focus', showSummary);
+      marker.addEventListener('click', showSummary);
+      marker.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSummary(); }
+      });
+    }
     svg.append(marker);
 
     const [lx, ly] = point(index, 1.18);
@@ -845,12 +1061,15 @@ function createDomainSpiderGraph(domainKey, elements, sourceRecords) {
       'aria-label': `${element.label}: show ${domains[domainKey].plural} summary.`,
     });
     label.textContent = element.label;
-    label.addEventListener('mouseenter', showSummary);
-    label.addEventListener('focus', showSummary);
-    label.addEventListener('click', showSummary);
-    label.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSummary(); }
-    });
+    if (interactive) {
+      const showSummary = () => renderDomainNodeSummary(domainKey, element, sourceRecords);
+      label.addEventListener('mouseenter', showSummary);
+      label.addEventListener('focus', showSummary);
+      label.addEventListener('click', showSummary);
+      label.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showSummary(); }
+      });
+    }
     svg.append(label);
   });
 
@@ -1032,6 +1251,8 @@ function renderPodManagement(status, ready = applicationReady) {
 }
 
 function renderPodActivity(activity) {
+  podActivity = activity;
+  renderWellnessRecentActivity(activity);
   const containerList = $('pod-container-list');
   const activityList = $('pod-activity-list');
   const healthKitStatus = $('healthkit-status');
@@ -1114,7 +1335,190 @@ function renderEpicStatus(status, ready = applicationReady) {
     : 'Run explicit live SMART discovery and FHIR CapabilityStatement checks.';
   $('epic-connect').disabled = !ready || !enabled || connected;
   $('epic-preview').disabled = !ready || !enabled || !connected;
+  $('epic-documents').disabled = !ready || !enabled || !connected;
   $('epic-apply').disabled = !ready || !enabled || !connected || !epicPreview || epicSelectedDomains.size === 0;
+}
+
+async function openEpicDocumentManager() {
+  const dialog = $('epic-document-dialog');
+  $('epic-document-connection').textContent = epicStatus.status === 'connected' ? 'Connected' : 'Not connected';
+  try {
+    const [recordsResponse, planResponse] = await Promise.all([
+      fetch('/api/resources/documents'),
+      fetch('/api/planned/epic/documents'),
+    ]);
+    const recordsPayload = await recordsResponse.json();
+    const planPayload = await planResponse.json();
+    epicDocumentRecords = Array.isArray(recordsPayload.data) ? recordsPayload.data : [];
+    renderEpicDocumentCapabilities(planPayload.data);
+  } catch (error) {
+    epicDocumentRecords = [];
+    renderEpicDocumentCapabilities({ error: error.message });
+  }
+  selectedEpicDocument = collectEpicDocuments()[0] || null;
+  renderEpicDocumentManager();
+  dialog.showModal();
+}
+
+function collectEpicDocuments() {
+  const local = epicDocumentRecords.map((record) => ({ ...record, _source: 'pod', _action: 'local' }));
+  const imported = (epicPreview?.changes || [])
+    .filter((change) => change.domain === 'documents')
+    .map((change) => ({ ...change.entity, _source: 'epic', _action: change.action, _provenance: change.provenance, _targetUrl: change.targetUrl }));
+  return [...imported, ...local];
+}
+
+function renderEpicDocumentCapabilities(plan) {
+  const target = $('epic-document-capabilities');
+  target.replaceChildren();
+  const copy = document.createElement('p');
+  copy.textContent = plan?.error
+    ? `Capability details unavailable: ${plan.error}`
+    : 'Read and local Pod create are available. Epic create/update actions are staged for review; delete remains blocked by the current contract.';
+  const chips = document.createElement('div');
+  chips.className = 'capability-chips';
+  for (const [text, className] of [
+    ['READ', 'capability-read'],
+    ['CREATE · STAGED', 'capability-read'],
+    ['UPDATE · REVIEW', 'capability-review'],
+    ['DELETE · BLOCKED', 'capability-blocked'],
+  ]) {
+    const chip = document.createElement('span');
+    chip.className = `capability-chip ${className}`;
+    chip.textContent = text;
+    chips.append(chip);
+  }
+  target.append(copy, chips);
+}
+
+function documentDate(record) {
+  return record.authoredDate || record.updatedAt || record._provenance?.sourceLastUpdated || '';
+}
+
+function documentTitle(record) {
+  return record.title || record.documentType?.display || record.documentType?.code || 'Untitled document';
+}
+
+function documentDuplicateKey(record) {
+  return `${documentTitle(record).toLowerCase().replace(/[^a-z0-9]/g, '')}:${String(documentDate(record)).slice(0, 10)}`;
+}
+
+function renderEpicDocumentManager() {
+  const query = $('epic-document-search').value.trim().toLowerCase();
+  const all = collectEpicDocuments();
+  const duplicateCounts = all.reduce((map, record) => map.set(documentDuplicateKey(record), (map.get(documentDuplicateKey(record)) || 0) + 1), new Map());
+  const visible = all.filter((record) => JSON.stringify(record).toLowerCase().includes(query));
+  const list = $('epic-document-list');
+  list.replaceChildren();
+  const heading = document.createElement('div');
+  heading.className = 'epic-document-list-heading';
+  heading.innerHTML = '<span>All documents</span><span>Newest first</span>';
+  list.append(heading);
+  for (const record of visible) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = `epic-document-row ${record === selectedEpicDocument ? 'active' : ''}`;
+    const duplicate = duplicateCounts.get(documentDuplicateKey(record)) > 1;
+    row.innerHTML = `<strong></strong><small></small><span class="capability-chip ${duplicate ? 'capability-review' : 'capability-read'}"></span>`;
+    row.querySelector('strong').textContent = documentTitle(record);
+    row.querySelector('small').textContent = `${formatDate(documentDate(record)) || 'Date unavailable'} · ${record.sourceSystem || record._source}`;
+    row.querySelector('span').textContent = duplicate ? 'DUPLICATE' : record._source.toUpperCase();
+    row.addEventListener('click', () => { selectedEpicDocument = record; renderEpicDocumentManager(); });
+    list.append(row);
+  }
+  const duplicates = all.filter((record) => duplicateCounts.get(documentDuplicateKey(record)) > 1);
+  $('epic-document-duplicates').textContent = `Potential duplicates: ${new Set(duplicates.map(documentDuplicateKey)).size}`;
+  $('epic-document-summary').textContent = `${all.length} documents · ${duplicates.length} duplicate candidates · audit logging enabled`;
+  renderEpicDocumentDetail(selectedEpicDocument, duplicates);
+}
+
+function renderEpicDocumentDetail(record, duplicates) {
+  const detail = $('epic-document-detail');
+  const actions = $('epic-document-actions');
+  detail.replaceChildren();
+  actions.replaceChildren();
+  if (!record) {
+    detail.innerHTML = '<h3>No documents available</h3><p>Preview an Epic import or add a document to your Solid pod.</p>';
+    return;
+  }
+  const heading = document.createElement('h3');
+  heading.textContent = documentTitle(record);
+  const provenance = document.createElement('p');
+  provenance.textContent = `${record._source === 'epic' ? 'Epic DocumentReference' : 'Owner Solid pod'} · ${formatDate(documentDate(record)) || 'Date unavailable'}`;
+  const metadata = document.createElement('dl');
+  metadata.className = 'epic-document-meta';
+  for (const [label, value] of [
+    ['Category', record.category?.display || record.documentType?.display || 'Not specified'],
+    ['Clinical date', formatDate(documentDate(record)) || 'Not specified'],
+    ['Status', record.status || 'Not specified'],
+    ['Source', record.sourceSystem || record._source],
+    ['Format', record.contentType || (record.binaryUrl ? 'Linked binary' : 'Metadata only')],
+    ['LOINC', record.documentType?.code || 'Not specified'],
+  ]) {
+    const cell = document.createElement('div');
+    cell.innerHTML = '<dt></dt><dd></dd>';
+    cell.querySelector('dt').textContent = label;
+    cell.querySelector('dd').textContent = value;
+    metadata.append(cell);
+  }
+  detail.append(heading, provenance, metadata);
+  const matches = duplicates.filter((candidate) => documentDuplicateKey(candidate) === documentDuplicateKey(record));
+  if (matches.length > 1) {
+    const duplicateHeading = document.createElement('h4');
+    duplicateHeading.textContent = 'Duplicate review';
+    const grid = document.createElement('div');
+    grid.className = 'epic-duplicate-grid';
+    matches.slice(0, 2).forEach((candidate, index) => {
+      const card = document.createElement('article');
+      card.className = `epic-duplicate-card ${index === 0 ? 'canonical' : ''}`;
+      card.innerHTML = `<strong>${index === 0 ? '● Keep as canonical' : '○ Merge into canonical'}</strong><p></p><small></small>`;
+      card.querySelector('p').textContent = documentTitle(candidate);
+      card.querySelector('small').textContent = candidate._source === 'epic' ? 'Epic provenance and signed source' : 'Owner notes and Pod provenance';
+      grid.append(card);
+    });
+    detail.append(duplicateHeading, grid);
+  }
+
+  const actionHeading = document.createElement('h3');
+  actionHeading.textContent = 'Owner actions';
+  const edit = document.createElement('button');
+  edit.className = 'secondary'; edit.type = 'button'; edit.textContent = 'Edit local metadata';
+  edit.disabled = record._source !== 'pod';
+  edit.addEventListener('click', () => { $('epic-document-dialog').close(); activeDomain = 'documents'; openForm(record); });
+  const stage = document.createElement('button');
+  stage.className = 'primary'; stage.type = 'button'; stage.textContent = record._source === 'pod' ? 'Stage Epic update' : 'Stage create in Epic';
+  stage.addEventListener('click', () => stageEpicDocument(record));
+  const remove = document.createElement('button');
+  remove.className = 'secondary'; remove.type = 'button'; remove.textContent = 'Delete from Epic'; remove.disabled = true;
+  const blocked = document.createElement('span');
+  blocked.className = 'blocked-note'; blocked.textContent = 'Delete unavailable: the current Epic document contract is read-only and does not expose an approved delete workflow.';
+  actions.append(actionHeading, edit, stage, remove, blocked);
+  const before = document.createElement('strong'); before.textContent = 'Before staging'; actions.append(before);
+  for (const text of ['Review exact changed fields', 'Confirm purpose: care coordination', 'Confirm authorized Epic destination', 'Record owner consent and audit event']) {
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input'); checkbox.type = 'checkbox';
+    label.append(checkbox, document.createTextNode(text)); actions.append(label);
+  }
+  const note = document.createElement('div'); note.className = 'safety-note'; note.textContent = 'No direct write occurs yet. The request is staged until authorization, capability, policy, and owner-consent checks pass.'; actions.append(note);
+}
+
+async function stageEpicDocument(record) {
+  const checked = [...$('epic-document-actions').querySelectorAll('input[type="checkbox"]')].every((input) => input.checked);
+  if (!checked) {
+    alert('Complete every owner-review confirmation before staging this Epic document change.');
+    return;
+  }
+  const documentRecord = Object.fromEntries(Object.entries(record).filter(([key]) => !key.startsWith('_')));
+  const podResourceUrl = record.url || record._targetUrl;
+  const action = record._action === 'update' || podResourceUrl ? 'update' : 'create';
+  const response = await fetch('/api/integrations/epic/outbound', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ domain: 'documents', action, writeMode: 'stage', podResourceUrl, record: documentRecord }),
+  });
+  const payload = await response.json();
+  if (!response.ok) { alert(formatApiError(payload)); return; }
+  $('epic-document-review').disabled = false;
+  $('epic-document-summary').textContent = payload.data?.message || 'Document change staged for owner review.';
 }
 
 async function refreshEpicDiagnostics(ready = applicationReady, live = false, status = epicStatus) {
@@ -1299,8 +1703,52 @@ function openForm(record = null, prefill = null) {
   for (const field of config.fields) fields.append(createField(field, fieldValues));
   renderSyncTargets(record);
   if (!record) document.querySelectorAll('#form-fields select[data-coded-select="true"]').forEach((input) => applyCodedSelect(input._fieldConfig, input));
+  renderFormReview();
   recordFormSnapshot = serializeRecordForm();
   $('record-dialog').showModal();
+}
+
+function renderFormReview() {
+  const target = $('form-review');
+  if (!target) return;
+  target.replaceChildren();
+  const heading = document.createElement('h3');
+  heading.textContent = 'Review before saving';
+  const label = document.createElement('span');
+  label.className = 'form-review-label';
+  label.textContent = 'Required fields';
+  target.append(heading, label);
+
+  const config = domains[activeDomain];
+  const required = config.fields.filter((field) => field.required && !field.transient && field.type !== 'terminology-search');
+  for (const field of required.slice(0, 5)) {
+    const input = document.getElementById(`field-${field.name}`);
+    const row = document.createElement('span');
+    row.className = 'form-review-check';
+    row.textContent = `${input?.value ? '✓' : '○'}  ${field.label}`;
+    target.append(row);
+  }
+
+  const codingPrefix = config.fields.find((field) => field.type === 'terminology-search')?.prefix;
+  if (!codingPrefix) return;
+  const details = document.createElement('dl');
+  for (const [name, key] of [['Display', 'display'], ['System', 'system'], ['Code', 'code']]) {
+    const value = document.getElementById(`field-${codingPrefix}.${key}`)?.value;
+    if (!value) continue;
+    const wrapper = document.createElement('div');
+    const term = document.createElement('dt');
+    term.textContent = name;
+    const description = document.createElement('dd');
+    description.textContent = value;
+    wrapper.append(term, description);
+    details.append(wrapper);
+  }
+  if (details.children.length) {
+    const codingLabel = document.createElement('span');
+    codingLabel.className = 'form-review-label';
+    codingLabel.textContent = 'Coding details';
+    target.append(codingLabel, details);
+  }
 }
 
 function renderSyncTargets(record = null) {
@@ -1929,6 +2377,8 @@ function formatApiError(payload) {
 
 $('add-button').addEventListener('click', () => openForm());
 $('record-form').addEventListener('submit', saveRecord);
+$('record-form').addEventListener('input', renderFormReview);
+$('record-form').addEventListener('change', renderFormReview);
 $('record-close').addEventListener('click', requestCloseRecordDialog);
 $('record-cancel').addEventListener('click', requestCloseRecordDialog);
 $('record-dialog').addEventListener('cancel', (event) => {
@@ -1942,8 +2392,30 @@ $('search').addEventListener('input', renderRecords);
 $('epic-connect').addEventListener('click', connectEpic);
 $('epic-diagnostics').addEventListener('click', () => refreshEpicDiagnostics(applicationReady, true, epicStatus));
 $('epic-preview').addEventListener('click', previewEpicImport);
+$('epic-documents').addEventListener('click', openEpicDocumentManager);
 $('epic-apply').addEventListener('click', applyEpicImport);
-$('connection').addEventListener('click', () => showView('status'));
+$('epic-document-close').addEventListener('click', () => $('epic-document-dialog').close());
+$('epic-document-dialog').addEventListener('click', (event) => {
+  if (event.target === $('epic-document-dialog')) $('epic-document-dialog').close();
+});
+$('epic-document-search').addEventListener('input', renderEpicDocumentManager);
+$('epic-document-duplicates').addEventListener('click', () => {
+  const all = collectEpicDocuments();
+  const counts = all.reduce((map, record) => map.set(documentDuplicateKey(record), (map.get(documentDuplicateKey(record)) || 0) + 1), new Map());
+  selectedEpicDocument = all.find((record) => counts.get(documentDuplicateKey(record)) > 1) || selectedEpicDocument;
+  renderEpicDocumentManager();
+});
+$('epic-document-add').addEventListener('click', () => {
+  $('epic-document-dialog').close();
+  activeDomain = 'documents';
+  openForm();
+});
+$('epic-document-review').addEventListener('click', () => {
+  $('epic-document-dialog').close();
+  showView('status');
+  $('epic-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+$('connection').addEventListener('click', () => showView('pod'));
 document.querySelector('.brand').addEventListener('click', (event) => {
   event.preventDefault();
   showView('wellness');

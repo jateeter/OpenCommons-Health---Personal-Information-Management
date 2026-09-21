@@ -41,7 +41,7 @@ function summary(overrides: Record<string, unknown> = {}) {
 }
 
 /** Boots the page with a stubbed fetch and returns handles for assertions. */
-function boot(options: { wellness?: unknown; wellnessStatus?: number; podReady?: boolean } = {}) {
+function boot(options: { wellness?: unknown; wellnessStatus?: number; podReady?: boolean; epic?: Record<string, unknown> } = {}) {
   document.documentElement.innerHTML = html.replace(/<!DOCTYPE html>/i, '');
   if (window.HTMLDialogElement) {
     window.HTMLDialogElement.prototype.showModal ??= function showModal() { this.setAttribute('open', ''); };
@@ -67,7 +67,7 @@ function boot(options: { wellness?: unknown; wellnessStatus?: number; podReady?:
       return {
         ok: true,
         status: 200,
-        json: async () => ({ ok: options.podReady ?? true, pod: {}, epic: { enabled: false, status: 'disabled' } }),
+        json: async () => ({ ok: options.podReady ?? true, pod: {}, epic: options.epic ?? { enabled: false, status: 'disabled' } }),
         text: async (): Promise<string> => '',
       };
     }
@@ -98,6 +98,7 @@ describe('wellness landing behaviour', () => {
     expect(visible('view-wellness')).toBe(true);
     expect(visible('view-records')).toBe(false);
     expect(visible('view-status')).toBe(false);
+    expect(visible('view-pod')).toBe(false);
     expect($('tab-wellness').getAttribute('aria-selected')).toBe('true');
     expect($('tab-status').getAttribute('aria-selected')).toBe('false');
   });
@@ -117,10 +118,11 @@ describe('wellness landing behaviour', () => {
     expect(visible('view-status')).toBe(false);
   });
 
-  it('keeps the masthead connection dot working as a route into connections', () => {
+  it('keeps the masthead connection dot working as a route into Pod settings', () => {
     boot();
     $('connection').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    expect(visible('view-status')).toBe(true);
+    expect(visible('view-pod')).toBe(true);
+    expect(visible('view-status')).toBe(false);
   });
 
   it('moves between tabs with the arrow keys', () => {
@@ -257,13 +259,13 @@ describe('wellness landing behaviour', () => {
     expect($('record-dialog').hasAttribute('open')).toBe(true);
   });
 
-  it('plots one point per wellness axis, coloured by status', async () => {
+  it('plots all nine Figma wellness pillars, coloured by status', async () => {
     boot();
     await flush();
     const points = document.querySelectorAll('.spider-point');
-    expect(points).toHaveLength(6);
+    expect(points).toHaveLength(9);
     const halos = document.querySelectorAll('.spider-point-halo');
-    expect(halos).toHaveLength(6);
+    expect(halos).toHaveLength(9);
     expect(halos[0].getAttribute('aria-hidden')).toBe('true');
     // Red / yellow / green are all represented by the fixture.
     const fills = Array.from(points).map((p) => p.getAttribute('fill'));
@@ -271,6 +273,26 @@ describe('wellness landing behaviour', () => {
     expect(fills).toContain('#d9a441'); // yellow
     expect(fills).toContain('#cf5240'); // red
     expect(fills).toContain('#a9b6b1'); // empty
+  });
+
+  it('renders the highest-priority wellness axes beside the graph', async () => {
+    boot();
+    await flush();
+    const cards = document.querySelectorAll('.wellness-priority-card');
+    expect(cards).toHaveLength(3);
+    expect($('wellness-priorities').textContent).toContain('Medications');
+    expect($('wellness-priorities').textContent).toContain('Nutrition');
+    expect($('wellness-priorities').textContent).toContain('Review records');
+  });
+
+  it('opens the Epic document manager with delete visibly blocked', async () => {
+    boot({ epic: { enabled: true, status: 'connected', mode: 'mock' } });
+    await flush();
+    $('tab-status').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    $('epic-documents').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    expect($('epic-document-dialog').hasAttribute('open')).toBe(true);
+    expect($('epic-document-capabilities').textContent).toContain('DELETE · BLOCKED');
   });
 
   it('separates empty axes so each is individually tappable', async () => {
@@ -286,6 +308,7 @@ describe('wellness landing behaviour', () => {
         { domain: 'allergies', label: 'Allergies', score: null, status: 'empty', summary: 'None', recordCount: 0 },
         { domain: 'immunizations', label: 'Immunisations', score: null, status: 'empty', summary: 'None', recordCount: 0 },
       ],
+      browse: summary().browse.map((entry) => ({ ...entry, count: 0 })),
     });
     boot({ wellness: allEmpty });
     await flush();
@@ -295,7 +318,7 @@ describe('wellness landing behaviour', () => {
       cx: Number(p.getAttribute('cx')),
       cy: Number(p.getAttribute('cy')),
     }));
-    expect(points).toHaveLength(6);
+    expect(points).toHaveLength(9);
 
     // No two markers share a position, and every pair clears the marker
     // diameter (r=7, so 14px) with a little room.
@@ -312,6 +335,7 @@ describe('wellness landing behaviour', () => {
     // still tell the truth: no data means no area.
     const allEmpty = summary({
       axes: summary().axes.map((axis) => ({ ...axis, score: null, status: 'empty', recordCount: 0 })),
+      browse: summary().browse.map((entry) => ({ ...entry, count: 0 })),
     });
     boot({ wellness: allEmpty });
     await flush();
@@ -331,24 +355,25 @@ describe('wellness landing behaviour', () => {
     boot();
     await flush();
     const labels = document.querySelectorAll('.spider-label');
-    expect(labels.length).toBe(6);
+    expect(labels.length).toBe(9);
     const label = labels[0] as SVGTextElement;
     expect(label.getAttribute('role')).toBe('button');
     expect(label.getAttribute('tabindex')).toBe('0');
     expect(label.getAttribute('data-domain')).toBeTruthy();
     label.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    expect(visible('view-records')).toBe(true);
+    expect(visible('pillar-detail')).toBe(true);
+    expect(document.querySelector('.wellness-dashboard')?.classList.contains('hidden')).toBe(true);
   });
 
-  it('opens the domain records view when a data point is activated', async () => {
+  it('opens the pillar detail flow when a data point is activated', async () => {
     boot();
     await flush();
     const point = document.querySelector('.spider-point') as HTMLElement;
     expect(point).toBeTruthy();
     point.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    // Tapping a vector leaves the landing for that domain's records.
-    expect(visible('view-records')).toBe(true);
-    expect(visible('view-wellness')).toBe(false);
+    expect(visible('view-wellness')).toBe(true);
+    expect(visible('pillar-detail')).toBe(true);
+    expect($('pillar-detail').textContent).toContain('Linked entries from your secure Pod');
   });
 
   it('lists the non-graph domains in the initially closed hamburger menu with their record counts', async () => {
