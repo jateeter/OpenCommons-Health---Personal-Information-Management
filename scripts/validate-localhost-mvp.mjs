@@ -202,7 +202,7 @@ requireText('public/app.js', publicApp, 'function initializeUtilityMenu');
 requireText('public/app.js', publicApp, 'function showView');
 requireText('public/app.js', publicApp, "const WELLNESS_AXIS_DOMAINS = ['vital-signs', 'lab-results', 'medications', 'conditions', 'allergies', 'immunizations']");
 requireText('public/app.js', publicApp, "const WELLNESS_BROWSE_DOMAINS = ['profiles', 'providers', 'insurance-policies', 'documents', 'workflow-tasks']");
-requireText('public/app.js', publicApp, "$('connection').addEventListener('click', () => showView('status'))");
+requireText('public/app.js', publicApp, "$('connection').addEventListener('click', () => showView('pod'))");
 requireText('public/index.html', publicIndex, 'id="view-wellness"');
 requireText('public/index.html', publicIndex, 'id="wellness-graph"');
 requireText('public/index.html', publicIndex, 'id="utility-menu"');
