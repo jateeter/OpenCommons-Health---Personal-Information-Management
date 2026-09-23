@@ -87,6 +87,18 @@ describe('wellness spider-graph landing page', () => {
     expect(indexSource).toContain('id="epic-panel"');
   });
 
+  it('gives every datum listing an owner-controlled sharing path', () => {
+    expect(indexSource).toContain('id="sharing-dialog"');
+    expect(indexSource).toContain('Pod authentication attached');
+    expect(indexSource).toContain('class="text-button sharing"');
+    expect(appSource).toContain('function openSharing(record, domainKey)');
+    expect(appSource).toContain("row.querySelector('.pillar-sharing').addEventListener");
+    expect(appSource).toContain("node.querySelector('.sharing').addEventListener");
+    expect(appSource).toContain('No data leaves the Pod until the authenticated recipient accepts.');
+    expect(styleSource).toContain('.pillar-record-actions .pillar-sharing');
+    expect(styleSource).toContain('.record-actions .sharing');
+  });
+
   it('exposes connections and Pod as primary tabs beside wellness and records', () => {
     // A tablist, not a trailing entry in the record-category list: on a phone
     // the category list scrolls horizontally, so a trailing item is hidden.
