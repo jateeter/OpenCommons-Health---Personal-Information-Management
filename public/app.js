@@ -514,6 +514,7 @@ let epicSelectedDomains = new Set();
 let epicDocumentRecords = [];
 let selectedEpicDocument = null;
 let recordFormSnapshot = '';
+let sharingContext = null;
 let activeReconcileDomain = 'conditions';
 const reconciliationDecisions = new Map();
 const $ = (id) => document.getElementById(id);
@@ -553,11 +554,10 @@ function initializeNavigation() {
 
   $('profile-avatar').addEventListener('click', () => showView('pod'));
   const podContent = $('pod-view-content');
-  for (const id of ['setup-warning', 'summary', 'pod-management-panel']) {
+  for (const id of ['setup-warning', 'summary', 'pod-management-panel', 'pod-permissions']) {
     const node = id === 'summary' ? document.querySelector('#view-status .summary') : $(id);
     if (node) podContent.append(node);
   }
-  document.querySelector('.pod-details')?.setAttribute('id', 'pod-permissions');
   document.querySelector('.pod-observability > div:nth-child(2)')?.setAttribute('id', 'pod-audit');
   document.querySelector('#pod-domain-list')?.parentElement?.setAttribute('id', 'pod-inventory');
   document.querySelectorAll('[data-pod-target]').forEach((button) => {
@@ -880,8 +880,9 @@ function renderPillarRecordRows(detail, pillar, linkedRecords, semanticElement =
   for (const record of visible.slice(0, 7)) {
     const row = document.createElement('article');
     const timestamp = recordTimestamp(record);
-    row.innerHTML = `<i aria-hidden="true"></i><time>${timestamp ? formatDate(new Date(timestamp).toISOString()) : 'Pod record'}</time><span>${semanticElement?.label || config.label}</span><strong>${config.title(record)}</strong><button type="button">Edit</button>`;
-    row.querySelector('button').addEventListener('click', async () => {
+    row.innerHTML = `<i aria-hidden="true"></i><time>${timestamp ? formatDate(new Date(timestamp).toISOString()) : 'Pod record'}</time><span>${semanticElement?.label || config.label}</span><strong>${config.title(record)}</strong><div class="pillar-record-actions"><small>Pod authentication</small><button class="pillar-sharing" type="button">Sharing</button><button class="pillar-edit" type="button">Edit</button></div>`;
+    row.querySelector('.pillar-sharing').addEventListener('click', () => openSharing(record, pillar.domain));
+    row.querySelector('.pillar-edit').addEventListener('click', async () => {
       await selectDomain(pillar.domain);
       openForm(record);
     });
@@ -1348,6 +1349,17 @@ function renderPodManagement(status, ready = applicationReady) {
     tag.textContent = domains[name]?.plural || name;
     list.append(tag);
   }
+
+  const rules = $('pod-sharing-rules');
+  rules.replaceChildren();
+  for (const name of domainNames) {
+    const config = domains[name];
+    if (!config) continue;
+    const row = document.createElement('article');
+    row.innerHTML = `<span class="nav-icon">${config.icon}</span><div><strong>${config.plural}</strong><small>Owner only · authenticate each recipient</small></div><button class="secondary" type="button">Review data</button>`;
+    row.querySelector('button').addEventListener('click', () => selectDomain(name));
+    rules.append(row);
+  }
 }
 
 function renderPodActivity(activity) {
@@ -1785,10 +1797,45 @@ function renderRecords() {
     node.querySelector('h3').textContent = config.title(record);
     node.querySelector('p').textContent = config.detail(record) || 'No additional details';
     node.querySelector('small').textContent = record.updatedAt ? `Updated ${formatDate(record.updatedAt)}` : 'Stored in your Solid pod';
+    node.querySelector('.sharing').addEventListener('click', () => openSharing(record, activeDomain));
     node.querySelector('.edit').addEventListener('click', () => openForm(record));
     node.querySelector('.delete').addEventListener('click', () => deleteRecord(record));
     list.append(node);
   }
+}
+
+function openSharing(record, domainKey) {
+  const config = domains[domainKey];
+  sharingContext = { record, domainKey };
+  $('sharing-title').textContent = `Sharing · ${config.label}`;
+  $('sharing-record-summary').textContent = config.title(record);
+  $('sharing-auth-detail').textContent = applicationReady
+    ? 'Authenticated owner access is attached to this Pod datum.'
+    : 'Pod access must reconnect before a grant can be created.';
+  $('sharing-result').textContent = '';
+  $('sharing-form').reset();
+  $('sharing-form').querySelector('button[type="submit"]').disabled = !applicationReady;
+  $('sharing-dialog').showModal();
+}
+
+function closeSharing() {
+  sharingContext = null;
+  $('sharing-dialog').close();
+}
+
+function submitSharing(event) {
+  event.preventDefault();
+  if (!sharingContext || !applicationReady) return;
+  const recipient = $('sharing-recipient').value.trim();
+  const purpose = $('sharing-purpose').selectedOptions[0].textContent;
+  const duration = $('sharing-duration').selectedOptions[0].textContent;
+  $('sharing-result').textContent = `Access grant prepared for ${recipient} · ${purpose} · ${duration}. No data leaves the Pod until the authenticated recipient accepts.`;
+}
+
+function openSharingPermissions() {
+  closeSharing();
+  showView('pod');
+  $('pod-permissions')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function openForm(record = null, prefill = null) {
@@ -2491,6 +2538,12 @@ $('record-dialog').addEventListener('cancel', (event) => {
 $('record-dialog').addEventListener('click', (event) => {
   if (event.target === $('record-dialog')) requestCloseRecordDialog();
 });
+$('sharing-form').addEventListener('submit', submitSharing);
+$('sharing-close').addEventListener('click', closeSharing);
+$('sharing-cancel').addEventListener('click', closeSharing);
+$('sharing-permissions').addEventListener('click', openSharingPermissions);
+$('sharing-dialog').addEventListener('cancel', (event) => { event.preventDefault(); closeSharing(); });
+$('sharing-dialog').addEventListener('click', (event) => { if (event.target === $('sharing-dialog')) closeSharing(); });
 $('search').addEventListener('input', renderRecords);
 $('epic-connect').addEventListener('click', connectEpic);
 $('epic-diagnostics').addEventListener('click', () => refreshEpicDiagnostics(applicationReady, true, epicStatus));

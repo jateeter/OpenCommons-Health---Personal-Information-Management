@@ -355,6 +355,9 @@ button { cursor: pointer; }
 .pillar-record-list article span { padding: 4px 7px; overflow: hidden; border-radius: 7px; background: #edf5f1; color: var(--teal-dark); text-overflow: ellipsis; white-space: nowrap; }
 .pillar-record-list article strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pillar-record-list article button, .pillar-records-card > footer button { border: 0; padding: 4px; color: var(--teal); background: transparent; font-weight: 850; }
+.pillar-record-actions { display: grid; grid-template-columns: repeat(2, auto); align-items: center; justify-items: end; gap: 2px 8px; }
+.pillar-record-actions small { grid-column: 1 / -1; color: var(--muted); font-size: 9px; white-space: nowrap; }
+.pillar-record-actions .pillar-sharing { padding: 7px 13px; border-radius: 999px; color: white; background: #087cff; }
 .pillar-records-card > footer { margin-top: 16px; font-size: 11px; }
 
 main { grid-column: 1 / -1; padding: 28px 40px 80px; min-width: 0; width: 100%; }
@@ -525,6 +528,15 @@ h1 { margin-bottom: 9px; font: 850 46px/1.06 Inter, ui-sans-serif, system-ui, sa
 }
 .pod-details dt { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .pod-details dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.pod-permissions-panel { margin-top: 18px; }
+.pod-sharing-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0 24px; }
+.pod-sharing-summary article { padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: #fbfdfc; }
+.pod-sharing-summary strong, .pod-sharing-summary small { display: block; }
+.pod-sharing-summary small { margin-top: 4px; color: var(--muted); }
+.pod-sharing-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.pod-sharing-rules article { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 13px; }
+.pod-sharing-rules strong, .pod-sharing-rules small { display: block; }
+.pod-sharing-rules small { margin-top: 3px; color: var(--muted); font-size: 10px; }
 .pod-panel h3 { margin: 0 22px 10px; font-size: 13px; color: var(--teal-dark); }
 .pod-domain-list {
   display: flex;
@@ -909,6 +921,21 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
 .sync-target-option.disabled { opacity: .62; background: #f5f8f6; }
 .sync-target-note { color: var(--muted); line-height: 1.35; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; border-top: 1px solid var(--line); padding: 16px 24px; }
+.sharing-dialog { width: min(620px, calc(100vw - 30px)); }
+#sharing-form { display: grid; }
+.sharing-record-summary { margin: 4px 0 0; color: var(--muted); }
+.sharing-auth-state { display: flex; gap: 12px; align-items: center; margin: 0 24px; padding: 14px 16px; border: 1px solid #b9ded1; border-radius: 14px; background: var(--mint); }
+.sharing-auth-state > span { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; color: white; background: var(--teal); font-weight: 900; }
+.sharing-auth-state strong, .sharing-auth-state small { display: block; }
+.sharing-auth-state small { margin-top: 2px; color: var(--muted); }
+.sharing-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 20px 24px; }
+.sharing-fields label { display: grid; gap: 6px; font-size: 12px; font-weight: 800; }
+.sharing-fields input, .sharing-fields select { min-height: 44px; border: 1px solid #ccd7d1; border-radius: 11px; padding: 9px 11px; background: white; color: var(--ink); }
+.sharing-fields > label:first-child, .sharing-consent { grid-column: 1 / -1; }
+.sharing-fields .sharing-consent { display: flex; align-items: center; font-weight: 650; }
+.sharing-consent input { min-height: auto; }
+.sharing-result { min-height: 20px; margin: 0; padding: 0 24px 14px; color: var(--teal-dark); font-size: 12px; font-weight: 700; }
+.record-actions .sharing { padding: 7px 13px; border-radius: 999px; color: white; background: #087cff; }
 .form-error { color: #923e2b; background: #fff0eb; padding: 10px 12px; border-radius: 9px; margin: 0 24px 12px; }
 
 .epic-document-dialog { width: min(1300px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); }
@@ -1051,6 +1078,7 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .domain-node-summary-empty { min-height: auto; padding: 12px; }
   .pod-actions { justify-content: flex-start; }
   .pod-grid { grid-template-columns: 1fr; }
+  .pod-sharing-summary, .pod-sharing-rules { grid-template-columns: 1fr; }
   .pod-details div { grid-template-columns: 1fr; gap: 3px; }
   .pod-observability { grid-template-columns: 1fr; }
   .epic-actions { justify-content: flex-start; }
@@ -1131,7 +1159,11 @@ dialog::backdrop { background: rgba(20, 43, 38, .45); backdrop-filter: blur(3px)
   .pillar-score-block { width: 100%; grid-template-columns: 1fr auto; align-items: center; justify-items: start; }
   .pillar-records-card > header { align-items: flex-start; }
   .pillar-record-list article { grid-template-columns: 8px 68px minmax(0, 1fr); }
-  .pillar-record-list article button { grid-column: 3; justify-self: start; }
+  .pillar-record-actions { grid-column: 3; justify-self: stretch; grid-template-columns: 1fr auto; justify-items: start; }
+  .pillar-record-actions small { grid-column: 1 / -1; }
+  .sharing-fields { grid-template-columns: 1fr; }
+  .sharing-fields > label { grid-column: 1; }
+  .sharing-dialog .dialog-actions { flex-wrap: wrap; }
   .spider { width: min(100%, 330px); }
   .record-form-progress { overflow-x: auto; }
   .record-form-progress span { white-space: nowrap; }
