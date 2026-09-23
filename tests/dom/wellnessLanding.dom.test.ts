@@ -97,10 +97,20 @@ describe('wellness landing behaviour', () => {
     boot();
     expect(visible('view-wellness')).toBe(true);
     expect(visible('view-records')).toBe(false);
+    expect(visible('view-reconcile')).toBe(false);
     expect(visible('view-status')).toBe(false);
     expect(visible('view-pod')).toBe(false);
     expect($('tab-wellness').getAttribute('aria-selected')).toBe('true');
     expect($('tab-status').getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('opens the reconciliation workspace with all eleven managed domains', () => {
+    boot({ epic: { enabled: true, status: 'connected' } });
+    $('tab-reconcile').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(visible('view-reconcile')).toBe(true);
+    expect(document.querySelectorAll('#reconcile-domain-list .reconcile-domain')).toHaveLength(11);
+    expect($('reconcile-progress').textContent).toContain('scan');
+    expect($('reconcile-epic-state').textContent).toContain('Epic');
   });
 
   it('switches to connections when its tab is activated, and back again', () => {

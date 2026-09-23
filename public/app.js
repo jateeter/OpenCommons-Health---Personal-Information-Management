@@ -514,9 +514,11 @@ let epicSelectedDomains = new Set();
 let epicDocumentRecords = [];
 let selectedEpicDocument = null;
 let recordFormSnapshot = '';
+let activeReconcileDomain = 'conditions';
+const reconciliationDecisions = new Map();
 const $ = (id) => document.getElementById(id);
 
-const PRIMARY_TABS = ['wellness', 'records', 'status', 'pod'];
+const PRIMARY_TABS = ['wellness', 'records', 'reconcile', 'status', 'pod'];
 
 function initializeNavigation() {
   // Primary tabs own the top-level destinations. The sidebar below is only a
@@ -587,6 +589,104 @@ function showView(view) {
     button.classList.toggle('active', recordsLayout && button.dataset.domain === activeDomain);
   });
   if (view === 'wellness') void refreshWellness();
+  if (view === 'reconcile') renderReconcileWorkspace();
+}
+
+function reconciliationStatus(change) {
+  if (change.action === 'conflict') return 'conflict';
+  if (change.action === 'create') return 'new';
+  if (change.action === 'update') return 'updated';
+  return 'matched';
+}
+
+function reconcileChanges() {
+  return epicPreview?.changes || [];
+}
+
+function renderReconcileWorkspace() {
+  const changes = reconcileChanges();
+  const counts = { matched: 0, conflict: 0, new: 0, updated: 0 };
+  changes.forEach((change) => { counts[reconciliationStatus(change)] += 1; });
+  $('reconcile-exact-count').textContent = counts.matched;
+  $('reconcile-conflict-count').textContent = counts.conflict;
+  $('reconcile-new-count').textContent = counts.new;
+  $('reconcile-updated-count').textContent = counts.updated;
+  const epicConnected = epicStatus.enabled && epicStatus.status === 'connected';
+  $('reconcile-epic-state').innerHTML = `<i class="dot ${epicConnected ? 'dot-green' : ''}"></i>${epicConnected ? 'Epic connected' : 'Epic not connected'}`;
+
+  const list = $('reconcile-domain-list');
+  list.replaceChildren();
+  for (const [domain, config] of Object.entries(domains)) {
+    const domainChanges = changes.filter((change) => change.domain === domain);
+    const domainCounts = { matched: 0, conflict: 0, new: 0, updated: 0 };
+    domainChanges.forEach((change) => { domainCounts[reconciliationStatus(change)] += 1; });
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `reconcile-domain ${domain === activeReconcileDomain ? 'active' : ''}`;
+    button.innerHTML = `<span class="nav-icon">${config.icon}</span><span><strong>${config.plural}</strong><small>${domainChanges.length ? `${domainChanges.length} compared` : 'No incoming changes'}</small></span><span class="reconcile-domain-badges"></span>`;
+    const badges = button.querySelector('.reconcile-domain-badges');
+    for (const [status, value] of Object.entries(domainCounts)) {
+      if (!value) continue;
+      const badge = document.createElement('i');
+      badge.className = `reconcile-status status-${status}`;
+      badge.textContent = `${value} ${status}`;
+      badges.append(badge);
+    }
+    button.addEventListener('click', () => { activeReconcileDomain = domain; renderReconcileWorkspace(); });
+    list.append(button);
+  }
+  renderReconcileDetail(changes.filter((change) => change.domain === activeReconcileDomain));
+
+  const selected = changes.filter((change) => ['create', 'update'].includes(change.action) && epicSelectedDomains.has(change.domain));
+  const conflicts = changes.filter((change) => change.action === 'conflict').length;
+  $('reconcile-progress').textContent = changes.length
+    ? `${selected.length} safe change${selected.length === 1 ? '' : 's'} selected · ${conflicts} conflict${conflicts === 1 ? '' : 's'} excluded`
+    : 'Run a connected-record scan to begin';
+  $('reconcile-approve').disabled = selected.length === 0;
+}
+
+function renderReconcileDetail(changes) {
+  const detail = $('reconcile-detail');
+  detail.replaceChildren();
+  const config = domains[activeReconcileDomain];
+  const heading = document.createElement('header');
+  heading.innerHTML = `<p class="eyebrow">Record source comparison</p><h2>${config?.plural || activeReconcileDomain}</h2><p>Solid Pod remains authoritative. Incoming records are not written until owner approval.</p>`;
+  detail.append(heading);
+  if (!changes.length) {
+    const empty = document.createElement('div');
+    empty.className = 'reconcile-empty';
+    empty.innerHTML = '<strong>No incoming differences</strong><p>This domain has no connected-source changes in the current scan.</p>';
+    detail.append(empty);
+    return;
+  }
+  for (const [index, change] of changes.entries()) {
+    const status = reconciliationStatus(change);
+    const card = document.createElement('article');
+    card.className = `reconcile-change status-${status}`;
+    const decisionKey = `${change.domain}:${index}:${change.display}`;
+    const decision = reconciliationDecisions.get(decisionKey);
+    card.innerHTML = `<div class="reconcile-change-heading"><span class="reconcile-status status-${status}">${status}</span><strong></strong></div><p></p><div class="reconcile-comparison"><span><small>Current Pod state</small><b>${status === 'new' ? 'No matching record' : 'Owner-held record'}</b></span><span><small>Incoming source</small><b>${change.fhirResourceType || 'FHIR record'}</b></span></div>`;
+    card.querySelector('strong').textContent = change.display || 'Clinical record';
+    card.querySelector('p').textContent = change.reconciliation?.detail || (status === 'new' ? 'New connected-source record ready for review.' : 'No material difference detected.');
+    if (status === 'conflict') {
+      const actions = document.createElement('div');
+      actions.className = 'reconcile-actions';
+      for (const [value, label] of [['pod', 'Keep Pod'], ['incoming', 'Use incoming'], ['merge', 'Review fields']]) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = decision === value ? 'secondary active' : 'secondary'; button.textContent = label;
+        button.addEventListener('click', () => {
+          reconciliationDecisions.set(decisionKey, value);
+          if (value === 'merge') { activeDomain = change.domain; showView('records'); void selectDomain(change.domain); }
+          else renderReconcileWorkspace();
+        });
+        actions.append(button);
+      }
+      const note = document.createElement('small');
+      note.textContent = decision ? 'Decision saved locally; apply remains blocked until the record is reconciled through the Pod editor.' : 'Choose a disposition. Conflict records are never auto-applied.';
+      actions.append(note); card.append(actions);
+    }
+    detail.append(card);
+  }
 }
 
 async function refreshWellness(ready = applicationReady) {
@@ -2100,6 +2200,7 @@ async function previewEpicImport() {
     epicPreview = payload.data;
     epicSelectedDomains = new Set(epicPreview.changes.map((change) => change.domain));
     renderEpicPreview();
+    renderReconcileWorkspace();
     renderEpicStatus(epicStatus);
   } catch (error) {
     alert(error.message);
@@ -2148,6 +2249,7 @@ function renderEpicPreview(applyResult = null) {
   }
   if (!epicPreview) {
     list.classList.add('hidden');
+    renderReconcileWorkspace();
     return;
   }
   list.classList.remove('hidden');
@@ -2157,6 +2259,7 @@ function renderEpicPreview(applyResult = null) {
   list.append(summary);
   list.append(renderEpicSourceDiagnostics(epicPreview.sourceDiagnostics || []));
   list.append(renderReconciliationReview(epicPreview));
+  renderReconcileWorkspace();
 
   const checklist = document.createElement('div');
   checklist.className = 'epic-review-checklist';
@@ -2394,6 +2497,8 @@ $('epic-diagnostics').addEventListener('click', () => refreshEpicDiagnostics(app
 $('epic-preview').addEventListener('click', previewEpicImport);
 $('epic-documents').addEventListener('click', openEpicDocumentManager);
 $('epic-apply').addEventListener('click', applyEpicImport);
+$('reconcile-scan').addEventListener('click', previewEpicImport);
+$('reconcile-approve').addEventListener('click', applyEpicImport);
 $('epic-document-close').addEventListener('click', () => $('epic-document-dialog').close());
 $('epic-document-dialog').addEventListener('click', (event) => {
   if (event.target === $('epic-document-dialog')) $('epic-document-dialog').close();

@@ -102,7 +102,8 @@ describe('wellness spider-graph landing page', () => {
     expect(indexSource).toMatch(/id="tab-records"[^>]*aria-selected="false"/);
     expect(indexSource).toMatch(/id="tab-status"[^>]*aria-selected="false"/);
     expect(indexSource).toMatch(/id="tab-pod"[^>]*aria-selected="false"/);
-    expect(appSource).toContain("const PRIMARY_TABS = ['wellness', 'records', 'status', 'pod']");
+    expect(indexSource).toMatch(/id="tab-reconcile"[^>]*aria-selected="false"/);
+    expect(appSource).toContain("const PRIMARY_TABS = ['wellness', 'records', 'reconcile', 'status', 'pod']");
     expect(appSource).toContain("tab.setAttribute('aria-selected', String(selected))");
     expect(styleSource).toContain('.primary-tabs');
     expect(styleSource).toContain('.primary-tab.active');

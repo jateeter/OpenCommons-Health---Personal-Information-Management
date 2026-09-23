@@ -48,6 +48,7 @@
     <div class="primary-tabs" role="tablist" aria-label="Main sections">
       <button id="tab-wellness" class="primary-tab" role="tab" type="button" data-view="wellness" aria-controls="view-wellness" aria-selected="true" tabindex="0"><span class="tab-icon" aria-hidden="true">✳</span>Wellness</button>
       <button id="tab-records" class="primary-tab" role="tab" type="button" data-view="records" aria-controls="view-records" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">▤</span>Records</button>
+      <button id="tab-reconcile" class="primary-tab" role="tab" type="button" data-view="reconcile" aria-controls="view-reconcile" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">⇄</span>Reconcile</button>
       <button id="tab-status" class="primary-tab" role="tab" type="button" data-view="status" aria-controls="view-status" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">◈</span>Connections</button>
       <button id="tab-pod" class="primary-tab" role="tab" type="button" data-view="pod" aria-controls="view-pod" aria-selected="false" tabindex="-1"><span class="tab-icon" aria-hidden="true">◉</span>Pod</button>
     </div>
@@ -95,6 +96,37 @@
             </aside>
           </div>
           <section id="pillar-detail" class="pillar-detail hidden" aria-live="polite"></section>
+        </section>
+
+        <section id="view-reconcile" class="view hidden" aria-label="Reconcile connected health records">
+          <section class="reconcile-hero">
+            <div>
+              <p class="eyebrow">Owner review workflow</p>
+              <h1>Sync ledger</h1>
+              <p>Compare connected-source records with your Solid Pod, resolve differences, and approve only the changes you choose.</p>
+            </div>
+            <div class="reconcile-source-state" aria-label="Connected reconciliation sources">
+              <span><i class="dot dot-green"></i>Solid Pod connected</span>
+              <span id="reconcile-epic-state"><i class="dot"></i>Epic status checking</span>
+            </div>
+          </section>
+          <section class="reconcile-summary" aria-live="polite">
+            <article><strong id="reconcile-exact-count">0</strong><span>Exact matches</span><small>Verified and unchanged</small></article>
+            <article class="status-conflict"><strong id="reconcile-conflict-count">0</strong><span>Review needed</span><small>Conflicts or duplicates</small></article>
+            <article class="status-new"><strong id="reconcile-new-count">0</strong><span>New records</span><small>Ready for owner approval</small></article>
+            <article class="status-updated"><strong id="reconcile-updated-count">0</strong><span>Updated records</span><small>Existing Pod record changes</small></article>
+          </section>
+          <div class="reconcile-workspace">
+            <section class="reconcile-domains" aria-labelledby="reconcile-domains-title">
+              <div class="panel-heading"><div><p class="eyebrow">Eleven managed domains</p><h2 id="reconcile-domains-title">Review by record type</h2></div><button id="reconcile-scan" class="secondary" type="button">Scan connected records</button></div>
+              <div id="reconcile-domain-list" class="reconcile-domain-list"></div>
+            </section>
+            <aside id="reconcile-detail" class="reconcile-detail" aria-live="polite"></aside>
+          </div>
+          <footer class="reconcile-approval-bar">
+            <div><strong id="reconcile-progress">No pending changes</strong><small>Conflicts remain excluded until explicitly resolved.</small></div>
+            <button id="reconcile-approve" class="primary" type="button" disabled>Approve selected Pod updates</button>
+          </footer>
         </section>
 
         <!-- ── Records view ─────────────────────────────────────────────── -->
