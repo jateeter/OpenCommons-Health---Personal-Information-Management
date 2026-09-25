@@ -35,6 +35,9 @@ export class VitalSignsRepository extends BaseRepository<VitalSign> {
         .addDecimal(`${health}valueSystolic`, entity.value.systolic)
         .addDecimal(`${health}valueDiastolic`, entity.value.diastolic);
     }
+    if (entity.source?.system) builder = builder.addStringNoLocale(`${health}sourceSystem`, entity.source.system);
+    if (entity.source?.identifier) builder = builder.addStringNoLocale(`${health}sourceIdentifier`, entity.source.identifier);
+    if (entity.source?.device) builder = builder.addStringNoLocale(`${health}sourceDevice`, entity.source.device);
     if (entity.notes) builder = builder.addStringNoLocale(`${schema}description`, entity.notes);
     if (entity.createdAt) builder = builder.addStringNoLocale(`${schema}dateCreated`, entity.createdAt);
     if (entity.updatedAt) builder = builder.addStringNoLocale(`${schema}dateModified`, entity.updatedAt);
@@ -57,6 +60,15 @@ export class VitalSignsRepository extends BaseRepository<VitalSign> {
         ? { systolic, diastolic }
         : (scalar ?? 0);
 
+    const sourceSystem = getStringNoLocale(thing, `${health}sourceSystem`);
+    const source = sourceSystem
+      ? {
+          system: sourceSystem,
+          identifier: getStringNoLocale(thing, `${health}sourceIdentifier`) ?? undefined,
+          device: getStringNoLocale(thing, `${health}sourceDevice`) ?? undefined,
+        }
+      : undefined;
+
     return {
       url: resourceUrl,
       code,
@@ -64,6 +76,7 @@ export class VitalSignsRepository extends BaseRepository<VitalSign> {
       unit: getStringNoLocale(thing, `${health}unit`) ?? '',
       effectiveDateTime: getStringNoLocale(thing, `${health}effectiveDateTime`) ?? '',
       notes: getStringNoLocale(thing, `${schema}description`) ?? undefined,
+      ...(source ? { source } : {}),
       createdAt: getStringNoLocale(thing, `${schema}dateCreated`) ?? undefined,
       updatedAt: getStringNoLocale(thing, `${schema}dateModified`) ?? undefined,
     };

@@ -1,5 +1,6 @@
 import type { Coding } from '../../types';
 import type { EpicFhirResource, EpicImportCandidate, EpicImportProvenance } from './types';
+import { DIASTOLIC_LOINC, SYSTOLIC_LOINC, vitalSignCodeFor } from '../../standards/vitalSigns';
 
 const MAPPER_VERSION = 'epic-mvp-2026-07';
 
@@ -182,17 +183,33 @@ function mapObservation(resource: EpicFhirResource, provenance: EpicImportProven
   const effectiveDateTime = firstString(resource, ['effectiveDateTime']) || new Date().toISOString();
   const value = firstNumber(resource, ['valueQuantity', 'value']) ?? firstString(resource, ['valueString']) ?? '';
   const unit = firstString(resource, ['valueQuantity', 'unit']);
-  if (category === 'vital-signs' || code.code === '39156-5') {
+  // The vital-sign code comes from the FHIR vital-signs profile's LOINC, shared
+  // with every other source (standards/vitalSigns.ts). This used to code every
+  // vital-signs Observation as body-weight (bmi excepted), so an Epic heart rate
+  // or blood pressure was stored as a weight and could never reconcile with the
+  // same reading from HealthKit; blood pressure also lost its components.
+  const vitalCode = vitalSignCodeFor(code.code);
+  if (vitalCode || category === 'vital-signs') {
+    const components = Array.isArray(resource.component) ? resource.component as Array<Record<string, unknown>> : [];
+    const componentValue = (loinc: string): number | undefined => {
+      const match = components.find((c) => firstString(c as EpicFhirResource, ['code', 'coding', 0, 'code']) === loinc);
+      return match ? firstNumber(match as EpicFhirResource, ['valueQuantity', 'value']) : undefined;
+    };
+    const systolic = componentValue(SYSTOLIC_LOINC);
+    const diastolic = componentValue(DIASTOLIC_LOINC);
+    const isPressure = vitalCode === 'blood-pressure' && systolic !== undefined && diastolic !== undefined;
     return [{
       domain: 'vital-signs',
       action: 'create',
       display: code.display || code.code,
       provenance,
       entity: {
-        code: code.code === '39156-5' ? 'bmi' : 'body-weight',
+        code: vitalCode ?? 'body-weight',
         loincCode: code,
-        value: typeof value === 'number' ? value : Number.parseFloat(value) || 0,
-        unit: unit || '',
+        value: isPressure
+          ? { systolic: systolic as number, diastolic: diastolic as number }
+          : typeof value === 'number' ? value : Number.parseFloat(value) || 0,
+        unit: unit || (isPressure ? firstString(components[0] as EpicFhirResource, ['valueQuantity', 'unit']) || 'mmHg' : ''),
         effectiveDateTime,
         notes: provenanceNote(provenance),
       },

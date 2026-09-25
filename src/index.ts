@@ -70,6 +70,7 @@ export * from './errors';
 export * from './privacy';
 export * from './standards/fhir';
 export * from './integrations/epic';
+export * from './integrations/healthkit';
 export * from './podActivity';
 export * from './podActivityRepository';
 export * from './reconciliation';

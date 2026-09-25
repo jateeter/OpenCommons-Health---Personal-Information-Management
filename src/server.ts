@@ -1,7 +1,9 @@
 import http from 'node:http';
 import { HealthPIM } from './index';
 import { contextFromPim, createRequestHandler, type ApplicationContext } from './httpApp';
-import { loadEpicRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from './runtimeConfig';
+import { loadEpicRuntimeConfig, loadHealthKitRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from './runtimeConfig';
+import { HealthKitMirrorService, MetricRegistryPodRepository } from './integrations/healthkit';
+import { PillarObservationRepository } from './repositories';
 import { EpicConnectionPodRepository, EpicIntegrationService } from './integrations/epic';
 import { InMemoryPodActivityLog } from './podActivity';
 import { PodActivityRepository } from './podActivityRepository';
@@ -30,7 +32,14 @@ function provideContext(): Promise<ApplicationContext> {
         baseContext.repositories,
       );
       await epic.initializeFromPod();
-      return contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, epic, activityLog, activityRepository);
+      const healthkitConfig = loadHealthKitRuntimeConfig();
+      const healthkit = new HealthKitMirrorService(
+        new MetricRegistryPodRepository(pim.pod),
+        baseContext.repositories,
+        (pillar) => new PillarObservationRepository(pim.pod, pillar),
+        { bridgeId: healthkitConfig.bridgeId, peScopeUrls: healthkitConfig.peScopeUrls, peToken: healthkitConfig.peToken },
+      );
+      return contextFromPim(pim, solid.podServerUrl, solid.podBaseUrl, epic, activityLog, activityRepository, healthkit, healthkitConfig.bridgeToken);
     })();
     contextPromise.catch(() => {
       contextPromise = undefined;

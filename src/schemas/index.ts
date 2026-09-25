@@ -17,6 +17,7 @@ export const SCHEMA_FILES: Record<string, string> = {
   InsurancePolicy: path.join(__dirname, 'insurance.shex'),
   ClinicalDocument: path.join(__dirname, 'document.shex'),
   WorkflowTask: path.join(__dirname, 'workflowTask.shex'),
+  PillarObservation: path.join(__dirname, 'pillarObservation.shex'),
 };
 
 /**

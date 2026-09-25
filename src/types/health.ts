@@ -179,6 +179,19 @@ export type VitalSignCode =
   | 'oxygen-saturation'
   | 'blood-glucose';
 
+/**
+ * Where a record came from. Provenance, not measurement: two sources of the same
+ * reading compare equal during reconciliation (`comparableSignature`).
+ */
+export interface HealthDataSource {
+  /** Originating system, e.g. `healthkit`. */
+  system: string;
+  /** The source's own identifier for the record, e.g. the HealthKit sample UUID. */
+  identifier?: string;
+  /** Originating device or app, e.g. the HealthKit source name. */
+  device?: string;
+}
+
 /** A single vital sign observation. */
 export interface VitalSign {
   url?: ResourceUrl;
@@ -188,6 +201,36 @@ export interface VitalSign {
   unit: string;
   effectiveDateTime: ISODateTime;
   notes?: string;
+  source?: HealthDataSource;
+  createdAt?: ISODateTime;
+  updatedAt?: ISODateTime;
+}
+
+/**
+ * A HealthKit measurement outside PIM's FHIR pillars, stored in the pillar named
+ * by its Apple Health category (activity, sleep, heart, …). Shaped like a FHIR
+ * Observation. Metrics are declared at runtime, so `metric` is open: there is no
+ * enumerated list here.
+ */
+export interface PillarObservation {
+  url?: ResourceUrl;
+  /** Pod pillar slug, derived from `appleCategory` (e.g. `sleep`). */
+  pillar: string;
+  /** HealthKit type identifier, e.g. `HKQuantityTypeIdentifierStepCount`. */
+  metric: string;
+  appleCategory: string;
+  fhirCategory?: string;
+  loinc?: string;
+  /** Scalar value (quantity samples). */
+  value?: number;
+  /** Category value (category samples), e.g. a sleep stage. */
+  valueCategory?: string;
+  /** Named numeric components (correlations, workouts). */
+  components?: Record<string, number>;
+  unit?: string;
+  effectiveStart: ISODateTime;
+  effectiveEnd?: ISODateTime;
+  source: HealthDataSource;
   createdAt?: ISODateTime;
   updatedAt?: ISODateTime;
 }

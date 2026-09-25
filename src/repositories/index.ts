@@ -10,3 +10,4 @@ export { LabResultRepository } from './labResultRepository';
 export { InsuranceRepository } from './insuranceRepository';
 export { DocumentRepository } from './documentRepository';
 export { WorkflowTaskRepository } from './workflowTaskRepository';
+export { PillarObservationRepository, PILLAR_ROOT, isPillarSlug } from './pillarObservationRepository';

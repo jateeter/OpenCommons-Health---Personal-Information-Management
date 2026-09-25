@@ -25,6 +25,8 @@ import {
 } from './podActivity';
 import type { PodActivityRepository } from './podActivityRepository';
 import { createHealthKitMirrorStatus } from './healthkitStatus';
+import type { HealthKitMirrorService } from './integrations/healthkit';
+import { timingSafeEqual } from 'node:crypto';
 import {
   computeWellnessSummary,
   WELLNESS_AXIS_DOMAINS,
@@ -50,6 +52,10 @@ export interface ApplicationContext {
   epic?: EpicIntegrationService;
   activityLog?: PodActivityLog;
   activityRepository?: PodActivityRepository;
+  /** HealthKit → PIM → POD mirror (localHealthkitBridge docs/MIRROR_CONTRACT.md). */
+  healthkit?: HealthKitMirrorService;
+  /** When set, HealthKit routes require `Authorization: Bearer <token>`. */
+  healthkitBridgeToken?: string;
 }
 
 export type ContextProvider = () => Promise<ApplicationContext>;
@@ -61,8 +67,12 @@ export function contextFromPim(
   epic?: EpicIntegrationService,
   activityLog: PodActivityLog = new InMemoryPodActivityLog(),
   activityRepository?: PodActivityRepository,
+  healthkit?: HealthKitMirrorService,
+  healthkitBridgeToken?: string,
 ): ApplicationContext {
   return {
+    healthkit,
+    healthkitBridgeToken,
     podServerUrl,
     podBaseUrl,
     authenticated: pim.isAuthenticated,
@@ -129,6 +139,9 @@ export function createRequestHandler(
       }
       if (requestUrl.pathname === '/api/planned/epic/workflow') {
         return sendJson(res, 200, { data: EPIC_WORKFLOW_READONLY_PLAN });
+      }
+      if (requestUrl.pathname.startsWith('/api/integrations/healthkit/')) {
+        return await handleHealthKitIntegrationRequest(req, res, requestUrl, provideContext);
       }
       if (requestUrl.pathname.startsWith('/api/integrations/epic')) {
         return await handleEpicIntegrationRequest(req, res, requestUrl, provideContext);
@@ -244,12 +257,104 @@ async function handleHealthKitStatusRequest(
     context.activityRepository ? await context.activityRepository.list(200).catch(() => []) : [],
     25,
   );
+  const mirror = context.healthkit
+    ? {
+        counts: await context.healthkit.mirroredCounts(),
+        registry: await context.healthkit.registry(),
+      }
+    : undefined;
   sendJson(res, 200, {
     data: await createHealthKitMirrorStatus({
       pod: context.pod,
       activityEvents: events,
+      mirror,
     }),
   });
+}
+
+/**
+ * HealthKit → PIM → POD mirror (localHealthkitBridge docs/MIRROR_CONTRACT.md).
+ * The bridge authenticates with its token; owner-changing actions and writes
+ * additionally need the owner-approval header (§7).
+ */
+async function handleHealthKitIntegrationRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  requestUrl: URL,
+  provideContext: ContextProvider,
+): Promise<void> {
+  const context = await provideContext();
+  assertHealthKitBridge(req, context.healthkitBridgeToken);
+  if (!context.authenticated) {
+    throw new AuthError('The PIM is not authenticated with the configured Solid server.');
+  }
+  const healthkit = context.healthkit;
+  if (!healthkit) {
+    throw new ValidationError('The HealthKit mirror is not configured for this deployment.', []);
+  }
+  const path = requestUrl.pathname;
+
+  if (path === '/api/integrations/healthkit/metrics' && req.method === 'GET') {
+    return sendJson(res, 200, { data: await healthkit.registry() });
+  }
+  if (path === '/api/integrations/healthkit/metrics' && req.method === 'POST') {
+    const body = await readJsonBodyOrEmpty(req);
+    if (body.action === 'declare') {
+      const data = await healthkit.declare(body.descriptors);
+      await recordActivity(context, { kind: 'healthkit-metrics-declared', status: 'info', summary: `HealthKit bridge declared ${data.applied.length} metric(s) for owner review`, source: 'healthkit' });
+      return sendJson(res, 200, { data });
+    }
+    assertOwnerApproved(req, 'Changing the approved HealthKit metrics');
+    const data = await healthkit.change(body.action, body.metrics);
+    await recordActivity(context, {
+      kind: 'healthkit-metrics-changed',
+      status: 'ok',
+      summary: `Owner ${String(body.action)} ${data.applied.length} HealthKit metric(s); generation ${data.generation}`,
+      source: 'owner-ui',
+    });
+    return sendJson(res, 200, { data });
+  }
+  if (path === '/api/integrations/healthkit/sync/preview' && req.method === 'POST') {
+    const data = await healthkit.preview(await readJsonBodyOrEmpty(req));
+    await recordActivity(context, {
+      kind: 'healthkit-preview',
+      status: 'info',
+      summary: `HealthKit mirror preview: ${data.summary.create} new, ${data.summary.unchanged} unchanged, ${data.summary.conflict} conflict, ${data.summary.excluded} excluded`,
+      source: 'healthkit',
+    });
+    return sendJson(res, 200, { data });
+  }
+  if (path === '/api/integrations/healthkit/sync/apply' && req.method === 'POST') {
+    assertOwnerApproved(req, 'Applying a HealthKit batch to the owner Pod');
+    const data = await healthkit.apply(await readJsonBodyOrEmpty(req));
+    await recordActivity(context, {
+      kind: 'healthkit-apply',
+      status: data.summary.conflict > 0 ? 'attention' : 'ok',
+      summary: `Owner-approved HealthKit batch applied: ${data.applied} written, ${data.summary.unchanged} unchanged, ${data.summary.conflict} conflict held for review`,
+      source: 'healthkit',
+    });
+    return sendJson(res, 200, { data });
+  }
+
+  res.setHeader('allow', path.endsWith('/metrics') ? 'GET, POST' : 'POST');
+  sendJson(res, 404, { error: 'HealthKit integration endpoint not found' });
+}
+
+function assertHealthKitBridge(req: IncomingMessage, expected: string | undefined): void {
+  if (!expected) return;
+  const header = headerValue(req, 'authorization') ?? '';
+  const presented = /^bearer\s+(.+)$/i.exec(header)?.[1]?.trim() ?? '';
+  const a = Buffer.from(presented);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    throw new AuthError('HealthKit bridge credentials are missing or invalid.');
+  }
+}
+
+function assertOwnerApproved(req: IncomingMessage, action: string): void {
+  if (headerValue(req, OWNER_APPROVAL_HEADER) !== 'true') {
+    throw new AuthorizationError(`${action} requires ${OWNER_APPROVAL_HEADER}: true from the pod owner.`);
+  }
 }
 
 async function handleWellnessSummaryRequest(
