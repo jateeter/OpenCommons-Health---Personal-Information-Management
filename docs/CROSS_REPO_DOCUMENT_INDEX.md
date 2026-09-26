@@ -106,14 +106,15 @@ These screenshots support the patient guide and UI workflow documentation.
 | [localHealthkitBridge/README.md](../../localHealthkitBridge/README.md) | iOS developers, integration engineers | Main HealthKit bridge guide covering architecture, iOS app setup, capabilities, privacy strings, authorization, and normalization tables. |
 | [localHealthkitBridge/ROADMAP.md](../../localHealthkitBridge/ROADMAP.md) | Product, engineering | MVP roadmap for the HealthKit bridge, including current state, contract drift, MVP definition, and milestones M0-M6. |
 | [localHealthkitBridge/docs/INGEST_CONTRACT.md](../../localHealthkitBridge/docs/INGEST_CONTRACT.md) | Cross-repo developers, PE runtime owners | Canonical HealthKit ingest contract for request body, authentication, mapping resolution, status, and validation responsibilities. |
-| [localHealthkitBridge/docs/MOBILE_SOLID_PHASE0_COMPATIBILITY.md](../../localHealthkitBridge/docs/MOBILE_SOLID_PHASE0_COMPATIBILITY.md) | Mobile/PIM integration developers | Phase 0 compatibility spike for SolidAuthSwift/SolidResourcesSwift, iPhone local Solid capability, local CSS mirroring, and acceptance checks. |
+| [localHealthkitBridge/docs/MIRROR_CONTRACT.md](../../localHealthkitBridge/docs/MIRROR_CONTRACT.md) | PIM and bridge developers | **Single source of truth for the HealthKit → PIM → POD mirror**: the bridge calls this PIM's `/api/integrations/healthkit/*` routes, and PIM writes the owner POD. It covers runtime-declared metrics, the owner-approved set (add/lock/remove, generation), rule-based pillar storage, per-batch owner approval, and reconciliation in which the POD wins. |
+| [localHealthkitBridge/docs/MOBILE_SOLID_PHASE0_COMPATIBILITY.md](../../localHealthkitBridge/docs/MOBILE_SOLID_PHASE0_COMPATIBILITY.md) | Mobile/PIM integration developers | Phase 0 compatibility spike for SolidAuthSwift/SolidResourcesSwift, iPhone local Solid capability, and acceptance checks. Its in-app CSS mirroring is superseded by MIRROR_CONTRACT.md (the bridge mirrors through PIM). |
 
 ### Local agent/codebase guidance
 
 | Document | Audience | Purpose |
 |---|---|---|
 | [localHealthkitBridge/AGENTS.md](../../localHealthkitBridge/AGENTS.md) | Codex / agentic development | Repo-specific Codex guidance: role, development rules, bug triage, verification commands, and artifact hygiene. |
-| [localHealthkitBridge/claude.md](../../localHealthkitBridge/claude.md) | Developers, agentic coding tools | Current codebase map, key commands, and contract rules for the HealthKit bridge. |
+| [localHealthkitBridge/CLAUDE.md](../../localHealthkitBridge/CLAUDE.md) | Developers, agentic coding tools | Current codebase map, key commands, and contract rules for the HealthKit bridge. |
 
 ### Vendored/reference documents
 

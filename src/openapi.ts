@@ -1,5 +1,12 @@
 type JsonSchema = Record<string, unknown>;
 
+/**
+ * Declared before OPENAPI_DOCUMENT, which is built at module load: a later
+ * declaration is in its temporal dead zone and throws on import. Same value as
+ * privacy.OWNER_APPROVAL_HEADER.
+ */
+const OWNER_APPROVAL_HEADER_NAME = 'x-opencommons-owner-approved';
+
 interface DomainApiDefinition {
   title: string;
   description: string;
@@ -315,6 +322,7 @@ export const OPENAPI_DOCUMENT = {
     { name: 'standards', description: 'HL7/FHIR capability and PHI schema documentation.' },
     { name: 'privacy', description: 'Owner-approved anonymized release operations.' },
     { name: 'epic', description: 'Patient-owned Epic SMART/FHIR connection, import preview, and pod sync operations.' },
+    { name: 'healthkit', description: 'HealthKit bridge → PIM → POD mirror: runtime-declared metrics, the owner-approved set, and owner-approved batch preview/apply (localHealthkitBridge docs/MIRROR_CONTRACT.md).' },
     { name: 'planning', description: 'Localhost MVP planning surfaces for future read-only Epic document and workflow APIs.' },
     { name: 'pod', description: 'Owner-visible Solid Pod activity, audit, and observability surfaces.' },
     { name: 'wellness', description: 'Aggregated owner wellness summary for the landing spider graph.' },
@@ -399,6 +407,7 @@ export const OPENAPI_DOCUMENT = {
         })),
       },
     },
+    ...healthKitMirrorPaths(),
     ...plannedEpicPaths(),
     ...epicIntegrationPaths(),
     ...domainPaths(),
@@ -938,6 +947,78 @@ function epicIntegrationPaths(): Record<string, unknown> {
         responses: okResponse('Epic audit events.', objectSchema(['data'], {
           data: { type: 'array', items: { $ref: '#/components/schemas/EpicAuditEvent' } },
         })),
+      },
+    },
+  };
+}
+
+function healthKitMirrorPaths(): Record<string, unknown> {
+  const descriptor = objectSchema(['metric', 'kind'], {
+    metric: string('HealthKit type identifier, e.g. HKQuantityTypeIdentifierStepCount'),
+    kind: enumSchema(['quantity', 'category', 'correlation', 'workout', 'clinical']),
+    unit: string('UCUM unit of raw values'),
+    loinc: string('LOINC code, when one applies'),
+    fhirCategory: string('FHIR Observation category, or FHIR resource type for clinical records'),
+    appleCategory: string('Apple Health category; names the pillar for non-vital, non-clinical metrics'),
+    display: string('Human-readable name'),
+  });
+  const sample = objectSchema(['uuid', 'metric', 'startDate'], {
+    uuid: string('HKSample.uuid'),
+    metric: string('HealthKit type identifier'),
+    startDate: dateTime(),
+    endDate: dateTime(),
+    value: number('Raw quantity value in the metric unit'),
+    unit: string('UCUM unit'),
+    categoryValue: string('Category value, e.g. a sleep stage'),
+    values: { type: 'object', additionalProperties: { type: 'number' }, description: 'Named components, e.g. systolic/diastolic' },
+    sourceName: string('HKSource name'),
+    fhirResource: { type: 'object', description: 'Clinical records only: the FHIR resource HealthKit holds' },
+  });
+  const batch = objectSchema(['samples'], {
+    bridgeId: string('Bridge id'),
+    generation: integer('Registry generation the batch was built against; a stale one is refused with 409'),
+    descriptors: { type: 'array', items: descriptor },
+    samples: { type: 'array', maxItems: 500, items: sample },
+  });
+  const ownerApproval = [{ name: OWNER_APPROVAL_HEADER_NAME, in: 'header', required: true, schema: { type: 'string', enum: ['true'] } }];
+  const outcome = { type: 'object', description: 'Per-sample outcome and summary; identity, metric, pillar and action only — never values.' };
+  return {
+    '/api/integrations/healthkit/metrics': {
+      get: {
+        tags: ['healthkit'],
+        operationId: 'getHealthKitMetricRegistry',
+        summary: 'Read the runtime-declared HealthKit metrics, their pillars, owner states, and the registry generation',
+        responses: okResponse('Metric registry.', objectSchema(['data'], { data: { type: 'object' } })),
+      },
+      post: {
+        tags: ['healthkit'],
+        operationId: 'changeHealthKitMetrics',
+        summary: 'Bridge declares metrics (action declare, no approval), or the owner adds, locks, or removes them (owner-approval header required)',
+        requestBody: jsonInlineRequest(objectSchema(['action'], {
+          action: enumSchema(['declare', 'add', 'lock', 'remove']),
+          descriptors: { type: 'array', items: descriptor },
+          metrics: { type: 'array', items: string('HealthKit type identifier') },
+        }), { action: 'add', metrics: ['HKQuantityTypeIdentifierStepCount'] }),
+        responses: okResponse('Applied change, new generation, and PE scope push results.', objectSchema(['data'], { data: { type: 'object' } })),
+      },
+    },
+    '/api/integrations/healthkit/sync/preview': {
+      post: {
+        tags: ['healthkit'],
+        operationId: 'previewHealthKitMirror',
+        summary: 'Map and reconcile a HealthKit batch against the owner Pod without writing',
+        requestBody: jsonInlineRequest(batch, { generation: 1, samples: [{ uuid: 'E3C1…', metric: 'HKQuantityTypeIdentifierStepCount', startDate: '2026-09-25T00:00:00Z', value: 8421, unit: 'count' }] }),
+        responses: okResponse('Mirror preview.', objectSchema(['data'], { data: outcome })),
+      },
+    },
+    '/api/integrations/healthkit/sync/apply': {
+      post: {
+        tags: ['healthkit'],
+        operationId: 'applyHealthKitMirror',
+        summary: 'Write an owner-approved HealthKit batch to the Pod; never overwrites a differing Pod record',
+        parameters: ownerApproval,
+        requestBody: jsonInlineRequest(batch, { generation: 1, samples: [] }),
+        responses: okResponse('Mirror apply result.', objectSchema(['data'], { data: outcome })),
       },
     },
   };

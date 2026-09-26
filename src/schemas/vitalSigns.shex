@@ -27,6 +27,9 @@ PREFIX loinc:    <http://loinc.org/rdf/>
   health:valueDiastolic xsd:decimal?                  ;
   health:unit           xsd:string                    ;
   health:effectiveDateTime xsd:dateTime               ;
+  health:sourceSystem   xsd:string?                   ;  # provenance, e.g. healthkit
+  health:sourceIdentifier xsd:string?                 ;  # e.g. HealthKit sample UUID
+  health:sourceDevice   xsd:string?                   ;
   schema:description    xsd:string?                   ;
   schema:dateCreated    xsd:dateTime?                 ;
   schema:dateModified   xsd:dateTime?                 ;

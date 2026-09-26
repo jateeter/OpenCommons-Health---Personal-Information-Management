@@ -1,0 +1,27 @@
+PREFIX schema:   <https://schema.org/>
+PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
+PREFIX health:   <https://opencommons.health/ns/health#>
+
+# A HealthKit measurement outside PIM's FHIR pillars, stored in the pillar named
+# by its Apple Health category (localHealthkitBridge docs/MIRROR_CONTRACT.md §2).
+# Metrics are declared at runtime, so the metric is an open string: there is no
+# enumerated value set.
+<PillarObservationShape> {
+  a                        [ health:PillarObservation ] ;
+  health:pillar            xsd:string                   ;
+  health:metric            xsd:string                   ;
+  health:appleCategory     xsd:string                   ;
+  health:fhirCategory      xsd:string?                  ;
+  health:loincCode         xsd:string?                  ;
+  health:valueDecimal      xsd:decimal?                 ;
+  health:valueCategory     xsd:string?                  ;
+  health:componentsJson    xsd:string?                  ;
+  health:unit              xsd:string?                  ;
+  health:effectiveStart    xsd:dateTime                 ;
+  health:effectiveEnd      xsd:dateTime?                ;
+  health:sourceSystem      xsd:string                   ;
+  health:sourceIdentifier  xsd:string?                  ;
+  health:sourceDevice      xsd:string?                  ;
+  schema:dateCreated       xsd:dateTime?                ;
+  schema:dateModified      xsd:dateTime?                ;
+}

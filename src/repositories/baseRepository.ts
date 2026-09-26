@@ -27,9 +27,29 @@ export abstract class BaseRepository<T extends { url?: string }> {
   protected readonly client: PodClient;
   protected readonly typeName: string;
 
-  constructor(client: PodClient, typeName: string) {
+  /**
+   * Pod-relative container for this repository, when it is not the type's
+   * default (`<type>s/`). Pillar repositories share one type and shape but each
+   * owns its own pillar container, created on first write.
+   */
+  protected readonly containerPath?: string;
+
+  constructor(client: PodClient, typeName: string, containerPath?: string) {
     this.client = client;
     this.typeName = typeName;
+    this.containerPath = containerPath;
+  }
+
+  private async writableContainerUrl(): Promise<string> {
+    return this.containerPath
+      ? this.client.ensureContainerPath(this.containerPath)
+      : this.client.ensureContainer(this.typeName);
+  }
+
+  private readableContainerUrl(): string {
+    return this.containerPath
+      ? this.client.containerUrlForPath(this.containerPath)
+      : this.client.containerUrlFor(this.typeName);
   }
 
   // ─── Abstract mapping methods ────────────────────────────────────────────
@@ -62,7 +82,7 @@ export abstract class BaseRepository<T extends { url?: string }> {
    */
   async create(entity: T): Promise<T> {
     this.validate(entity);
-    const containerUrl = await this.client.ensureContainer(this.typeName);
+    const containerUrl = await this.writableContainerUrl();
     const resourceUrl = newResourceUrl(
       containerUrl,
       this.typeName.toLowerCase(),
@@ -99,7 +119,7 @@ export abstract class BaseRepository<T extends { url?: string }> {
    * List all entities in the container for this resource type.
    */
   async findAll(): Promise<T[]> {
-    const containerUrl = this.client.containerUrlFor(this.typeName);
+    const containerUrl = this.readableContainerUrl();
     const urls = await this.client.listResources(containerUrl).catch((error: unknown) => {
       if (isNotFound(error)) return [];
       throw error;

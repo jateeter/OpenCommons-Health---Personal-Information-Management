@@ -62,6 +62,29 @@ const DEFAULT_EPIC_SCOPES = [
 ];
 
 /** Load network settings needed before the HTTP server starts. */
+export interface HealthKitRuntimeConfig {
+  /**
+   * Credential the HealthKit bridge presents as `Authorization: Bearer`. PIM's
+   * API does not authenticate its clients, which is fine on loopback; a phone
+   * reaches PIM over the network, so HealthKit routes require this when set.
+   */
+  bridgeToken?: string;
+  bridgeId: string;
+  /** PE base URLs whose ingest scope follows the owner's approved metrics. */
+  peScopeUrls: string[];
+  peToken?: string;
+}
+
+export function loadHealthKitRuntimeConfig(env: Environment = process.env): HealthKitRuntimeConfig {
+  const text = (name: string): string | undefined => env[name]?.trim() || undefined;
+  return {
+    bridgeToken: text('PIM_HEALTHKIT_BRIDGE_TOKEN'),
+    bridgeId: text('HEALTHKIT_BRIDGE_ID') ?? 'healthkit-ios-bridge',
+    peScopeUrls: (text('HEALTHKIT_PE_SCOPE_URLS') ?? '').split(',').map((u) => u.trim()).filter(Boolean),
+    peToken: text('HEALTHKIT_PE_TOKEN'),
+  };
+}
+
 export function loadServerRuntimeConfig(env: Environment = process.env): ServerRuntimeConfig {
   const rawPort = env.PORT ?? env.APP_PORT ?? '8080';
   const port = Number.parseInt(rawPort, 10);

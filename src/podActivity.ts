@@ -13,7 +13,11 @@ export type PodActivityKind =
   | 'epic-apply'
   | 'epic-outbound'
   | 'epic-connect'
-  | 'epic-disconnect';
+  | 'epic-disconnect'
+  | 'healthkit-metrics-declared'
+  | 'healthkit-metrics-changed'
+  | 'healthkit-preview'
+  | 'healthkit-apply';
 
 export type PodActivityStatus = 'ok' | 'attention' | 'failed' | 'info';
 
@@ -26,7 +30,7 @@ export interface PodActivityEvent {
   domain?: string;
   resourcePath?: string;
   purpose?: string;
-  source?: 'owner-ui' | 'api' | 'epic' | 'deployment-smoke';
+  source?: 'owner-ui' | 'api' | 'epic' | 'healthkit' | 'deployment-smoke';
 }
 
 export interface PodContainerStatus {
