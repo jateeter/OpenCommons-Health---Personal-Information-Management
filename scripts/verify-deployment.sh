@@ -311,8 +311,15 @@ check_healthkit_mirror_status() {
     echo "ERROR: HealthKit status did not report localhostMvp=true: ${healthkit}"
     exit 1
   }
-  echo "${healthkit}" | grep -q '"containerPath":"health-pim/healthkit/observations/"' || {
-    echo "ERROR: HealthKit status did not report the observations container path: ${healthkit}"
+  # The HealthKit mirror (localHealthkitBridge docs/MIRROR_CONTRACT.md) stores
+  # records by pillar under health-pim/healthkit/<pillar>/ and in vital-signs,
+  # so status reports the pillar root and the owner's metric set.
+  echo "${healthkit}" | grep -q '"containerPath":"health-pim/healthkit/"' || {
+    echo "ERROR: HealthKit status did not report the mirror pillar root: ${healthkit}"
+    exit 1
+  }
+  echo "${healthkit}" | grep -q '"metrics":{"generation":' || {
+    echo "ERROR: HealthKit status did not report the mirror's metric set: ${healthkit}"
     exit 1
   }
   echo "${healthkit}" | grep -q '"observationCount":' || {

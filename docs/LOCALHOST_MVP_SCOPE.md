@@ -61,8 +61,9 @@ The localhost MVP includes:
   `/api/pod/activity`;
 - persisted safe audit metadata in the owner Pod under
   `health-pim/audit/activity.ttl`;
-- HealthKitBridge mirror status under `/api/pod/healthkit/status` for the
-  Pod-side `health-pim/healthkit/observations/` container;
+- HealthKitBridge mirror status under `/api/pod/healthkit/status`: counts per
+  pillar (`health-pim/healthkit/<pillar>/` and `vital-signs`) and the owner's
+  approved metric set (localHealthkitBridge `docs/MIRROR_CONTRACT.md`);
 - local Solid Community Server bootstrap and authenticated pod access checks;
 - RDF/ShEx validation before pod writes;
 - terminology-assisted manual entry for supported clinical domains;

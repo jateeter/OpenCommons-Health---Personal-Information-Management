@@ -187,9 +187,9 @@ Every Epic-enabled deployment should pass these gates:
    - FHIR capability metadata is reachable;
    - requested scopes match configured feature lanes;
    - no secrets appear in logs or OpenAPI examples.
-10. `/api/pod/healthkit/status` verifies the
-    `health-pim/healthkit/observations/` container and returns only owner-facing
-    sync metadata/counts.
+10. `/api/pod/healthkit/status` reports the HealthKit mirror's pillar root
+    `health-pim/healthkit/`, counts per pillar, and the owner's metric set, and
+    returns only owner-facing sync metadata/counts.
 11. Playwright Medicare Wellness E2E passes against the selected local stack.
 
 For the localhost MVP, the repository also provides
