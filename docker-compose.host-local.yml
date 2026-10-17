@@ -40,7 +40,7 @@ services:
     restart: unless-stopped
 
   bootstrap:
-    image: node:22-alpine
+    image: node:26.8-alpine
     command: ["node", "/bootstrap/provision-css.mjs"]
     network_mode: "service:css"
     environment:

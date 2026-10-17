@@ -65,7 +65,7 @@ jobs:
   # ── Stage 1: Build the production Docker image ─────────────────────────────
   build:
     name: Build Docker image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
@@ -120,7 +120,7 @@ jobs:
   # ── Stage 2: Smoke-test the full compose stack ─────────────────────────────
   smoke-test:
     name: Compose stack smoke tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     permissions:
       contents: read
@@ -180,7 +180,7 @@ jobs:
   # ── Stage 3: Push validated image to GHCR (main branch only) ───────────────
   push:
     name: Push image to GHCR
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: smoke-test
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
     permissions:

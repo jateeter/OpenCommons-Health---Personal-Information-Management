@@ -59,7 +59,7 @@ services:
 
   # ── Idempotent CSS provisioning ────────────────────────────────────────────
   bootstrap:
-    image: node:22-alpine
+    image: node:26.8-alpine
     command: ["node", "/bootstrap/provision-css.mjs"]
     environment:
       CSS_BASE_URL: "http://css.localhost:${CSS_PORT:-13000}/"
