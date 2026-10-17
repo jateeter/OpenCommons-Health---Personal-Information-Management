@@ -59,8 +59,15 @@ services:
 
   # ── Idempotent CSS provisioning ────────────────────────────────────────────
   bootstrap:
-    image: node:22-alpine
-    command: ["node", "/bootstrap/provision-css.mjs"]
+    # Runs the provisioning script from the PIM image (it is baked in), as root,
+    # then hands the credentials to the image's node user: PIM runs as node and
+    # must read them, including from a volume an older root bootstrap wrote.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencommons-health-pim:local
+    user: "0:0"
+    command: ["sh", "-c", "node /app/scripts/provision-css.mjs && chown -R node:node /credentials"]
     environment:
       CSS_BASE_URL: "http://css.localhost:${CSS_PORT:-13000}/"
       CSS_ACCOUNT_EMAIL: ${CSS_ACCOUNT_EMAIL:-alice@example.test}
@@ -68,7 +75,6 @@ services:
       CSS_POD_NAME: ${CSS_POD_NAME:-alice}
       CSS_CLIENT_CREDENTIALS_FILE: /credentials/client-credentials.json
     volumes:
-      - ./scripts/provision-css.mjs:/bootstrap/provision-css.mjs:ro
       - css_credentials:/credentials
     depends_on:
       css:
