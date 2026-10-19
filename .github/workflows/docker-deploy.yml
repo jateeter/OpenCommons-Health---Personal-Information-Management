@@ -99,7 +99,7 @@ jobs:
 
       - name: Verify Node runtime and application entrypoint
         run: |
-          docker run --rm --entrypoint node opencommons-health-pim:ci --version | grep -E '^v26\.8\.'
+          docker run --rm --entrypoint node opencommons-health-pim:ci --version | grep -F "v$(cat .nvmrc)."
           test "$(docker image inspect opencommons-health-pim:ci --format '{{json .Config.Cmd}}')" = '["node","dist/server.js"]'
 
       - name: Smoke-test the built image
