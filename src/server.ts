@@ -56,6 +56,9 @@ const requestHandler = createRequestHandler(provideContext);
 // outbound call follows the lane's rules; a partial configuration stops here.
 const lane = laneSettings();
 if (lane) installOutboundLaneTls(lane);
+// The PE scope URLs are environment alone, so they are checked before PIM
+// listens: on the lane a plaintext internal one stops PIM here, not at first use.
+loadHealthKitRuntimeConfig();
 const handle = (req: http.IncomingMessage, res: http.ServerResponse): void => {
   void requestHandler(req, res);
 };
