@@ -35,3 +35,6 @@ epic.txt
 # ─── Solid Pod local data ────────────────────────────────────────────────────
 .solid/
 client-credentials.json
+
+# Lane TLS certificate links (scripts/lane-tls-certs.sh)
+runtime/

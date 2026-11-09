@@ -19,11 +19,15 @@ set +a
 
 npm run build
 
+# Lane TLS (PIM#86): the env file sets RE_TLS_* when the lane is on.
+SCHEME=http
+[ -n "${RE_TLS_CERT:-}" ] && SCHEME=https
+
 echo ""
 echo "Starting OpenCommons Health host-local app..."
-echo "  PIM UI      http://localhost:${APP_PORT:-8080}/"
-echo "  API docs    http://localhost:${APP_PORT:-8080}/api/docs"
-echo "  OpenAPI     http://localhost:${APP_PORT:-8080}/openapi.json"
+echo "  PIM UI      ${SCHEME}://localhost:${APP_PORT:-8080}/"
+echo "  API docs    ${SCHEME}://localhost:${APP_PORT:-8080}/api/docs"
+echo "  OpenAPI     ${SCHEME}://localhost:${APP_PORT:-8080}/openapi.json"
 echo "  Local CSS   ${SOLID_POD_SERVER_URL}"
 
 exec npm start

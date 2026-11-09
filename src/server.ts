@@ -1,5 +1,7 @@
 import http from 'node:http';
+import https from 'node:https';
 import { HealthPIM } from './index';
+import { installOutboundLaneTls, laneDescription, laneSettings, serverOptions } from './laneTls';
 import { contextFromPim, createRequestHandler, type ApplicationContext } from './httpApp';
 import { loadEpicRuntimeConfig, loadHealthKitRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from './runtimeConfig';
 import { HealthKitMirrorService, MetricRegistryPodRepository } from './integrations/healthkit';
@@ -50,12 +52,20 @@ function provideContext(): Promise<ApplicationContext> {
 
 const { port, host } = loadServerRuntimeConfig();
 const requestHandler = createRequestHandler(provideContext);
-const server = http.createServer((req, res) => {
+// Lane TLS (PIM#86): with RE_TLS_CERT set PIM serves https only and every
+// outbound call follows the lane's rules; a partial configuration stops here.
+const lane = laneSettings();
+if (lane) installOutboundLaneTls(lane);
+// The PE scope URLs are environment alone, so they are checked before PIM
+// listens: on the lane a plaintext internal one stops PIM here, not at first use.
+loadHealthKitRuntimeConfig();
+const handle = (req: http.IncomingMessage, res: http.ServerResponse): void => {
   void requestHandler(req, res);
-});
+};
+const server = lane ? https.createServer(serverOptions(lane), handle) : http.createServer(handle);
 
 server.listen(port, host, () => {
-  console.log(`OpenCommons Health listening on http://${host}:${port}`);
+  console.log(`OpenCommons Health listening on ${lane ? 'https' : 'http'}://${host}:${port}${lane ? ` (${laneDescription()})` : ''}`);
 });
 
 function shutdown(signal: string): void {
