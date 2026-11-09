@@ -18,6 +18,34 @@ esac
 CREDS_FILE="${CREDS_DIR_ABS}/client-credentials.json"
 export APP_PORT CSS_PORT HOST CSS_POD_NAME COMPOSE_PROJECT_NAME HOST_CREDENTIALS_DIR
 
+# Lane TLS (PIM#86): with PIM_TLS_DIR set (eval "$(scripts/lane-tls-certs.sh)"),
+# CSS serves TLS 1.3 itself through docker-compose.host-local.tls.yml, every URL
+# written below is https, and the env file turns PIM's own lane on.
+COMPOSE_FILES="-f docker-compose.host-local.yml"
+SCHEME=http
+if [ -n "${PIM_TLS_DIR:-}" ]; then
+  case "${PIM_TLS_DIR}" in
+    /*) ;;
+    *) PIM_TLS_DIR="$(pwd)/${PIM_TLS_DIR#./}" ;;
+  esac
+  for f in ca.crt ca.crl css/chain.pem css/key.pem pim/chain.pem pim/key.pem; do
+    [ -r "${PIM_TLS_DIR}/${f}" ] || { echo "ERROR: ${PIM_TLS_DIR}/${f} is not readable; run scripts/lane-tls-certs.sh"; exit 1; }
+  done
+  export PIM_TLS_DIR
+  COMPOSE_FILES="${COMPOSE_FILES} -f docker-compose.host-local.tls.yml"
+  SCHEME=https
+fi
+
+# CSS answers (any status below 500). On the lane the probe is Node, held to
+# TLS 1.3 and the install CA: macOS's curl cannot complete the handshake.
+css_ready() {
+  if [ "${SCHEME}" = https ]; then
+    node -e "require('https').get({host:'127.0.0.1',port:${CSS_PORT},path:'/',servername:'localhost',minVersion:'TLSv1.3',ca:require('fs').readFileSync(process.argv[1]),timeout:5000},r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))" "${PIM_TLS_DIR}/ca.crt" >/dev/null 2>&1
+  else
+    curl -fsS --max-time 5 "http://localhost:${CSS_PORT}/" >/dev/null 2>&1
+  fi
+}
+
 quote_env_value() {
   printf "%s" "$1" | sed "s/'/'\\\\''/g"
 }
@@ -36,15 +64,18 @@ if [ "${SKIP_LOCAL_PREFLIGHT:-0}" != "1" ]; then
   node scripts/local-preflight.mjs
 fi
 
-docker compose -f docker-compose.host-local.yml up --build -d css
+# shellcheck disable=SC2086  # COMPOSE_FILES is a word list built above
+docker compose ${COMPOSE_FILES} up --build -d css
 
-echo "Waiting for Community Solid Server at http://localhost:${CSS_PORT}/..."
+echo "Waiting for Community Solid Server at ${SCHEME}://localhost:${CSS_PORT}/..."
 elapsed=0
-until curl -fsS --max-time 5 "http://localhost:${CSS_PORT}/" >/dev/null 2>&1; do
+until css_ready; do
   if [ "${elapsed}" -ge "${WAIT_TIMEOUT}" ]; then
     echo "ERROR: Community Solid Server did not become reachable within ${WAIT_TIMEOUT}s."
-    docker compose -f docker-compose.host-local.yml ps
-    docker compose -f docker-compose.host-local.yml logs css
+    # shellcheck disable=SC2086
+    docker compose ${COMPOSE_FILES} ps
+    # shellcheck disable=SC2086
+    docker compose ${COMPOSE_FILES} logs css
     exit 1
   fi
   sleep 2
@@ -52,18 +83,25 @@ until curl -fsS --max-time 5 "http://localhost:${CSS_PORT}/" >/dev/null 2>&1; do
 done
 
 echo "Starting host-local Solid bootstrap..."
-docker compose -f docker-compose.host-local.yml up --no-recreate -d bootstrap
+# shellcheck disable=SC2086
+docker compose ${COMPOSE_FILES} up --no-recreate -d bootstrap
 
 mkdir -p "$(dirname "${ENV_FILE}")" "${HOST_CREDENTIALS_DIR}"
 {
   write_env PORT "${APP_PORT}"
   write_env APP_PORT "${APP_PORT}"
   write_env HOST "${HOST}"
-  write_env SOLID_POD_SERVER_URL "http://localhost:${CSS_PORT}"
-  write_env SOLID_OIDC_ISSUER "http://localhost:${CSS_PORT}"
-  write_env SOLID_POD_BASE_URL "http://localhost:${CSS_PORT}/${CSS_POD_NAME}/"
+  write_env SOLID_POD_SERVER_URL "${SCHEME}://localhost:${CSS_PORT}"
+  write_env SOLID_OIDC_ISSUER "${SCHEME}://localhost:${CSS_PORT}"
+  write_env SOLID_POD_BASE_URL "${SCHEME}://localhost:${CSS_PORT}/${CSS_POD_NAME}/"
   write_env SOLID_POD_PATH "${SOLID_POD_PATH:-/health-pim/}"
-  write_env SOLID_REDIRECT_URL "http://localhost:${APP_PORT}/callback"
+  write_env SOLID_REDIRECT_URL "${SCHEME}://localhost:${APP_PORT}/callback"
+  if [ "${SCHEME}" = https ]; then
+    write_env RE_TLS_CERT "${PIM_TLS_DIR}/pim/chain.pem"
+    write_env RE_TLS_KEY "${PIM_TLS_DIR}/pim/key.pem"
+    write_env RE_TLS_CA "${PIM_TLS_DIR}/ca.crt"
+    write_env RE_TLS_CRL "${PIM_TLS_DIR}/ca.crl"
+  fi
   write_env SOLID_CLIENT_CREDENTIALS_FILE "${CREDS_FILE}"
   write_env EPIC_ENABLED "${EPIC_ENABLED:-false}"
   write_env EPIC_MODE "${EPIC_MODE:-mock}"
@@ -80,7 +118,7 @@ mkdir -p "$(dirname "${ENV_FILE}")" "${HOST_CREDENTIALS_DIR}"
   write_env EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE "${EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE:-}"
   write_env EPIC_CLIENT_SECRET "${EPIC_CLIENT_SECRET:-}"
   write_env EPIC_CLIENT_SECRET_FILE "${EPIC_CLIENT_SECRET_FILE:-}"
-  write_env EPIC_REDIRECT_URI "${EPIC_REDIRECT_URI:-http://localhost:${APP_PORT}/api/integrations/epic/connect/callback}"
+  write_env EPIC_REDIRECT_URI "${EPIC_REDIRECT_URI:-${SCHEME}://localhost:${APP_PORT}/api/integrations/epic/connect/callback}"
   write_env EPIC_SCOPES "${EPIC_SCOPES:-}"
   write_env EPIC_GRANT_ENCRYPTION_KEY "${EPIC_GRANT_ENCRYPTION_KEY:-}"
   write_env EPIC_SYNC_ON_STARTUP "${EPIC_SYNC_ON_STARTUP:-false}"
@@ -91,7 +129,8 @@ elapsed=0
 until [ -s "${CREDS_FILE}" ]; do
   if [ "${elapsed}" -ge "${WAIT_TIMEOUT}" ]; then
     echo "ERROR: ${CREDS_FILE} was not generated within ${WAIT_TIMEOUT}s."
-    docker compose -f docker-compose.host-local.yml logs bootstrap
+    # shellcheck disable=SC2086
+    docker compose ${COMPOSE_FILES} logs bootstrap
     exit 1
   fi
   sleep 2
@@ -100,7 +139,7 @@ done
 
 echo ""
 echo "Host-local Solid infrastructure is ready."
-echo "  Local CSS     http://localhost:${CSS_PORT}/"
+echo "  Local CSS     ${SCHEME}://localhost:${CSS_PORT}/"
 echo "  Env file      ${ENV_FILE}"
 echo "  Credentials   ${CREDS_FILE}"
 echo ""

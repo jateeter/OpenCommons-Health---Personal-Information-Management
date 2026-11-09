@@ -57,7 +57,8 @@
     "@inrupt/solid-client": "^3.0.0",
     "@inrupt/solid-client-authn-node": "^5.0.0",
     "@rdfjs/types": "^2.0.1",
-    "n3": "^1.23.1"
+    "n3": "^1.23.1",
+    "undici": "^8.12.4"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

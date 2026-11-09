@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { refusePlaintextInternal } from './laneTls';
 
 export interface ServerRuntimeConfig {
   host: string;
@@ -77,10 +78,12 @@ export interface HealthKitRuntimeConfig {
 
 export function loadHealthKitRuntimeConfig(env: Environment = process.env): HealthKitRuntimeConfig {
   const text = (name: string): string | undefined => env[name]?.trim() || undefined;
+  const peScopeUrls = (text('HEALTHKIT_PE_SCOPE_URLS') ?? '').split(',').map((u) => u.trim()).filter(Boolean);
+  for (const url of peScopeUrls) refusePlaintextInternal(url, 'HEALTHKIT_PE_SCOPE_URLS', env);
   return {
     bridgeToken: text('PIM_HEALTHKIT_BRIDGE_TOKEN'),
     bridgeId: text('HEALTHKIT_BRIDGE_ID') ?? 'healthkit-ios-bridge',
-    peScopeUrls: (text('HEALTHKIT_PE_SCOPE_URLS') ?? '').split(',').map((u) => u.trim()).filter(Boolean),
+    peScopeUrls,
     peToken: text('HEALTHKIT_PE_TOKEN'),
   };
 }
@@ -225,16 +228,16 @@ function required(env: Environment, name: string): string {
 
 function requiredHttpUrl(env: Environment, name: string, trailingSlash = false): string {
   const value = required(env, name);
-  const normalized = validateHttpUrl(value, name);
+  const normalized = validateHttpUrl(value, name, env);
   return trailingSlash && !normalized.endsWith('/') ? `${normalized}/` : normalized;
 }
 
 function optionalHttpUrl(env: Environment, name: string): string | undefined {
   const value = env[name]?.trim();
-  return value ? validateHttpUrl(value, name) : undefined;
+  return value ? validateHttpUrl(value, name, env) : undefined;
 }
 
-function validateHttpUrl(value: string, name: string): string {
+function validateHttpUrl(value: string, name: string, env: Environment): string {
   let url: URL;
   try {
     url = new URL(value);
@@ -244,6 +247,8 @@ function validateHttpUrl(value: string, name: string): string {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error(`${name} must use http or https.`);
   }
+  // Lane TLS (PIM#86): on the lane an internal peer is never plaintext.
+  refusePlaintextInternal(url.href, name, env);
   return url.href.replace(/\/$/, '');
 }
 

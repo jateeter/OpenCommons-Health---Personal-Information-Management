@@ -1,0 +1,50 @@
+# Lane TLS overlay for docker-compose.host-local.yml (PIM#86, RealityEngine_CI#668).
+#
+#   eval "$(scripts/lane-tls-certs.sh)"
+#   docker compose -f docker-compose.host-local.yml -f docker-compose.host-local.tls.yml up -d css
+#
+# scripts/local-host-solid-up.sh applies it when PIM_TLS_DIR is set.
+#
+# CSS terminates TLS itself (config/css-https.json, the HTTPS server factory),
+# TLS 1.3 only with the transport profile's suites, as assets-css does. CSS does
+# not verify client certificates, so PIM -> CSS is TLS without mTLS: an
+# owner-accepted deficiency (2026-11-09), compensated by Solid-OIDC with
+# DPoP-bound tokens and a port bound to 127.0.0.1.
+
+services:
+  css:
+    command:
+      - "-c"
+      - "/config/css-https.json"
+      - "-f"
+      - "/data"
+      - "-p"
+      - "${CSS_PORT:-13000}"
+      - "-b"
+      - "https://localhost:${CSS_PORT:-13000}/"
+      - "--httpsKey"
+      - "/pki/self/key.pem"
+      - "--httpsCert"
+      - "/pki/self/chain.pem"
+    environment:
+      # TLS 1.3 only, with the profile's suites (RealityEngine_CI config/transport-profile.json).
+      NODE_OPTIONS: "--tls-min-v1.3 --tls-cipher-list=TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
+      NODE_EXTRA_CA_CERTS: /pki/ca.crt
+    volumes:
+      - ./config/css-https.json:/config/css-https.json:ro
+      - ${PIM_TLS_DIR:?eval scripts/lane-tls-certs.sh first}/css:/pki/self:ro
+      - ${PIM_TLS_DIR:?eval scripts/lane-tls-certs.sh first}/ca.crt:/pki/ca.crt:ro
+    healthcheck:
+      # Verifies the served certificate against the install CA and its name.
+      test: ["CMD", "node", "-e", "require('https').get({host:'127.0.0.1',port:${CSS_PORT:-13000},path:'/',servername:'localhost',minVersion:'TLSv1.3',ca:require('fs').readFileSync('/pki/ca.crt')},r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+
+  bootstrap:
+    environment:
+      CSS_BASE_URL: "https://localhost:${CSS_PORT:-13000}/"
+      CSS_PUBLIC_BASE_URL: "https://localhost:${CSS_PORT:-13000}/"
+      CSS_INTERNAL_BASE_URL: "https://localhost:${CSS_PORT:-13000}/"
+      # The provisioning script's fetch trusts the install CA for this one-shot run.
+      NODE_EXTRA_CA_CERTS: /pki/ca.crt
+      NODE_OPTIONS: "--tls-min-v1.3"
+    volumes:
+      - ${PIM_TLS_DIR:?eval scripts/lane-tls-certs.sh first}/ca.crt:/pki/ca.crt:ro
