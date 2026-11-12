@@ -7,8 +7,12 @@ import { join } from 'node:path';
 import tls from 'node:tls';
 import { getGlobalDispatcher } from 'undici';
 import {
+  epicOptions,
+  epicTls12Hosts,
   installOutboundLaneTls,
   isInternalHost,
+  outboundKind,
+  profileOptions,
   laneSettings,
   refusePlaintextInternal,
   serverOptions,
@@ -74,6 +78,30 @@ describe('lane settings', () => {
     for (const h of ['fhir.epic.com', '8.8.8.8', '172.32.0.1', '2001:db8::1', '']) {
       expect(isInternalHost(h)).toBe(false);
     }
+  });
+});
+
+describe('Epic, the TLS 1.2 deficiency (pim-to-epic, owner 2026-11-12)', () => {
+  it('names no host while Epic is off', () => {
+    expect(epicTls12Hosts({ EPIC_FHIR_BASE_URL: 'https://fhir.epic.com/api/FHIR/R4' }).size).toBe(0);
+  });
+  it('names the FHIR base host and any extra hosts when Epic is on', () => {
+    const hosts = epicTls12Hosts({
+      EPIC_ENABLED: 'true',
+      EPIC_FHIR_BASE_URL: 'https://FHIR.epic.com/interconnect/api/FHIR/R4',
+      EPIC_TLS12_EXTRA_HOSTS: 'auth.example.org, ',
+    });
+    expect([...hosts].sort()).toEqual(['auth.example.org', 'fhir.epic.com']);
+  });
+  it('gives TLS 1.2 to Epic alone; every other external host stays TLS 1.3', () => {
+    const hosts = new Set(['fhir.epic.com']);
+    expect(outboundKind('fhir.epic.com', hosts)).toBe('epic');
+    expect(outboundKind('api.openai.com', hosts)).toBe('external');
+    expect(outboundKind('localhost', hosts)).toBe('internal');
+    expect(profileOptions().minVersion).toBe('TLSv1.3');
+    const epic = epicOptions();
+    expect(epic.minVersion).toBe('TLSv1.2');
+    expect(String(epic.ciphers).split(':').every((c) => c.startsWith('TLS_') || (c.startsWith('ECDHE-') && /GCM|POLY1305/.test(c)))).toBe(true);
   });
 });
 
