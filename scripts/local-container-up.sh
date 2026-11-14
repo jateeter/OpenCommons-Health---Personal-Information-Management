@@ -21,6 +21,11 @@ echo "  CSS port: ${CSS_PORT}"
 echo "  Compose project: ${COMPOSE_PROJECT_NAME}"
 echo "  RealityEngine suite: ${REALITYENGINE_SUITE_ENABLED:-1}"
 
+# Secrets come from the suite's secrets home, which compose mounts; copy this
+# checkout's old .secrets/ there first (verified, originals kept), so a missing
+# bind source never becomes an empty directory.
+node scripts/migrate-secrets.mjs
+
 if [ "${SKIP_LOCAL_PREFLIGHT:-0}" != "1" ]; then
   node scripts/local-preflight.mjs
 fi

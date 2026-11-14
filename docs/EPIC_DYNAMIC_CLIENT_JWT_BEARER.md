@@ -20,16 +20,17 @@ Use the dynamic client JWT bearer flow:
 ```sh
 EPIC_CONNECT_FLOW=dynamic_jwt_bearer
 EPIC_DYNAMIC_CLIENT_ID=<dynamic-client-id-returned-by-Epic-DCR>
-EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=.secrets/epic-dynamic-client/private-key.pem
+EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=~/.reality-engine/secrets/OpenCommons-Health---Personal-Information-Management/epic-dynamic-client/private-key.pem
 EPIC_CLIENT_ASSERTION_KID=<kid-from-the-registered-jwks>
 EPIC_CLIENT_ASSERTION_ALG=RS384
-EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE=.secrets/epic-dynamic-client/jwks.json
-EPIC_DYNAMIC_CLIENT_METADATA_FILE=.secrets/epic-dynamic-client/metadata.json
-EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE=.secrets/epic-dynamic-client/dynamic-client-registration.request.json
+EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE=~/.reality-engine/secrets/OpenCommons-Health---Personal-Information-Management/epic-dynamic-client/jwks.json
+EPIC_DYNAMIC_CLIENT_METADATA_FILE=~/.reality-engine/secrets/OpenCommons-Health---Personal-Information-Management/epic-dynamic-client/metadata.json
+EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE=~/.reality-engine/secrets/OpenCommons-Health---Personal-Information-Management/epic-dynamic-client/dynamic-client-registration.request.json
 ```
 
-For Docker deployment, mount `.secrets` through the compose-provided read-only
-volume and use the container path:
+The key material lives in the RealityEngine suite's secrets home (`$RE_SECRETS_DIR/OpenCommons-Health---Personal-Information-Management/`, default shown above; `scripts/lib/secrets-home.mjs`): one place per machine, outside every repository. `npm run epic:dcr` writes there, and `npm run secrets:migrate` (also run by `scripts/local-container-up.sh`) copies an old checkout `.secrets/` there once, verified, without deleting it.
+
+For Docker deployment, compose mounts the secrets home read-only and the container path is unchanged:
 
 ```sh
 EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE=/run/opencommons-secrets/epic-dynamic-client/private-key.pem
@@ -56,7 +57,7 @@ the one-shot helper.
    client id. Epic returns a one-time registration access token for dynamic
    client registration.
 2. Register the local dynamic client with Epic using the public JWKS from
-   `.secrets/epic-dynamic-client/jwks.json`.
+   `~/.reality-engine/secrets/OpenCommons-Health---Personal-Information-Management/epic-dynamic-client/jwks.json`.
 3. Save the returned `client_id` as `EPIC_DYNAMIC_CLIENT_ID`.
 4. Start the PIM with `EPIC_CONNECT_FLOW=dynamic_jwt_bearer`.
 5. Press **Connect Epic**. In this mode the PIM signs a one-time JWT assertion

@@ -3,10 +3,14 @@ import { createHash, createSign, generateKeyPairSync, randomBytes, randomUUID } 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, copyFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { basename, dirname, join } from 'node:path';
+import { migrateFromCheckout, secretsHome } from './lib/secrets-home.mjs';
 
 const repoRoot = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const envFile = process.env.EPIC_ENV_FILE ?? join(repoRoot, '.env.epic-sandbox.local');
-const secretDir = process.env.EPIC_DYNAMIC_CLIENT_SECRET_DIR ?? join(repoRoot, '.secrets/epic-dynamic-client');
+// The suite's secrets home, not the checkout (scripts/lib/secrets-home.mjs).
+// A checkout's old .secrets/ is copied there first, verified and kept.
+migrateFromCheckout(repoRoot);
+const secretDir = process.env.EPIC_DYNAMIC_CLIENT_SECRET_DIR ?? join(secretsHome(), 'epic-dynamic-client');
 const resetKey = process.argv.includes('--reset-key');
 const timeoutMs = Number.parseInt(process.env.EPIC_DCR_TIMEOUT_MS ?? `${10 * 60 * 1000}`, 10);
 const skipDynamicGrantTest = process.env.EPIC_DCR_SKIP_DYNAMIC_GRANT_TEST === '1';
@@ -158,13 +162,13 @@ function resetDynamicClientKeyMaterial() {
   writeSecret('publickey509.pem', publicKey.export({ type: 'spki', format: 'pem' }));
   writeJsonSecret(join(secretDir, 'jwks.json'), { keys: [publicKeyEntry] });
   writeJsonSecret(join(secretDir, 'private-jwks.json'), { keys: [privateKeyEntry] });
-  updateEnvLine(envFile, 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE', '.secrets/epic-dynamic-client/private-key.pem');
+  updateEnvLine(envFile, 'EPIC_CLIENT_ASSERTION_PRIVATE_KEY_FILE', join(secretDir, 'private-key.pem'));
   updateEnvLine(envFile, 'EPIC_CLIENT_ASSERTION_KID', kid);
   updateEnvLine(envFile, 'EPIC_CLIENT_ASSERTION_ALG', 'RS384');
   updateEnvLine(envFile, 'EPIC_DYNAMIC_CLIENT_ID', '');
-  updateEnvLine(envFile, 'EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE', '.secrets/epic-dynamic-client/jwks.json');
-  updateEnvLine(envFile, 'EPIC_DYNAMIC_CLIENT_METADATA_FILE', '.secrets/epic-dynamic-client/metadata.json');
-  updateEnvLine(envFile, 'EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE', '.secrets/epic-dynamic-client/dynamic-client-registration.request.json');
+  updateEnvLine(envFile, 'EPIC_DYNAMIC_CLIENT_PUBLIC_JWKS_FILE', join(secretDir, 'jwks.json'));
+  updateEnvLine(envFile, 'EPIC_DYNAMIC_CLIENT_METADATA_FILE', join(secretDir, 'metadata.json'));
+  updateEnvLine(envFile, 'EPIC_DYNAMIC_CLIENT_REGISTRATION_REQUEST_FILE', join(secretDir, 'dynamic-client-registration.request.json'));
 
   const softwareId = env.EPIC_CLIENT_ID ?? '';
   writeJsonSecret(join(secretDir, 'dynamic-client-registration.request.json'), {
