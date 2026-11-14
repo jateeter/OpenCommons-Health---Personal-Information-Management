@@ -17,6 +17,8 @@
     "verify:deployment": "./scripts/verify-deployment.sh",
     "epic:diagnostics": "node scripts/epic-diagnostics-check.mjs",
     "epic:dcr": "node scripts/epic-dcr-one-shot.mjs",
+    "secrets:migrate": "node scripts/migrate-secrets.mjs",
+    "test:secrets": "node --test scripts/secrets-home.test.mjs",
     "epic:dcr:reset": "node scripts/epic-dcr-one-shot.mjs --reset-key",
     "validate:openapi": "node scripts/validate-openapi.mjs",
     "validate:localhost-mvp": "node scripts/validate-localhost-mvp.mjs",

@@ -117,7 +117,10 @@ services:
       EPIC_SYNC_ON_STARTUP: "${EPIC_SYNC_ON_STARTUP:-false}"
     volumes:
       - css_credentials:/run/opencommons:ro
-      - ./.secrets:/run/opencommons-secrets:ro
+      # The RealityEngine suite's secrets home (scripts/lib/secrets-home.mjs),
+      # one place per machine outside every repository; the container path is
+      # unchanged. scripts/local-container-up.sh migrates .secrets/ there first.
+      - ${PIM_SECRETS_DIR:-${RE_SECRETS_DIR:-${HOME}/.reality-engine/secrets}/OpenCommons-Health---Personal-Information-Management}:/run/opencommons-secrets:ro
     depends_on:
       bootstrap:
         condition: service_completed_successfully
