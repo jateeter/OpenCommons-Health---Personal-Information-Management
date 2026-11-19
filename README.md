@@ -263,6 +263,28 @@ See
 [`tests/e2e/playwright/medicare-wellness-evaluation.md`](tests/e2e/playwright/medicare-wellness-evaluation.md)
 for the use case and acceptance criteria.
 
+### The device listener (iPhone HealthKit bridge)
+
+PIM's API listens on loopback, because only its HealthKit routes authenticate
+the caller. The iPhone bridge (`localHealthkitBridge`) is not on this host, so
+PIM can open a second listener on the LAN that serves only what the phone calls
+(PIM#91):
+
+| Route | Token |
+|---|---|
+| `GET /healthz` | none (PIM's status; the app reads its pod addresses) |
+| `/api/integrations/healthkit/*` (`metrics`, `sync/preview`, `sync/apply`) | bridge token |
+| `GET /api/resources/<domain>` (the app's pod hydration) | bridge token, on this listener only |
+
+Every other path answers 404 there, `/api/resources` is read-only, and the
+token is checked before PIM touches the pod. `PIM_DEVICE_PORT` turns it on;
+`PIM_DEVICE_HOST` defaults to every interface. It serves TLS 1.3 with a server
+certificate only (`RE_TLS_CERT`, `RE_TLS_KEY`, `RE_TLS_CA`, as the main
+listener does on the lane), and PIM refuses to start it without lane TLS or
+`PIM_HEALTHKIT_BRIDGE_TOKEN` (`Authorization: Bearer <token>`). The phone must
+trust the certificate's CA, and the certificate must name the address the phone
+dials.
+
 ### Sample usage
 
 ```typescript

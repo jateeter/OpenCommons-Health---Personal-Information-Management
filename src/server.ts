@@ -2,8 +2,8 @@ import http from 'node:http';
 import https from 'node:https';
 import { HealthPIM } from './index';
 import { installOutboundLaneTls, laneDescription, laneSettings, serverOptions } from './laneTls';
-import { contextFromPim, createRequestHandler, type ApplicationContext } from './httpApp';
-import { loadEpicRuntimeConfig, loadHealthKitRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from './runtimeConfig';
+import { contextFromPim, createDeviceRequestHandler, createRequestHandler, type ApplicationContext } from './httpApp';
+import { loadDeviceListenerConfig, loadEpicRuntimeConfig, loadHealthKitRuntimeConfig, loadServerRuntimeConfig, loadSolidRuntimeConfig } from './runtimeConfig';
 import { HealthKitMirrorService, MetricRegistryPodRepository } from './integrations/healthkit';
 import { PillarObservationRepository } from './repositories';
 import { EpicConnectionPodRepository, EpicIntegrationService } from './integrations/epic';
@@ -58,7 +58,12 @@ const lane = laneSettings();
 if (lane) installOutboundLaneTls(lane);
 // The PE scope URLs are environment alone, so they are checked before PIM
 // listens: on the lane a plaintext internal one stops PIM here, not at first use.
-loadHealthKitRuntimeConfig();
+const healthkitRuntime = loadHealthKitRuntimeConfig();
+// The device listener (PIM#91) faces the LAN: it starts only on lane TLS and
+// with the bridge token, and a configuration missing either stops PIM here.
+const device = loadDeviceListenerConfig();
+if (device && !lane) throw new Error('PIM_DEVICE_PORT is set, but lane TLS (RE_TLS_CERT/KEY/CA) is not: the device listener serves https only.');
+if (device && !healthkitRuntime.bridgeToken) throw new Error('PIM_DEVICE_PORT is set, but PIM_HEALTHKIT_BRIDGE_TOKEN is not: every device route but /healthz needs it.');
 const handle = (req: http.IncomingMessage, res: http.ServerResponse): void => {
   void requestHandler(req, res);
 };
@@ -68,9 +73,22 @@ server.listen(port, host, () => {
   console.log(`OpenCommons Health listening on ${lane ? 'https' : 'http'}://${host}:${port}${lane ? ` (${laneDescription()})` : ''}`);
 });
 
+const deviceHandler = createDeviceRequestHandler(provideContext, healthkitRuntime.bridgeToken);
+const deviceServer = device && lane
+  ? https.createServer(serverOptions(lane), (req, res) => { void deviceHandler(req, res); })
+  : undefined;
+if (device && deviceServer) {
+  deviceServer.listen(device.port, device.host, () => {
+    console.log(`OpenCommons Health device listener on https://${device.host}:${device.port} (HealthKit mirror and hydration, bridge token; ${laneDescription()})`);
+  });
+}
+
 function shutdown(signal: string): void {
   console.log(`Received ${signal}, shutting down...`);
-  server.close(() => process.exit(0));
+  let open = deviceServer ? 2 : 1;
+  const closed = (): void => { open -= 1; if (open === 0) process.exit(0); };
+  server.close(closed);
+  deviceServer?.close(closed);
 }
 
 process.on('SIGINT', () => shutdown('SIGINT'));
