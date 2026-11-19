@@ -60,6 +60,9 @@ export interface ApplicationContext {
 
 export type ContextProvider = () => Promise<ApplicationContext>;
 
+// Only parses a request's path and query; never dialled.
+const REQUEST_URL_BASE = 'http://localhost';
+
 export function contextFromPim(
   pim: HealthPIM,
   podServerUrl: string,
@@ -103,7 +106,7 @@ export function createRequestHandler(
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req, res) => {
     try {
-      const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+      const requestUrl = new URL(req.url ?? '/', REQUEST_URL_BASE);
       if (requestUrl.pathname === '/livez') {
         return sendJson(res, 200, { ok: true });
       }
@@ -163,6 +166,59 @@ export function createRequestHandler(
       sendError(res, error);
     }
   };
+}
+
+/**
+ * The device listener's handler (PIM#91, owner decision 2026-11-19): exactly
+ * what the iPhone bridge calls, on the LAN, and nothing else.
+ *
+ * - `GET /healthz`: PIM's status, untokened (the app reads its pod addresses);
+ * - `/api/integrations/healthkit/*`: the mirror, bridge token required;
+ * - `GET /api/resources/<domain>`: the app's pod hydration, bridge token
+ *   required here (the loopback listener does not ask for one).
+ *
+ * Every other path is 404, and a gated route without a configured bridge token
+ * is refused, never open: unlike the loopback listener, an unset token here
+ * does not mean "no auth". The token is the one server.ts loaded at startup and
+ * is checked before the application context is built, so an unauthenticated
+ * caller never reaches the pod or its errors.
+ */
+export function createDeviceRequestHandler(
+  provideContext: ContextProvider,
+  bridgeToken: string | undefined,
+): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  return async (req, res) => {
+    try {
+      const requestUrl = new URL(req.url ?? '/', REQUEST_URL_BASE);
+      const path = requestUrl.pathname;
+      if (path === '/healthz') {
+        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+        return await sendStatus(provideContext, res);
+      }
+      if (path.startsWith('/api/integrations/healthkit/')) {
+        assertDeviceToken(req, bridgeToken);
+        return await handleHealthKitIntegrationRequest(req, res, requestUrl, provideContext);
+      }
+      if (path.startsWith('/api/resources/')) {
+        assertDeviceToken(req, bridgeToken);
+        if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
+        return await handleDomainRequest(req, res, requestUrl, provideContext);
+      }
+      sendJson(res, 404, { error: 'Not found' });
+    } catch (error) {
+      sendError(res, error);
+    }
+  };
+}
+
+function methodNotAllowed(res: ServerResponse, allow: string): void {
+  res.setHeader('allow', allow);
+  sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+function assertDeviceToken(req: IncomingMessage, expected: string | undefined): void {
+  if (!expected) throw new AuthError('HealthKit bridge credentials are not configured on this listener.');
+  assertHealthKitBridge(req, expected);
 }
 
 async function sendStatus(provideContext: ContextProvider, res: ServerResponse): Promise<void> {

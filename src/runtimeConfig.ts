@@ -100,6 +100,28 @@ export function loadServerRuntimeConfig(env: Environment = process.env): ServerR
   };
 }
 
+/**
+ * The device listener (PIM#91): the HealthKit mirror and pod hydration on the
+ * LAN for the iPhone, beside the loopback listener. Off unless PIM_DEVICE_PORT
+ * is set; PIM_DEVICE_HOST defaults to every interface, since the phone is not
+ * on this host. server.ts refuses to start it without lane TLS and the bridge
+ * token, so nothing reaches the network in plaintext or unauthenticated.
+ */
+export interface DeviceListenerConfig {
+  host: string;
+  port: number;
+}
+
+export function loadDeviceListenerConfig(env: Environment = process.env): DeviceListenerConfig | undefined {
+  const raw = env.PIM_DEVICE_PORT?.trim();
+  if (!raw) return undefined;
+  const port = Number.parseInt(raw, 10);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535 || String(port) !== raw) {
+    throw new Error(`PIM_DEVICE_PORT must be an integer between 1 and 65535; received: ${raw}`);
+  }
+  return { host: env.PIM_DEVICE_HOST?.trim() || '0.0.0.0', port };
+}
+
 /** Load and validate the complete Solid connection contract. */
 export function loadSolidRuntimeConfig(env: Environment = process.env): SolidRuntimeConfig {
   const podServerUrl = requiredHttpUrl(env, 'SOLID_POD_SERVER_URL');
