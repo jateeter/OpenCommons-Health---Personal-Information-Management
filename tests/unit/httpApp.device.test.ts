@@ -94,10 +94,11 @@ describe('device listener handler', () => {
         port,
         path,
         method: init.method ?? 'GET',
-        // Its own agent: laneTls.test.ts's installOutboundLaneTls replaces
-        // https.globalAgent with one bound to that test's CA, and Jest shares
-        // core modules within a worker.
-        agent: false,
+        // Its own https.Agent: laneTls.test.ts's installOutboundLaneTls
+        // replaces https.globalAgent with a LaneAwareHttpsAgent bound to that
+        // test's CA, Jest shares core modules within a worker, and
+        // `agent: false` builds from the global agent's constructor.
+        agent: new https.Agent({ ca: readFileSync(lane.ca), minVersion: 'TLSv1.3' }),
         ca: readFileSync(lane.ca),
         minVersion: 'TLSv1.3',
         headers: init.token === null ? {} : { authorization: `Bearer ${init.token ?? TOKEN}` },
@@ -168,7 +169,8 @@ describe('device listener handler', () => {
 
   it('refuses TLS 1.2', async () => {
     await expect(new Promise((resolve, reject) => {
-      const req = https.request({ host: '127.0.0.1', port, path: '/healthz', agent: false, ca: readFileSync(lane.ca), maxVersion: 'TLSv1.2' }, resolve);
+      const ca = readFileSync(lane.ca);
+      const req = https.request({ host: '127.0.0.1', port, path: '/healthz', agent: new https.Agent({ ca, maxVersion: 'TLSv1.2' }), ca, maxVersion: 'TLSv1.2' }, resolve);
       req.on('error', reject);
       req.end();
     })).rejects.toThrow();
