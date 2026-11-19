@@ -60,6 +60,9 @@ export interface ApplicationContext {
 
 export type ContextProvider = () => Promise<ApplicationContext>;
 
+// Only parses a request's path and query; never dialled.
+const REQUEST_URL_BASE = 'http://localhost';
+
 export function contextFromPim(
   pim: HealthPIM,
   podServerUrl: string,
@@ -103,7 +106,7 @@ export function createRequestHandler(
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req, res) => {
     try {
-      const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+      const requestUrl = new URL(req.url ?? '/', REQUEST_URL_BASE);
       if (requestUrl.pathname === '/livez') {
         return sendJson(res, 200, { ok: true });
       }
@@ -186,7 +189,7 @@ export function createDeviceRequestHandler(
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req, res) => {
     try {
-      const requestUrl = new URL(req.url ?? '/', 'http://localhost');
+      const requestUrl = new URL(req.url ?? '/', REQUEST_URL_BASE);
       const path = requestUrl.pathname;
       if (path === '/healthz') {
         if (req.method !== 'GET') return methodNotAllowed(res, 'GET');
